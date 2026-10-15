@@ -25,6 +25,7 @@ function message(seq: number, changeSeq = seq, body = `m${seq}`): Message {
     pinnedAt: null,
     reactions: [],
     starred: false,
+    attachment: null,
   }
 }
 
@@ -99,6 +100,8 @@ describe("cache da conversa (RT-01, RT-02)", () => {
       replyTo: null,
       createdAt: "2026-10-15T12:00:00Z",
       status: "sending",
+      attachment: null,
+      attachmentId: null,
     })
     expect(cache.pending).toHaveLength(1)
     cache = confirmSent(cache, message(1))

@@ -33,7 +33,19 @@ import { toast } from "@/components/ui/toast"
 import { formatTime } from "@/lib/format"
 import { MessageText } from "../format/message-text"
 import { plainText } from "../format/parse"
-import type { MessageStatus, Reaction, ReplyPreview } from "../types"
+import type {
+  Attachment,
+  AttachmentKind,
+  LocalAttachment,
+  MessageStatus,
+  Reaction,
+  ReplyPreview,
+} from "../types"
+import {
+  AttachmentView,
+  KindIcon,
+  LocalAttachmentView,
+} from "./attachment-view"
 
 /** Reações rápidas do menu; a lista completa de emojis entra com MS-10. */
 export const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "🙏"]
@@ -53,6 +65,8 @@ export type DisplayMessage = {
   reactions: Reaction[]
   starred: boolean
   status: MessageStatus | null
+  attachment: Attachment | null
+  localAttachment: LocalAttachment | null
 }
 
 export type MessageAction =
@@ -65,7 +79,9 @@ export type MessageAction =
   | "info"
   | "select"
   | "retry"
+  | "cancelUpload"
   | { react: string }
+  | { openImage: string }
   | "unreact"
 
 export function MessageRow({
@@ -130,6 +146,19 @@ export function MessageRow({
                   : t("chat.forwarded")}
               </span>
             ) : null}
+            {message.attachment ? (
+              <AttachmentView
+                attachment={message.attachment}
+                onOpenImage={(id) => onAction({ openImage: id })}
+              />
+            ) : message.localAttachment ? (
+              <LocalAttachmentView
+                clientMessageId={message.key}
+                attachment={message.localAttachment}
+                uploading={message.status === "uploading"}
+                onCancel={() => onAction("cancelUpload")}
+              />
+            ) : null}
             {message.replyTo ? (
               <button
                 type="button"
@@ -144,11 +173,15 @@ export function MessageRow({
                   {nameOf(message.replyTo.senderId)}
                 </span>
                 <span className="line-clamp-2 opacity-80">
-                  {plainText(message.replyTo.body)}
+                  {message.replyTo.body ? (
+                    plainText(message.replyTo.body)
+                  ) : message.replyTo.attachmentKind ? (
+                    <AttachmentLabel kind={message.replyTo.attachmentKind} />
+                  ) : null}
                 </span>
               </button>
             ) : null}
-            <MessageText text={message.body} />
+            {message.body ? <MessageText text={message.body} /> : null}
             <span className="flex items-center justify-end gap-1 self-end text-[0.7rem] leading-none opacity-70">
               {message.pinned ? (
                 <PinIcon
@@ -254,16 +287,18 @@ export function MessageRow({
                 {message.starred ? <StarOffIcon /> : <StarIcon />}
                 {message.starred ? t("chat.unstar") : t("chat.star")}
               </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => {
-                  void navigator.clipboard
-                    ?.writeText(message.body)
-                    .then(() => toast.add({ title: t("common.copied") }))
-                }}
-              >
-                <CopyIcon />
-                {t("chat.copyText")}
-              </DropdownMenuItem>
+              {message.body ? (
+                <DropdownMenuItem
+                  onClick={() => {
+                    void navigator.clipboard
+                      ?.writeText(message.body)
+                      .then(() => toast.add({ title: t("common.copied") }))
+                  }}
+                >
+                  <CopyIcon />
+                  {t("chat.copyText")}
+                </DropdownMenuItem>
+              ) : null}
               <DropdownMenuItem onClick={() => onAction("select")}>
                 <ListChecksIcon />
                 {t("chat.select")}
@@ -282,6 +317,17 @@ export function MessageRow({
   )
 }
 
+/** "Foto", "Vídeo", "Áudio" ou "Documento" com ícone (prévias sem texto). */
+export function AttachmentLabel({ kind }: { kind: AttachmentKind }) {
+  const { t } = useTranslation()
+  return (
+    <span className="inline-flex items-center gap-1 align-middle">
+      <KindIcon kind={kind} className="size-3.5" />
+      {t(`media.kind.${kind}`)}
+    </span>
+  )
+}
+
 function groupReactions(reactions: Reaction[]): [string, number][] {
   const counts = new Map<string, number>()
   reactions.forEach((reaction) =>
@@ -296,6 +342,7 @@ export function StatusIcon({ status }: { status: MessageStatus }) {
   const label = t(`chat.status.${status}`)
   const common = { "aria-label": label, role: "img", className: "size-3.5" }
   switch (status) {
+    case "uploading":
     case "sending":
       return <ClockIcon {...common} />
     case "failed":

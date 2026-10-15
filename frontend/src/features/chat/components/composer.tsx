@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
-import { SendHorizontalIcon, XIcon } from "lucide-react"
+import { PaperclipIcon, SendHorizontalIcon, XIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -27,6 +27,7 @@ export function Composer({
   replyName,
   onCancelReply,
   onSend,
+  onFiles,
   disabled,
 }: {
   conversationId: string
@@ -34,11 +35,14 @@ export function Composer({
   replyName: string
   onCancelReply: () => void
   onSend: (body: string) => void
+  /** Arquivos escolhidos pelo botão ou colados (Ctrl+V) no campo. */
+  onFiles: (files: File[]) => void
   disabled: boolean
 }) {
   const { t } = useTranslation()
   const [value, setValue] = useState("")
   const textarea = useRef<HTMLTextAreaElement>(null)
+  const fileInput = useRef<HTMLInputElement>(null)
   const lastTyping = useRef(0)
 
   useEffect(() => {
@@ -109,7 +113,33 @@ export function Composer({
           </Button>
         </div>
       ) : null}
+      <input
+        ref={fileInput}
+        type="file"
+        multiple
+        hidden
+        tabIndex={-1}
+        aria-hidden="true"
+        onChange={(event) => {
+          const chosen = [...(event.target.files ?? [])]
+          event.target.value = ""
+          if (chosen.length > 0) {
+            onFiles(chosen)
+          }
+        }}
+      />
       <InputGroup>
+        <InputGroupAddon align="inline-start">
+          <InputGroupButton
+            type="button"
+            size="icon-sm"
+            aria-label={t("media.attach")}
+            disabled={disabled}
+            onClick={() => fileInput.current?.click()}
+          >
+            <PaperclipIcon />
+          </InputGroupButton>
+        </InputGroupAddon>
         <InputGroupTextarea
           ref={textarea}
           aria-label={t("chat.composerLabel")}
@@ -121,6 +151,13 @@ export function Composer({
           enterKeyHint="send"
           className="field-sizing-content max-h-40 min-h-11 resize-none"
           onChange={(event) => typing(event.target.value)}
+          onPaste={(event) => {
+            const pasted = [...event.clipboardData.files]
+            if (pasted.length > 0) {
+              event.preventDefault()
+              onFiles(pasted)
+            }
+          }}
           onKeyDown={(event) => {
             const coarse = window.matchMedia("(pointer: coarse)").matches
             if (

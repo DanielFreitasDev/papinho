@@ -17,6 +17,7 @@ import {
 } from "./cache"
 import type {
   Conversation,
+  LocalAttachment,
   Message,
   MessageInfo,
   MessagePage,
@@ -190,6 +191,8 @@ export function useSendMessage(conversationId: string) {
       clientMessageId: string
       body: string
       replyTo: ReplyPreview | null
+      attachmentId?: string | null
+      attachment?: LocalAttachment | null
     }) =>
       apiFetch<Message>(`/api/v1/conversations/${conversationId}/messages`, {
         method: "POST",
@@ -197,6 +200,7 @@ export function useSendMessage(conversationId: string) {
           clientMessageId: input.clientMessageId,
           body: input.body,
           replyToId: input.replyTo?.id ?? null,
+          attachmentId: input.attachmentId ?? null,
         },
       }),
     onMutate: (input) => {
@@ -211,6 +215,8 @@ export function useSendMessage(conversationId: string) {
                 replyTo: input.replyTo,
                 createdAt: new Date().toISOString(),
                 status: "sending",
+                attachment: input.attachment ?? null,
+                attachmentId: input.attachmentId ?? null,
               })
             : current
       )

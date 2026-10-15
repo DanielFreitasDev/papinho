@@ -21,7 +21,8 @@
     "edit": "Editar",
     "saved": "Alterações salvas",
     "offline": "Sem conexão com o servidor",
-    "genericError": "Não foi possível concluir a ação. Tente de novo."
+    "genericError": "Não foi possível concluir a ação. Tente de novo.",
+    "closeNotification": "Fechar notificação"
   },
   "errors": {
     "notFoundTitle": "Página não encontrada",
@@ -284,7 +285,8 @@
       "failed": "Não enviada",
       "sent": "Enviada",
       "delivered": "Entregue",
-      "read": "Lida"
+      "read": "Lida",
+      "uploading": "Enviando arquivo"
     },
     "retrySend": "Tentar enviar de novo",
     "forwarded": "Encaminhada",
@@ -357,5 +359,30 @@
     "dismiss": "Arquivar",
     "statusRESOLVED": "Resolvida",
     "statusDISMISSED": "Arquivada"
+  },
+  "media": {
+    "attach": "Anexar arquivo",
+    "sendFiles_one": "Enviar {{count}} arquivo",
+    "sendFiles_other": "Enviar {{count}} arquivos",
+    "sendDescription": "Fotos, vídeos e documentos de até 1 GB. O envio continua de onde parou se a conexão cair.",
+    "caption": "Legenda (opcional)",
+    "pastedImage": "Imagem colada",
+    "tooLarge": "Arquivos acima de 1 GB não podem ser enviados.",
+    "uploading": "Enviando {{name}}",
+    "cancelUpload": "Cancelar envio",
+    "retryLost": "O arquivo não está mais disponível. Escolha-o de novo.",
+    "openImage": "Abrir imagem {{name}}",
+    "download": "Baixar",
+    "zoomIn": "Ampliar",
+    "zoomOut": "Reduzir",
+    "previous": "Imagem anterior",
+    "next": "Próxima imagem",
+    "position": "{{current}} de {{total}}",
+    "kind": {
+      "IMAGE": "Foto",
+      "VIDEO": "Vídeo",
+      "AUDIO": "Áudio",
+      "DOCUMENT": "Documento"
+    }
   }
 }

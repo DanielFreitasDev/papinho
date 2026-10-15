@@ -21,7 +21,8 @@
     "edit": "Edit",
     "saved": "Changes saved",
     "offline": "No connection to the server",
-    "genericError": "The action could not be completed. Try again."
+    "genericError": "The action could not be completed. Try again.",
+    "closeNotification": "Close notification"
   },
   "errors": {
     "notFoundTitle": "Page not found",
@@ -284,7 +285,8 @@
       "failed": "Not sent",
       "sent": "Sent",
       "delivered": "Delivered",
-      "read": "Read"
+      "read": "Read",
+      "uploading": "Uploading file"
     },
     "retrySend": "Try sending again",
     "forwarded": "Forwarded",
@@ -357,5 +359,30 @@
     "dismiss": "Dismiss",
     "statusRESOLVED": "Resolved",
     "statusDISMISSED": "Dismissed"
+  },
+  "media": {
+    "attach": "Attach file",
+    "sendFiles_one": "Send {{count}} file",
+    "sendFiles_other": "Send {{count}} files",
+    "sendDescription": "Photos, videos and documents up to 1 GB. The upload resumes where it stopped if the connection drops.",
+    "caption": "Caption (optional)",
+    "pastedImage": "Pasted image",
+    "tooLarge": "Files over 1 GB cannot be sent.",
+    "uploading": "Uploading {{name}}",
+    "cancelUpload": "Cancel upload",
+    "retryLost": "The file is no longer available. Choose it again.",
+    "openImage": "Open image {{name}}",
+    "download": "Download",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "previous": "Previous image",
+    "next": "Next image",
+    "position": "{{current}} of {{total}}",
+    "kind": {
+      "IMAGE": "Photo",
+      "VIDEO": "Video",
+      "AUDIO": "Audio",
+      "DOCUMENT": "Document"
+    }
   }
 }

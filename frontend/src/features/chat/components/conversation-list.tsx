@@ -147,7 +147,11 @@ function ConversationItem({
   const preview = activity
     ? t(activity.activity === "recording" ? "chat.recording" : "chat.typing")
     : last
-      ? `${last.senderId === meId ? `${t("chat.you")}: ` : ""}${plainText(last.body)}`
+      ? `${last.senderId === meId ? `${t("chat.you")}: ` : ""}${
+          last.attachmentKind
+            ? `${t(`media.kind.${last.attachmentKind}`)}${last.body ? ` · ${plainText(last.body)}` : ""}`
+            : plainText(last.body)
+        }`
       : ""
 
   return (

@@ -36,6 +36,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { toast } from "@/components/ui/toast"
 import { useBlock } from "@/features/contact"
 import { useMediaQuery } from "@/hooks/use-media-query"
+import { MAX_FILE_SIZE } from "@/features/media"
 import { ApiError, errorMessage } from "@/lib/api-client"
 import { dayKey, formatDay } from "@/lib/format"
 import {
@@ -49,12 +50,17 @@ import {
 import type { ConversationCache } from "../cache"
 import { plainText } from "../format/parse"
 import type {
+  Attachment,
   Conversation,
+  LocalAttachment,
   Message,
   MessageStatus,
   ReplyPreview,
 } from "../types"
+import { cancelFile, retryFile, sendFile } from "../attachments"
+import { AttachDialog } from "./attach-dialog"
 import { Composer } from "./composer"
+import { ImageViewer } from "./image-viewer"
 import { ContactDetails } from "./contact-details"
 import { ForwardDialog } from "./forward-dialog"
 import { MessageInfoDialog } from "./message-info-dialog"
@@ -153,6 +159,8 @@ function LoadedConversation({
   const [forwardIds, setForwardIds] = useState<string[]>([])
   const [infoId, setInfoId] = useState<string | null>(null)
   const [detailsOpen, setDetailsOpen] = useState(false)
+  const [files, setFiles] = useState<File[]>([])
+  const [viewerId, setViewerId] = useState<string | null>(null)
   // Painel de detalhes como terceira coluna só em telas largas; nas outras, gaveta (UI-01).
   const wide = useMediaQuery("(min-width: 80rem)")
   // Não lidas no momento em que a conversa abriu: o marcador fica até sair da conversa (MS-14).
@@ -198,6 +206,15 @@ function LoadedConversation({
     () => toDisplay(cache, conversation, meId),
     [cache, conversation, meId]
   )
+  const images = useMemo(
+    () =>
+      cache.messages
+        .map((message) => message.attachment)
+        .filter(
+          (attachment): attachment is Attachment => attachment?.kind === "IMAGE"
+        ),
+    [cache.messages]
+  )
 
   async function jumpTo(messageId: string) {
     for (let page = 0; page < 10; page++) {
@@ -219,6 +236,50 @@ function LoadedConversation({
       }
       await loadOlder(queryClient, conversation.id)
     }
+  }
+
+  const sendWithAttachment = (input: {
+    clientMessageId: string
+    body: string
+    replyTo: ReplyPreview | null
+    attachmentId: string
+    attachment: LocalAttachment
+  }) =>
+    send.mutateAsync(input).catch((error: unknown) =>
+      toast.add({
+        title: errorMessage(error, t("common.genericError")),
+        type: "error",
+      })
+    )
+
+  /** Escolhidos pelo botão, colados ou arrastados: confirma no diálogo antes de enviar (MD-01). */
+  function chooseFiles(chosen: File[]) {
+    if (!conversation.canSend) {
+      return
+    }
+    const tooLarge = chosen.filter((file) => file.size > MAX_FILE_SIZE)
+    if (tooLarge.length > 0) {
+      toast.add({ title: t("media.tooLarge"), type: "error" })
+    }
+    setFiles(chosen.filter((file) => file.size <= MAX_FILE_SIZE))
+  }
+
+  function sendFiles(chosen: File[], caption: string) {
+    let previous: Promise<unknown> = Promise.resolve()
+    chosen.forEach((file, index) => {
+      previous = sendFile(
+        queryClient,
+        conversation.id,
+        file,
+        index === 0 ? caption : "",
+        index === 0 ? replyTo : null,
+        sendWithAttachment,
+        crypto.randomUUID(),
+        previous
+      )
+    })
+    setFiles([])
+    setReplyTo(null)
   }
 
   function sendBody(
@@ -244,9 +305,22 @@ function LoadedConversation({
       const pending = cache.pending.find(
         (item) => item.clientMessageId === message.key
       )
-      if (pending) {
+      if (pending?.attachment) {
+        if (!retryFile(queryClient, pending, sendWithAttachment)) {
+          cancelFile(queryClient, conversation.id, pending.clientMessageId)
+          toast.add({ title: t("media.retryLost"), type: "error" })
+        }
+      } else if (pending) {
         sendBody(pending.body, pending.clientMessageId, pending.replyTo)
       }
+      return
+    }
+    if (action === "cancelUpload") {
+      cancelFile(queryClient, conversation.id, message.key)
+      return
+    }
+    if (typeof action === "object" && "openImage" in action) {
+      setViewerId(action.openImage)
       return
     }
     if (!message.id || message.seq === null) {
@@ -260,6 +334,7 @@ function LoadedConversation({
           seq: message.seq,
           senderId: message.senderId,
           body: message.body,
+          attachmentKind: message.attachment?.kind ?? null,
         })
         return
       case "forward":
@@ -301,7 +376,25 @@ function LoadedConversation({
   const canWrite = conversation.canSend && selection === null
 
   return (
-    <div className="flex h-full min-h-0 flex-1">
+    <div
+      className="flex h-full min-h-0 flex-1"
+      onDragOver={(event) => {
+        if (
+          conversation.canSend &&
+          event.dataTransfer.types.includes("Files")
+        ) {
+          event.preventDefault()
+          event.dataTransfer.dropEffect = "copy"
+        }
+      }}
+      onDrop={(event) => {
+        const dropped = [...event.dataTransfer.files]
+        if (dropped.length > 0) {
+          event.preventDefault()
+          chooseFiles(dropped)
+        }
+      }}
+    >
       <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col">
         <header className="z-10 flex min-h-14 items-center gap-2 border-b bg-background px-2 pt-[env(safe-area-inset-top)] md:px-4">
           <Link
@@ -554,6 +647,7 @@ function LoadedConversation({
             replyName={replyTo ? nameOf(replyTo.senderId) : ""}
             onCancelReply={() => setReplyTo(null)}
             onSend={(body) => sendBody(body)}
+            onFiles={chooseFiles}
             disabled={!canWrite}
           />
         )}
@@ -567,6 +661,16 @@ function LoadedConversation({
           }}
         />
         <MessageInfoDialog messageId={infoId} onClose={() => setInfoId(null)} />
+        <AttachDialog
+          files={files}
+          onClose={() => setFiles([])}
+          onSend={sendFiles}
+        />
+        <ImageViewer
+          images={images}
+          openId={viewerId}
+          onOpenChange={setViewerId}
+        />
       </div>
       {wide && detailsOpen ? (
         <aside
@@ -628,6 +732,8 @@ function toDisplay(
     reactions: message.reactions,
     starred: message.starred,
     status: message.senderId === meId ? statusOf(message, conversation) : null,
+    attachment: message.attachment,
+    localAttachment: null,
   }))
   const pending: DisplayMessage[] = cache.pending.map((message) => ({
     key: message.clientMessageId,
@@ -643,6 +749,8 @@ function toDisplay(
     reactions: [],
     starred: false,
     status: message.status,
+    attachment: null,
+    localAttachment: message.attachment,
   }))
   return [...confirmed, ...pending]
 }

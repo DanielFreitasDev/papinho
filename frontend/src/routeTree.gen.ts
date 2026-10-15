@@ -25,6 +25,7 @@ import { Route as AppSettingsIndexRouteImport } from './routes/_app/settings/ind
 import { Route as AppSettingsAccountRouteImport } from './routes/_app/settings/account'
 import { Route as AppSettingsAppearanceRouteImport } from './routes/_app/settings/appearance'
 import { Route as AppSettingsBlockedRouteImport } from './routes/_app/settings/blocked'
+import { Route as AppSettingsChatsRouteImport } from './routes/_app/settings/chats'
 import { Route as AppSettingsProfileRouteImport } from './routes/_app/settings/profile'
 import { Route as AppSettingsSecurityRouteImport } from './routes/_app/settings/security'
 import { Route as AppSettingsSessionsRouteImport } from './routes/_app/settings/sessions'
@@ -109,6 +110,11 @@ const AppSettingsBlockedRoute = AppSettingsBlockedRouteImport.update({
   path: '/blocked',
   getParentRoute: () => AppSettingsRoute,
 } as any)
+const AppSettingsChatsRoute = AppSettingsChatsRouteImport.update({
+  id: '/chats',
+  path: '/chats',
+  getParentRoute: () => AppSettingsRoute,
+} as any)
 const AppSettingsProfileRoute = AppSettingsProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
@@ -146,6 +152,7 @@ export interface FileRoutesByFullPath {
   '/settings/account': typeof AppSettingsAccountRoute
   '/settings/appearance': typeof AppSettingsAppearanceRoute
   '/settings/blocked': typeof AppSettingsBlockedRoute
+  '/settings/chats': typeof AppSettingsChatsRoute
   '/settings/profile': typeof AppSettingsProfileRoute
   '/settings/security': typeof AppSettingsSecurityRoute
   '/settings/sessions': typeof AppSettingsSessionsRoute
@@ -166,6 +173,7 @@ export interface FileRoutesByTo {
   '/settings/account': typeof AppSettingsAccountRoute
   '/settings/appearance': typeof AppSettingsAppearanceRoute
   '/settings/blocked': typeof AppSettingsBlockedRoute
+  '/settings/chats': typeof AppSettingsChatsRoute
   '/settings/profile': typeof AppSettingsProfileRoute
   '/settings/security': typeof AppSettingsSecurityRoute
   '/settings/sessions': typeof AppSettingsSessionsRoute
@@ -189,6 +197,7 @@ export interface FileRoutesById {
   '/_app/settings/account': typeof AppSettingsAccountRoute
   '/_app/settings/appearance': typeof AppSettingsAppearanceRoute
   '/_app/settings/blocked': typeof AppSettingsBlockedRoute
+  '/_app/settings/chats': typeof AppSettingsChatsRoute
   '/_app/settings/profile': typeof AppSettingsProfileRoute
   '/_app/settings/security': typeof AppSettingsSecurityRoute
   '/_app/settings/sessions': typeof AppSettingsSessionsRoute
@@ -212,6 +221,7 @@ export interface FileRouteTypes {
     | '/settings/account'
     | '/settings/appearance'
     | '/settings/blocked'
+    | '/settings/chats'
     | '/settings/profile'
     | '/settings/security'
     | '/settings/sessions'
@@ -232,6 +242,7 @@ export interface FileRouteTypes {
     | '/settings/account'
     | '/settings/appearance'
     | '/settings/blocked'
+    | '/settings/chats'
     | '/settings/profile'
     | '/settings/security'
     | '/settings/sessions'
@@ -254,6 +265,7 @@ export interface FileRouteTypes {
     | '/_app/settings/account'
     | '/_app/settings/appearance'
     | '/_app/settings/blocked'
+    | '/_app/settings/chats'
     | '/_app/settings/profile'
     | '/_app/settings/security'
     | '/_app/settings/sessions'
@@ -382,6 +394,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSettingsBlockedRouteImport
       parentRoute: typeof AppSettingsRoute
     }
+    '/_app/settings/chats': {
+      id: '/_app/settings/chats'
+      path: '/chats'
+      fullPath: '/settings/chats'
+      preLoaderRoute: typeof AppSettingsChatsRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
     '/_app/settings/profile': {
       id: '/_app/settings/profile'
       path: '/profile'
@@ -417,6 +436,7 @@ interface AppSettingsRouteChildren {
   AppSettingsAccountRoute: typeof AppSettingsAccountRoute
   AppSettingsAppearanceRoute: typeof AppSettingsAppearanceRoute
   AppSettingsBlockedRoute: typeof AppSettingsBlockedRoute
+  AppSettingsChatsRoute: typeof AppSettingsChatsRoute
   AppSettingsProfileRoute: typeof AppSettingsProfileRoute
   AppSettingsSecurityRoute: typeof AppSettingsSecurityRoute
   AppSettingsSessionsRoute: typeof AppSettingsSessionsRoute
@@ -428,6 +448,7 @@ const AppSettingsRouteChildren: AppSettingsRouteChildren = {
   AppSettingsAccountRoute: AppSettingsAccountRoute,
   AppSettingsAppearanceRoute: AppSettingsAppearanceRoute,
   AppSettingsBlockedRoute: AppSettingsBlockedRoute,
+  AppSettingsChatsRoute: AppSettingsChatsRoute,
   AppSettingsProfileRoute: AppSettingsProfileRoute,
   AppSettingsSecurityRoute: AppSettingsSecurityRoute,
   AppSettingsSessionsRoute: AppSettingsSessionsRoute,

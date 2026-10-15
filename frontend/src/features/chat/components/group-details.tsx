@@ -48,6 +48,7 @@ import type { Attachment, Conversation, GroupInfo } from "../types"
 import { ContactPicker } from "./contact-picker"
 import { ConversationAvatar } from "./conversation-avatar"
 import { ConversationGallery } from "./conversation-gallery"
+import { DisappearingSetting } from "./disappearing-select"
 
 /**
  * Painel "Dados do grupo" (GR-01, GR-02): foto, nome e descrição, membros com admins, adicionar, convite por
@@ -200,6 +201,11 @@ export function GroupDetails({
           <span className="flex-1 text-left">{t("gallery.title")}</span>
           <ChevronRightIcon data-icon="inline-end" />
         </Button>
+        <Separator />
+        <DisappearingSetting
+          conversation={conversation}
+          disabled={!group.canEditInfo}
+        />
         <Separator />
         <section
           aria-labelledby="group-members"

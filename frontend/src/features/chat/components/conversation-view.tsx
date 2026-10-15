@@ -241,9 +241,10 @@ function LoadedConversation({
     queryClient,
   ])
 
+  const now = useNow()
   const display = useMemo(
-    () => toDisplay(cache, conversation, meId),
-    [cache, conversation, meId]
+    () => toDisplay(cache, conversation, meId, now),
+    [cache, conversation, meId, now]
   )
   // Fila de áudios da conversa, em ordem, para tocar em sequência (AU-02).
   const audioQueue = useMemo<Track[]>(
@@ -355,7 +356,6 @@ function LoadedConversation({
   }
 
   // Janelas do admin (MS-05, MS-06); o servidor confere de novo, o menu só esconde o que já expirou.
-  const now = useNow()
   const withinMinutes = (createdAt: string, minutes: number | undefined) =>
     minutes !== undefined && now - Date.parse(createdAt) <= minutes * 60_000
   const canEdit = (message: DisplayMessage) =>
@@ -940,9 +940,14 @@ function statusOf(message: Message, conversation: Conversation): MessageStatus {
 function toDisplay(
   cache: ConversationCache,
   conversation: Conversation,
-  meId: string
+  meId: string,
+  now: number
 ): DisplayMessage[] {
-  const confirmed: DisplayMessage[] = cache.messages.map((message) => ({
+  // Temporárias vencidas somem já, antes de o job do servidor apagá-las (MS-07).
+  const live = cache.messages.filter(
+    (message) => !message.expiresAt || Date.parse(message.expiresAt) > now
+  )
+  const confirmed: DisplayMessage[] = live.map((message) => ({
     key: message.id,
     id: message.id,
     seq: message.seq,

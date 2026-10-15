@@ -112,6 +112,8 @@ export type Conversation = {
   updatedAt: string
   canSend: boolean
   blockedByMe: boolean
+  /** Timer de mensagens temporárias em segundos (MS-07); nulo = desligado. */
+  disappearingSeconds: number | null
 }
 
 export type Reaction = { userId: string; emoji: string }
@@ -148,6 +150,8 @@ export type Message = {
   editedAt: string | null
   /** Apagada para todos: sem texto nem anexo (MS-06). */
   deleted: boolean
+  /** Quando a mensagem temporária some (MS-07). */
+  expiresAt: string | null
 }
 
 export type MessagePage = {

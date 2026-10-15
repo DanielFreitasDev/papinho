@@ -36,6 +36,14 @@ export function describeNotice(
   const targets = new Intl.ListFormat(t("chat.listLocale"), {
     type: "conjunction",
   }).format(notice.targets.map(name(t("chat.youObject"))))
+  if (notice.type === "timer") {
+    return notice.value
+      ? t("chat.notice.timer", {
+          actor,
+          value: t(`chat.timer.${notice.value}`),
+        })
+      : t("chat.notice.timerOff", { actor })
+  }
   const type =
     notice.type === "group.photo" && notice.value === "removed"
       ? "photoRemoved"

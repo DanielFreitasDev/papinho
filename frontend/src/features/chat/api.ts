@@ -36,6 +36,7 @@ export const chatKeys = {
   starred: ["starred"] as const,
   info: (messageId: string) => ["message-info", messageId] as const,
   presence: (userId: string) => ["presence", userId] as const,
+  preferences: ["messaging-preferences"] as const,
   gallery: (id: string, tab: GalleryTab) =>
     ["messages", id, "gallery", tab] as const,
 }
@@ -108,6 +109,15 @@ export const chatQueries = {
       initialPageParam: 0,
       getNextPageParam: (page) =>
         page.hasMore ? (page.messages.at(-1)?.seq ?? undefined) : undefined,
+    }),
+  preferences: () =>
+    queryOptions({
+      queryKey: chatKeys.preferences,
+      queryFn: ({ signal }) =>
+        apiFetch<{ defaultDisappearingSeconds: number | null }>(
+          "/api/v1/messaging/preferences",
+          { signal }
+        ),
     }),
   presence: (userId: string) =>
     queryOptions({
@@ -370,6 +380,34 @@ export function useHideMessages(conversationId: string) {
       }),
     onSuccess: (_result, messageIds) =>
       hideLocally(queryClient, conversationId, messageIds),
+  })
+}
+
+/** Timer de mensagens temporárias da conversa (MS-07). */
+export function useDisappearing(conversationId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (seconds: number | null) =>
+      apiFetch<void>(`/api/v1/conversations/${conversationId}/disappearing`, {
+        method: "PUT",
+        json: { seconds },
+      }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: chatKeys.conversations }),
+  })
+}
+
+/** Timer padrão para conversas novas (MS-07). */
+export function useChangePreferences() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (defaultDisappearingSeconds: number | null) =>
+      apiFetch<{ defaultDisappearingSeconds: number | null }>(
+        "/api/v1/messaging/preferences",
+        { method: "PUT", json: { defaultDisappearingSeconds } }
+      ),
+    onSuccess: (preferences) =>
+      queryClient.setQueryData(chatKeys.preferences, preferences),
   })
 }
 

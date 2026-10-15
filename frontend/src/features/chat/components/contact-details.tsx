@@ -22,6 +22,7 @@ import { errorMessage } from "@/lib/api-client"
 import { chatKeys } from "../api"
 import type { Attachment, Conversation, Peer } from "../types"
 import { ConversationGallery } from "./conversation-gallery"
+import { DisappearingSetting } from "./disappearing-select"
 
 /**
  * Painel "Dados do contato" (UI-01): foto, nome, @usuario e recado, com adicionar aos contatos, bloquear
@@ -136,6 +137,15 @@ export function ContactDetails({
           <span className="flex-1 text-left">{t("gallery.title")}</span>
           <ChevronRightIcon data-icon="inline-end" />
         </Button>
+        {self ? null : (
+          <>
+            <Separator />
+            <DisappearingSetting
+              conversation={conversation}
+              disabled={conversation.blockedByMe}
+            />
+          </>
+        )}
         <Separator />
         <div className={self ? "hidden" : "flex flex-col gap-1"}>
           {person.data && !person.data.contact ? (

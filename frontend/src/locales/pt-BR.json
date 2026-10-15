@@ -150,7 +150,8 @@
     "sessions": "Sessões",
     "blocked": "Bloqueados",
     "appearance": "Aparência",
-    "transcription": "Transcrição"
+    "transcription": "Transcrição",
+    "chats": "Conversas"
   },
   "profile": {
     "about": "Recado",
@@ -369,13 +370,25 @@
       "photoRemoved": "{{actor}} removeu a foto do grupo",
       "settings": "{{actor}} mudou as configurações do grupo",
       "admin": "{{actor}} tornou {{targets}} admin do grupo",
-      "notAdmin": "{{actor}} tirou {{targets}} de admin do grupo"
+      "notAdmin": "{{actor}} tirou {{targets}} de admin do grupo",
+      "timer": "{{actor}} ativou as mensagens temporárias: {{value}}",
+      "timerOff": "{{actor}} desativou as mensagens temporárias"
     },
     "memberTyping": "{{name}} está digitando…",
     "memberRecording": "{{name}} está gravando áudio…",
     "savedMessagesHint": "Mensagens só para você",
     "formerMember": "Ex-membro",
-    "youObject": "você"
+    "youObject": "você",
+    "timer": {
+      "title": "Mensagens temporárias",
+      "hint": "Vale para as mensagens enviadas daqui em diante, para todos na conversa.",
+      "off": "Desligadas",
+      "86400": "24 horas",
+      "604800": "7 dias",
+      "7776000": "90 dias",
+      "defaultTitle": "Timer padrão de mensagens temporárias",
+      "defaultDescription": "Conversas e grupos que você criar começam com este timer."
+    }
   },
   "moderation": {
     "report": "Denunciar",

@@ -150,7 +150,8 @@
     "sessions": "Sessions",
     "blocked": "Blocked",
     "appearance": "Appearance",
-    "transcription": "Transcription"
+    "transcription": "Transcription",
+    "chats": "Chats"
   },
   "profile": {
     "about": "About",
@@ -369,13 +370,25 @@
       "photoRemoved": "{{actor}} removed the group photo",
       "settings": "{{actor}} changed the group settings",
       "admin": "{{actor}} made {{targets}} a group admin",
-      "notAdmin": "{{actor}} dismissed {{targets}} as group admin"
+      "notAdmin": "{{actor}} dismissed {{targets}} as group admin",
+      "timer": "{{actor}} turned on disappearing messages: {{value}}",
+      "timerOff": "{{actor}} turned off disappearing messages"
     },
     "memberTyping": "{{name}} is typing…",
     "memberRecording": "{{name}} is recording audio…",
     "savedMessagesHint": "Messages only for you",
     "formerMember": "Former member",
-    "youObject": "you"
+    "youObject": "you",
+    "timer": {
+      "title": "Disappearing messages",
+      "hint": "Applies to messages sent from now on, for everyone in the chat.",
+      "off": "Off",
+      "86400": "24 hours",
+      "604800": "7 days",
+      "7776000": "90 days",
+      "defaultTitle": "Default disappearing message timer",
+      "defaultDescription": "Chats and groups you start begin with this timer."
+    }
   },
   "moderation": {
     "report": "Report",

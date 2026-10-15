@@ -24,8 +24,8 @@ async function send(page: Page, text: string) {
   ).toBeVisible()
 }
 
-/** Fase 4: editar (MS-05), apagar para todos e para mim (MS-06), entre dois navegadores. */
-test("editar, apagar para todos e apagar para mim", async ({
+/** Fase 4: editar (MS-05), apagar para todos e para mim (MS-06) e timer de temporárias (MS-07), entre dois navegadores. */
+test("editar, apagar para todos, apagar para mim e mensagens temporárias", async ({
   browser,
   pageErrors,
 }) => {
@@ -86,6 +86,23 @@ test("editar, apagar para todos e apagar para mim", async ({
     hana.page.getByRole("main").getByText("Esta mensagem foi apagada")
   ).toBeVisible()
   await expect(row(hana.page, "tudo bem?")).toHaveCount(0)
+
+  // Mensagens temporárias (MS-07): o timer vira aviso para os dois e vale para as próximas mensagens.
+  await gil.page.getByRole("button", { name: /Dados do contato/ }).click()
+  await gil.page
+    .getByRole("combobox", { name: "Mensagens temporárias" })
+    .click()
+  await gil.page.getByRole("option", { name: "24 horas" }).click()
+  await expect(
+    hana.page
+      .getByRole("main")
+      .getByText("Gil Edita ativou as mensagens temporárias: 24 horas")
+  ).toBeVisible()
+  await expect(
+    gil.page
+      .getByRole("main")
+      .getByText("Você ativou as mensagens temporárias: 24 horas")
+  ).toBeVisible()
 
   expect(pageErrors).toEqual([])
   await gil.context.close()

@@ -1,5 +1,8 @@
 # Rede local com HTTPS próprio (ADR 0007). Pré-requisito: java -jar papinho.jar pki init
 # A porta HTTPS serve SPA, API e WebSocket; a porta HTTP só serve /setup/** e redireciona o resto.
+# Sem variáveis, escuta em 8443/8080 e anuncia essas portas nos links. Para endereços sem porta
+# (http://papinho.lan/setup), redirecione 80→8080 e 443→8443 no host e defina
+# PAPINHO_PUBLIC_HTTP_PORT=80 e PAPINHO_PUBLIC_HTTPS_PORT=443 (veja o README).
 server:
   port: ${PAPINHO_HTTPS_PORT:8443}
   ssl:
@@ -16,3 +19,5 @@ spring:
 app:
   pki:
     enabled: true
+    public-http-port: ${PAPINHO_PUBLIC_HTTP_PORT:${PAPINHO_HTTP_PORT:8080}}
+    public-https-port: ${PAPINHO_PUBLIC_HTTPS_PORT:${PAPINHO_HTTPS_PORT:8443}}

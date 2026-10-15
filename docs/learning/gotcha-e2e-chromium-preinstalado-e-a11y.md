@@ -16,5 +16,14 @@ date: 2026-10-15
 - O Base UI põe `aria-hidden` no fechar dos toasts empilhados, que continuava focável (axe
   `aria-hidden-focus`): o `ToastClose` tira da ordem de foco quando há `aria-hidden`.
 
+- O axe rodando com um diálogo ainda em fade-in mede o contraste com opacidade parcial (falso 2,9:1): o
+  `expectNoSeriousA11yViolations` espera, até 2 s, as animações finitas em andamento.
+- Texto decorativo com `aria-hidden` ainda entra no `color-contrast` do axe; marca d'água sobre mídia vai em
+  SVG (`<pattern>` com `<text>`), que o axe não mede.
+- O vermelho `destructive` padrão (oklch 0.577) dá 3,8:1 no botão destrutivo sobre o próprio fundo tingido;
+  foi para 0.5.
+- `twoFriends(tag)` cadastra `gil.<tag>`/`hana.<tag>`: cada spec precisa de um sufixo próprio na tag, senão a
+  suíte completa falha no cadastro (rodando um spec sozinho passa).
+
 **Evidência:** falhas do axe e dos seletores em `media.spec.ts`, `audio.spec.ts` e `moderation.spec.ts`;
 29/29 verdes depois, 2026-10-15.

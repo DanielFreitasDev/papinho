@@ -68,10 +68,19 @@ cd frontend && pnpm exec playwright install chromium && PAPINHO_E2E_URL=http://l
 | `PAPINHO_STORAGE_DIR` / `PAPINHO_UPLOAD_DIR` | dentro de `PAPINHO_DATA_DIR` | troca cada um desses diretórios |
 | `PAPINHO_CLAMAV_ENABLED` | `false` | analisa cada arquivo com o ClamAV (`PAPINHO_CLAMAV_HOST`, `PAPINHO_CLAMAV_PORT`, padrão `localhost:3310`) |
 | `PAPINHO_LINK_PREVIEW` | `true` | prévia de links buscada pelo servidor (desligue se a instância não deve acessar a internet) |
+| `PAPINHO_GIFS_PROVIDER` / `PAPINHO_GIFS_API_KEY` | `none` / vazio | GIFs pelo Tenor (`tenor` com a chave da API); a busca e os GIFs passam pelo servidor (ADR 0011) |
 
 A cota por usuário (padrão 5 GB), as janelas de edição e exclusão e os provedores de transcrição ficam no
 painel do admin. Arquivos têm limite de 1 GB e sobem por upload retomável (tus): atrás de um proxy, libere
 `PATCH` em `/api/v1/uploads/**` com corpo de até 50 MB por requisição.
+
+### Mensagens
+
+Grupos (com admins, permissões e convite por link ou QR Code), listas de transmissão, mensagens salvas,
+enquetes, figurinhas, mensagens temporárias, agendadas e de visualização única. Os jobs agendados (mensagens
+temporárias, agendadas e limpeza da visualização única) usam o ShedLock: com mais de uma instância apontando para o
+mesmo banco, só uma roda cada job. Figurinhas são WebP de até 1 MB enviados por qualquer pessoa da instância e
+ficam disponíveis para todos.
 
 ### Transcrição de áudios
 

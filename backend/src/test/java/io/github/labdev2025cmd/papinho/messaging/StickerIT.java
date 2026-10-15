@@ -91,4 +91,11 @@ class StickerIT {
         assertThat(ana.json(ana.get("/api/v1/stickers/packs"))).isEmpty();
         assertThat(List.of(pack)).isNotEmpty();
     }
+
+    @Test
+    @DisplayName("GIFs ficam desligados por padrão: nada sai do servidor (MS-10)")
+    void shouldKeepGifsDisabledByDefault() {
+        assertThat(ana.json(ana.get("/api/v1/gifs/status")).get("enabled").asBoolean()).isFalse();
+        assertThat(ana.get("/api/v1/gifs?q=gato")).hasStatus(503);
+    }
 }

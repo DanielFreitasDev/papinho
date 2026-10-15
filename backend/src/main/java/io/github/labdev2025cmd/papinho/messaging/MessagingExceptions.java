@@ -107,4 +107,18 @@ final class MessagingExceptions {
             super(HttpStatus.FORBIDDEN, "broadcast-expired", "This broadcast list has expired");
         }
     }
+
+    /** GIFs desligados na instância (MS-10). */
+    static class GifsDisabledException extends ApiException {
+        GifsDisabledException() {
+            super(HttpStatus.SERVICE_UNAVAILABLE, "gifs-disabled", "GIFs are disabled on this instance");
+        }
+    }
+
+    /** O provedor de GIF falhou ou mandou algo fora dos limites. */
+    static class GifUnavailableException extends ApiException {
+        GifUnavailableException() {
+            super(HttpStatus.BAD_GATEWAY, "gif-unavailable", "The GIF provider is unavailable");
+        }
+    }
 }

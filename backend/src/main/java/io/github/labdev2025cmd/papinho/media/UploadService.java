@@ -106,6 +106,19 @@ public class UploadService {
         return new UploadStatus(upload.id(), 0, upload.length(), upload.expiresAt(), null);
     }
 
+    /**
+     * Guarda um arquivo que o servidor buscou em nome do usuário (GIF do provedor, MS-10), pelo mesmo caminho do
+     * upload: limite, cota, tipo pelo conteúdo, antivírus e limpeza de metadados.
+     */
+    public MediaView ingest(UUID owner, String filename, @Nullable String declaredType, byte[] content)
+            throws IOException {
+        UploadStatus status = create(owner, content.length, filename, declaredType);
+        MediaUpload upload = require(owner, status.id());
+        Path file = staged(status.id());
+        Files.write(file, content);
+        return complete(upload, file);
+    }
+
     /** Deslocamento atual, para o cliente retomar ({@code HEAD}). */
     public UploadStatus status(UUID owner, UUID id) throws IOException {
         MediaUpload upload = require(owner, id);

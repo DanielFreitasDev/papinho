@@ -33,6 +33,7 @@ public class RateLimiter {
         public static final Policy SENSITIVE_BY_USER = new Policy("sensitive-user", 10, Duration.ofMinutes(15));
         public static final Policy REPORT_BY_USER = new Policy("report-user", 20, Duration.ofHours(1));
         /** Consultar ou usar links de convite de grupo (GR-02): impede adivinhar códigos. */
+        public static final Policy GIF_BY_USER = new Policy("gif-user", 120, Duration.ofHours(1));
         public static final Policy GROUP_INVITE_BY_USER = new Policy("group-invite-user", 60, Duration.ofHours(1));
         public static final Policy UPLOAD_BY_USER = new Policy("upload-user", 200, Duration.ofHours(1));
         public static final Policy LINK_PREVIEW_BY_USER = new Policy("link-preview-user", 120, Duration.ofHours(1));

@@ -109,6 +109,10 @@ app:
       enabled: ${PAPINHO_CLAMAV_ENABLED:false}
       host: ${PAPINHO_CLAMAV_HOST:localhost}
       port: ${PAPINHO_CLAMAV_PORT:3310}
+  # GIFs por provedor externo (MS-10): desligado por padrão; "tenor" com PAPINHO_GIFS_API_KEY liga.
+  gifs:
+    provider: ${PAPINHO_GIFS_PROVIDER:none}
+    api-key: ${PAPINHO_GIFS_API_KEY:}
   link-preview:
     enabled: ${PAPINHO_LINK_PREVIEW:true}
     cache-ttl: 24h

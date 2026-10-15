@@ -1,11 +1,12 @@
 # STATUS — progresso do Papinho
 
 Fonte de verdade do progresso (PROMPT.md §3.1). `feito` exige evidência **executada**; código sem
-verificação é `em andamento`. Última auditoria: 2026-10-15 (passada 1, fim da Fase 1).
+verificação é `em andamento`. Última auditoria: 2026-10-15 (passada 1, Fase 2).
 
 Ambiente da passada 1: sandbox de nuvem com JDK 25.0.4 (Temurin, baixado), Node 24.22.0, pnpm 10.34.6,
 Docker 29 (daemon iniciado manualmente), Chromium do Playwright em `/opt/pw-browsers`, sem aparelhos reais.
-A passada 1 cobriu a Fase 0 e a Fase 1 (exceto o que depende de mensagens: CT-02, CT-04, e-mail de ID-05).
+A passada 1 cobriu as fases 0 e 1 e a maior parte da Fase 2 (conversas individuais em tempo real). Pendentes da
+Fase 1: CT-04 (denúncia) e o e-mail opcional de ID-05.
 
 ## Fase 0 — Fundação
 
@@ -39,23 +40,23 @@ A passada 1 cobriu a Fase 0 e a Fase 1 (exceto o que depende de mensagens: CT-02
 | ID-07 | Modos de cadastro; convites por link/QR com expiração e usos | feito | `IdentityIT` (aberto/convite/fechado; revogado, esgotado e vencido recusados; QR em SVG); e2e convite usado em outro contexto | |
 | ID-08 | Primeiro usuário vira admin | feito | `IdentityIT.shouldMakeFirstUserAdmin`; e2e `first-admin.setup.ts` | |
 | CT-01 | Adicionar contato por @usuario, link ou QR; apelido local | feito | `ContactIT` (por @usuario com apelido; link próprio e cartão); e2e adiciona por @usuario em maiúsculas e pelo link `/add/@usuario` | QR lido por câmera real não testado |
-| CT-02 | Solicitações de mensagem (aceitar, recusar, bloquear) | pendente | | depende das conversas (Fase 2) |
-| CT-03 | Bloquear e desbloquear | em andamento | `ContactIT` (bloqueado não vê foto/recado; desbloquear devolve) | UI pronta (lista e Configurações > Bloqueados) sem e2e; efeito em mensagens vem com a Fase 2 |
-| CT-04 | Denunciar usuário com as 5 últimas mensagens | pendente | | depende das mensagens (Fase 2) |
+| CT-02 | Solicitações de mensagem (aceitar, recusar, bloquear) | feito | `MessagingIT.shouldHandleMessageRequests` (vai para solicitações, leitura escondida até aceitar, recusar esconde); `RealtimeIT` presença só após aceitar; e2e aceitar pela UI | recusar e bloquear pela UI sem e2e (cobertos no servidor) |
+| CT-03 | Bloquear e desbloquear | em andamento | `ContactIT` (foto/recado); `MessagingIT.shouldEnforceBlocksAndMembership` (envio recusado nos dois sentidos); presença filtrada por bloqueio | UI de bloquear sem e2e; "não pode adicionar a grupos" vem com GR-01 |
+| CT-04 | Denunciar usuário com as 5 últimas mensagens | pendente | | as mensagens já existem; falta a fila de moderação no admin (próxima passada) |
 
 ## Fase 2 — Conversas individuais em tempo real
 
 | ID | Descrição curta | Status | Evidência | Observações |
 |---|---|---|---|---|
-| MS-01 | Formatação do WhatsApp, sanitizada | pendente | | |
-| MS-02 | Status por mensagem e "Dados da mensagem" | pendente | | |
-| MS-03 | "digitando…" e "gravando áudio…" | pendente | | |
-| MS-04 | Responder, encaminhar, reagir, mencionar, fixar, favoritar, selecionar | pendente | | |
-| MS-14 | Marcador de não lidas, ir para a primeira, marcar como não lida | pendente | | |
-| RT-01 | `seq` monotônico por conversa e `afterSeq` | pendente | | |
-| RT-02 | `clientMessageId` idempotente | pendente | | |
-| RT-03 | Presença com heartbeat; aba em segundo plano não conta | pendente | | |
-| UI-01 | Duas colunas no desktop, pilha no celular | em andamento | shell `app-shell.tsx`; e2e roda os fluxos em desktop e Pixel 7 | falta a coluna da conversa (Fase 2) |
+| MS-01 | Formatação do WhatsApp, sanitizada | feito | `parse.test.ts` (10: marcadores, limites de palavra, mono literal, HTML vira texto, blocos, listas, citação, spoiler); e2e `chat.spec.ts` (negrito, spoiler que revela, mono) | render só monta elementos React; destaque de código por lowlight carregado sob demanda |
+| MS-02 | Status por mensagem e "Dados da mensagem" | feito | `MessagingIT.shouldTrackReceiptsAndUnread` (ponteiros, horários de entrega/leitura, só o autor vê); e2e enviada → lida e diálogo Dados da mensagem | leitura escondida em solicitação (CT-02); configurações de PV-06 na Fase 5 |
+| MS-03 | "digitando…" e "gravando áudio…" | em andamento | `RealtimeIT.shouldNotifyMessagesReceiptsAndTyping`; e2e mostra "digitando…" no outro navegador | "gravando áudio…" já é aceito e exibido, mas só será disparado pela gravação (AU-01, Fase 3) |
+| MS-04 | Responder, encaminhar, reagir, mencionar, fixar, favoritar, selecionar | em andamento | `MessagingIT.shouldReactPinStarAndForward` (até 3 fixadas, selo após 5 saltos, favorita privada); e2e responder com salto, reagir, fixar, favoritar, selecionar duas e encaminhar | menção @usuario é reconhecida e vira link (unit); @todos depende de grupos (Fase 4) |
+| MS-14 | Marcador de não lidas, ir para a primeira, marcar como não lida | feito | `MessagingIT.shouldTrackReceiptsAndUnread`; e2e contador na lista, marcador "2 mensagens não lidas", botão leva à primeira, marcar como não lida | |
+| RT-01 | `seq` monotônico por conversa e `afterSeq` | feito | `MessagingIT.shouldSyncBySeqAndDeduplicate`, `shouldPageHistoryBackwards`; `cache.test.ts` (6: cursor, merge, janela, pendentes); e2e reação e fixar chegam por afterSeq | seq atribuído com trava de linha (`SequenceAllocator`); reconexão real com rede caída não testada em e2e |
+| RT-02 | `clientMessageId` idempotente | feito | `MessagingIT.shouldSyncBySeqAndDeduplicate` (reenvio devolve 200 com a mesma mensagem; outro chat dá 409); `cache.test.ts` pendente some ao confirmar | o botão "tentar de novo" reenvia com o mesmo id |
+| RT-03 | Presença com heartbeat; aba em segundo plano não conta | feito | `RealtimeIT.shouldTrackPresence` (aba oculta não conta, offline com visto por último, terceiro recebe 404); e2e "online" no cabeçalho | por enquanto só entre conversas aceitas pelos dois lados; PV-04/PV-05 na Fase 5 |
+| UI-01 | Duas colunas no desktop, pilha no celular | em andamento | lista + conversa no desktop e rota própria `/c/$id` com voltar no celular; e2e de conversa nos dois projetos | falta o painel de detalhes opcional à direita |
 
 ## Fase 3 — Mídia, áudio e links
 
@@ -129,21 +130,21 @@ A passada 1 cobriu a Fase 0 e a Fase 1 (exceto o que depende de mensagens: CT-02
 | AR-01 | WCAG 2.2 AA; RESPONSIVENESS.md aplicado | em andamento | e2e com axe nas telas existentes | revisar a cada tela nova |
 | AR-02 | 320 px, alvos de 44 px, safe areas, teclado virtual | em andamento | e2e 320 px em `/`, `/login`, `/register` e `/setup`; alvos de 44 px em `pointer: coarse` (`index.css`) | teclado virtual só em aparelho real |
 | AR-03 | Fluxo só com teclado; axe sem críticas/sérias | em andamento | axe sem críticas/sérias em `/setup`, cadastro, admin com contatos e segurança | fluxo só com teclado não automatizado |
-| QA-03 | E2E dos fluxos críticos | em andamento | 23 testes verdes (desktop e celular): primeiro admin, convite, contatos, TOTP, passkey, perfil, sessões, setup | faltam mensagens, mídia, grupos, offline |
+| QA-03 | E2E dos fluxos críticos | em andamento | 25 testes verdes (desktop e celular): primeiro admin, convite, contatos, TOTP, passkey, perfil, sessões, setup e conversa em tempo real entre dois navegadores | faltam mídia, grupos, offline |
 
 ## Requisitos transversais
 
 | ID | Descrição curta | Status | Evidência | Observações |
 |---|---|---|---|---|
-| SG-01 | IDOR, Problem Details, sem segredos em logs | em andamento | Problem Details em 401/403/400/500 (`SecurityIT`) | IDOR a cada endpoint novo |
+| SG-01 | IDOR, Problem Details, sem segredos em logs | em andamento | Problem Details em 401/403/400/500 (`SecurityIT`); IDOR de conversa, mensagem, reação e encaminhar (`MessagingIT`); WebSocket só assina a própria fila (`WebSocketSecurityConfig`) | IDOR a cada endpoint novo |
 | SG-02 | CSP estrita, cabeçalhos, HSTS em produção | feito | `SecurityIT.shouldServeSpaShellWithSecurityHeaders`; e2e falha em qualquer violação de CSP | HSTS por `PAPINHO_HSTS=true` |
-| SG-03 | Rate limit em login, convites, desbloqueio, envio, upload | em andamento | `RateLimiter` (Bucket4j) em login por IP e conta, cadastro, recuperação, convites, ações sensíveis; `IdentityIT` 429 com Retry-After | faltam envio, upload e desbloqueio (fases 2, 3 e 5) |
+| SG-03 | Rate limit em login, convites, desbloqueio, envio, upload | em andamento | `RateLimiter` (Bucket4j) em login por IP e conta, cadastro, recuperação, convites, ações sensíveis; `IdentityIT` 429 com Retry-After; "digitando" limitado por frequência | falta limite de envio de mensagens, upload e desbloqueio; `rate-limit-multiplier` só para e2e |
 | UI-02 | Temas, papel de parede, fonte, densidade | em andamento | Configurações > Aparência (claro/escuro/sistema) | papel de parede, fonte e densidade pendentes |
 | UI-03 | Estados carregando, vazio, erro, offline, sem permissão | em andamento | contatos com carregando/vazio/erro; não encontrado (e2e `smoke.spec.ts`) | offline vem com NT-05 |
-| UI-04 | Lista de mensagens performática | pendente | | |
+| UI-04 | Lista de mensagens performática | em andamento | `message-scroller` do shadcn com `content-visibility`, páginas de 50 e paginação para trás (`beforeSeq`) | sem medição com milhares de mensagens |
 | IN-01 | Textos externalizados; pt-BR completo, pronto para en | em andamento | `i18n.test.ts` garante as mesmas chaves em pt-BR e en; backend com `messages*.properties` | |
-| QA-01 | Backend: unitários, slice, integração, ArchUnit, Modulith, `./mvnw verify` | em andamento | `./mvnw -B verify` na raiz: 21 unitários + 42 de integração verdes; job backend do CI verde | cresce a cada fase |
-| QA-02 | Frontend: lint, typecheck, Vitest | feito | `pnpm lint`, `pnpm typecheck`, `pnpm format:check`, `pnpm test` (12) locais e no job frontend do CI | |
+| QA-01 | Backend: unitários, slice, integração, ArchUnit, Modulith, `./mvnw verify` | em andamento | `./mvnw -B -pl backend verify`: 21 unitários + 52 de integração verdes (inclui `MessagingIT` 6 e `RealtimeIT` 4 com servidor real); CI verde | cresce a cada fase |
+| QA-02 | Frontend: lint, typecheck, Vitest | feito | `pnpm lint`, `pnpm typecheck`, `pnpm format:check`, `pnpm test` (28) locais e no job frontend do CI | |
 
 ## Dúvidas registradas para o dono
 

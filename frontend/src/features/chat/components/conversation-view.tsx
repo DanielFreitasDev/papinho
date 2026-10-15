@@ -484,11 +484,6 @@ function LoadedConversation({
           aria-label={t("chat.messages")}
         />
       </MessageScroller>
-      {unread && display.some((message) => message.seq === unread.seq) ? (
-        <div className="sr-only" aria-live="polite">
-          {t("chat.unreadMarker", { count: unread.count })}
-        </div>
-      ) : null}
       {selection !== null ? (
         <div className="flex items-center gap-2 border-t bg-background px-3 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
           <Button

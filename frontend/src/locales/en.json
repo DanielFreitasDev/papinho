@@ -322,6 +322,7 @@
     "cannotSend": "You can't send messages in this chat.",
     "notFound": "Chat not found",
     "goToOriginal": "Go to replied message",
-    "deletedAccount": "Account disabled"
+    "deletedAccount": "Account disabled",
+    "markedUnread": "Marked as unread"
   }
 }

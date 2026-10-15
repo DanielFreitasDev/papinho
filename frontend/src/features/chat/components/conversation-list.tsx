@@ -211,16 +211,16 @@ function ConversationItem({
               {preview}
             </span>
             {conversation.unreadCount > 0 ? (
-              <Badge
-                className="min-w-5 justify-center"
-                aria-label={t("chat.unreadCount", {
-                  count: conversation.unreadCount,
-                })}
-              >
-                {conversation.unreadCount}
+              <Badge className="min-w-5 justify-center">
+                <span aria-hidden="true">{conversation.unreadCount}</span>
+                <span className="sr-only">
+                  {t("chat.unreadCount", { count: conversation.unreadCount })}
+                </span>
               </Badge>
             ) : conversation.markedUnread ? (
-              <Badge className="size-3 p-0" aria-label={t("chat.markUnread")} />
+              <Badge className="size-3 p-0">
+                <span className="sr-only">{t("chat.markedUnread")}</span>
+              </Badge>
             ) : null}
           </span>
         </span>

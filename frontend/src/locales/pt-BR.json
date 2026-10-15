@@ -322,6 +322,7 @@
     "cannotSend": "Não é possível enviar mensagens nesta conversa.",
     "notFound": "Conversa não encontrada",
     "goToOriginal": "Ir para a mensagem respondida",
-    "deletedAccount": "Conta desativada"
+    "deletedAccount": "Conta desativada",
+    "markedUnread": "Marcada como não lida"
   }
 }

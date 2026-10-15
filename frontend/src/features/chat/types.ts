@@ -88,6 +88,7 @@ export type MessagePreview = {
   /** Apagada para todos (MS-06). */
   deleted: boolean
   kind: MessageKind
+  sticker: boolean
 }
 
 /** Arquivo anexado (MD-01); conteúdo em /api/v1/media/{id}/content. */
@@ -192,6 +193,8 @@ export type Message = {
   viewOnce: ViewOnce | null
   /** Enviada sem notificação (MS-11). */
   silent: boolean
+  /** Figurinha (MS-10). */
+  sticker: { id: string; mediaId: string } | null
 }
 
 export type ViewOnce = {

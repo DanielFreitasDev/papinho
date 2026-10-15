@@ -34,6 +34,7 @@ function message(seq: number, changeSeq = seq, body = `m${seq}`): Message {
     poll: null,
     viewOnce: null,
     silent: false,
+    sticker: null,
   }
 }
 

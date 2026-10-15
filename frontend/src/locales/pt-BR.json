@@ -676,6 +676,31 @@
       "7": "Objetos",
       "8": "Símbolos",
       "9": "Bandeiras"
-    }
+    },
+    "tab": "Emojis"
+  },
+  "sticker": {
+    "tab": "Figurinhas",
+    "label": "Figurinha",
+    "send": "Enviar figurinha {{emoji}}",
+    "favorites": "Favoritas",
+    "emptyPack": "Pacote vazio",
+    "empty": "Ninguém criou pacotes de figurinhas ainda.",
+    "manage": "Gerenciar figurinhas",
+    "manageDescription": "Os pacotes valem para todos desta instância. Envie WebP (estáticos ou animados) de até 1 MB.",
+    "packName": "Nome do pacote",
+    "createPack": "Criar pacote",
+    "add": "Adicionar",
+    "removePack": "Apagar o pacote {{name}}",
+    "favorite": "Favoritar figurinha",
+    "unfavorite": "Desfavoritar figurinha",
+    "remove": "Tirar figurinha"
+  },
+  "gif": {
+    "tab": "GIFs",
+    "search": "Buscar GIF",
+    "label": "GIF",
+    "unavailable": "Não foi possível buscar GIFs agora.",
+    "poweredBy": "Busca pelo provedor configurado no servidor"
   }
 }

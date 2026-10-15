@@ -38,7 +38,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Message, MessageContent } from "@/components/ui/message"
 import { toast } from "@/components/ui/toast"
-import type { Track } from "@/features/media"
+import { mediaUrl, type Track } from "@/features/media"
 import { formatTime } from "@/lib/format"
 import { LinkPreviewCard } from "@/features/linkpreview"
 import { MessageText } from "../format/message-text"
@@ -88,6 +88,7 @@ export type DisplayMessage = {
   poll: Poll | null
   viewOnce: ViewOnce | null
   silent: boolean
+  sticker: { id: string; mediaId: string } | null
 }
 
 export type MessageAction =
@@ -205,7 +206,13 @@ export function MessageRow({
                   : t("chat.forwarded")}
               </span>
             ) : null}
-            {message.viewOnce ? (
+            {message.sticker ? (
+              <img
+                src={mediaUrl(message.sticker.mediaId)}
+                alt={t("sticker.label")}
+                className="size-32 object-contain"
+              />
+            ) : message.viewOnce ? (
               <ViewOnceBubble
                 viewOnce={message.viewOnce}
                 mine={mine}

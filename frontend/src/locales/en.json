@@ -676,6 +676,31 @@
       "7": "Objects",
       "8": "Symbols",
       "9": "Flags"
-    }
+    },
+    "tab": "Emojis"
+  },
+  "sticker": {
+    "tab": "Stickers",
+    "label": "Sticker",
+    "send": "Send sticker {{emoji}}",
+    "favorites": "Favorites",
+    "emptyPack": "Empty pack",
+    "empty": "No sticker packs yet.",
+    "manage": "Manage stickers",
+    "manageDescription": "Packs are shared with everyone on this instance. Upload WebP files (static or animated) up to 1 MB.",
+    "packName": "Pack name",
+    "createPack": "Create pack",
+    "add": "Add",
+    "removePack": "Delete pack {{name}}",
+    "favorite": "Favorite sticker",
+    "unfavorite": "Unfavorite sticker",
+    "remove": "Remove sticker"
+  },
+  "gif": {
+    "tab": "GIFs",
+    "search": "Search GIF",
+    "label": "GIF",
+    "unavailable": "Could not search GIFs right now.",
+    "poweredBy": "Search through the server's provider"
   }
 }

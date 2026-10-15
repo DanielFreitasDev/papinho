@@ -35,6 +35,7 @@ import {
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
 import { EmojiPicker } from "@/features/emoji"
+import { attachGif } from "@/features/sticker"
 import { Skeleton } from "@/components/ui/skeleton"
 import { toast } from "@/components/ui/toast"
 import { authQueries } from "@/features/auth"
@@ -913,6 +914,48 @@ function LoadedConversation({
             }
             draft={conversation.draft}
             onSchedule={setScheduling}
+            onSticker={(stickerId) => {
+              send.mutate(
+                {
+                  clientMessageId: crypto.randomUUID(),
+                  body: "",
+                  replyTo,
+                  stickerId,
+                },
+                {
+                  onError: (error) =>
+                    toast.add({
+                      title: errorMessage(error, t("common.genericError")),
+                      type: "error",
+                    }),
+                }
+              )
+              setReplyTo(null)
+            }}
+            onGif={async (gif) => {
+              try {
+                const media = await attachGif(gif.id)
+                await sendWithAttachment({
+                  clientMessageId: crypto.randomUUID(),
+                  body: "",
+                  replyTo,
+                  attachmentId: media.id,
+                  attachment: {
+                    kind: "IMAGE",
+                    filename: "gif.gif",
+                    size: media.size,
+                    contentType: "image/gif",
+                    previewUrl: `/api/v1/gifs/${gif.id}/preview`,
+                  },
+                })
+                setReplyTo(null)
+              } catch (error) {
+                toast.add({
+                  title: errorMessage(error, t("common.genericError")),
+                  type: "error",
+                })
+              }
+            }}
             onFiles={chooseFiles}
             onVoice={(file) => sendFiles([file], "")}
             disabled={!canWrite}
@@ -1084,6 +1127,7 @@ function toDisplay(
     poll: message.poll,
     viewOnce: message.viewOnce,
     silent: message.silent,
+    sticker: message.sticker,
   }))
   const pending: DisplayMessage[] = cache.pending.map((message) => ({
     key: message.clientMessageId,
@@ -1107,6 +1151,7 @@ function toDisplay(
     poll: null,
     viewOnce: null,
     silent: false,
+    sticker: null,
   }))
   return [...confirmed, ...pending]
 }

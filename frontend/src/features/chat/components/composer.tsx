@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react"
+import { useQuery } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
 import {
   BellOffIcon,
@@ -31,7 +32,15 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { EmojiPicker } from "@/features/emoji"
+import {
+  GifPanel,
+  StickerManager,
+  StickerPanel,
+  stickerQueries,
+  type GifResult,
+} from "@/features/sticker"
 import { realtime } from "@/lib/realtime"
 import { saveDraft } from "../api"
 import { plainText } from "../format/parse"
@@ -62,6 +71,8 @@ export function Composer({
   onPoll,
   draft = null,
   onSchedule,
+  onSticker,
+  onGif,
 }: {
   conversationId: string
   replyTo: ReplyPreview | null
@@ -85,6 +96,9 @@ export function Composer({
   draft?: string | null
   /** Agendar o texto atual (MS-11). */
   onSchedule?: (body: string) => void
+  /** Enviar figurinha ou GIF (MS-10). */
+  onSticker?: (stickerId: string) => void
+  onGif?: (gif: GifResult) => void
 }) {
   const { t } = useTranslation()
   const [value, setValue] = useState(draft ?? "")
@@ -108,6 +122,11 @@ export function Composer({
   const fileInput = useRef<HTMLInputElement>(null)
   const [recording, setRecording] = useState(false)
   const [emojiOpen, setEmojiOpen] = useState(false)
+  const [managingStickers, setManagingStickers] = useState(false)
+  const gifStatus = useQuery({
+    ...stickerQueries.gifStatus(),
+    enabled: emojiOpen && onGif !== undefined,
+  })
   const lastTyping = useRef(0)
 
   useEffect(() => {
@@ -286,7 +305,46 @@ export function Composer({
                   <SmileIcon />
                 </PopoverTrigger>
                 <PopoverContent side="top" align="start" className="w-auto">
-                  <EmojiPicker onSelect={insertEmoji} />
+                  <Tabs defaultValue="emoji">
+                    <TabsList>
+                      <TabsTrigger value="emoji">{t("emoji.tab")}</TabsTrigger>
+                      {onSticker ? (
+                        <TabsTrigger value="stickers">
+                          {t("sticker.tab")}
+                        </TabsTrigger>
+                      ) : null}
+                      {onGif && gifStatus.data?.enabled ? (
+                        <TabsTrigger value="gifs">{t("gif.tab")}</TabsTrigger>
+                      ) : null}
+                    </TabsList>
+                    <TabsContent value="emoji">
+                      <EmojiPicker onSelect={insertEmoji} />
+                    </TabsContent>
+                    {onSticker ? (
+                      <TabsContent value="stickers">
+                        <StickerPanel
+                          onSelect={(sticker) => {
+                            setEmojiOpen(false)
+                            onSticker(sticker.id)
+                          }}
+                          onManage={() => {
+                            setEmojiOpen(false)
+                            setManagingStickers(true)
+                          }}
+                        />
+                      </TabsContent>
+                    ) : null}
+                    {onGif && gifStatus.data?.enabled ? (
+                      <TabsContent value="gifs">
+                        <GifPanel
+                          onSelect={(gif) => {
+                            setEmojiOpen(false)
+                            onGif(gif)
+                          }}
+                        />
+                      </TabsContent>
+                    ) : null}
+                  </Tabs>
                 </PopoverContent>
               </Popover>
               {onPoll ? (
@@ -413,6 +471,10 @@ export function Composer({
           </div>
         ) : null}
       </div>
+      <StickerManager
+        open={managingStickers}
+        onOpenChange={setManagingStickers}
+      />
     </form>
   )
 }

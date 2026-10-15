@@ -238,6 +238,8 @@ export function useSendMessage(conversationId: string) {
       attachment?: LocalAttachment | null
       /** Sem notificação para quem recebe (MS-11). */
       silent?: boolean
+      /** Figurinha (MS-10). */
+      stickerId?: string | null
     }) =>
       apiFetch<Message>(`/api/v1/conversations/${conversationId}/messages`, {
         method: "POST",
@@ -248,6 +250,7 @@ export function useSendMessage(conversationId: string) {
           attachmentId: input.attachmentId ?? null,
           viewOnce: input.attachment?.viewOnce ?? false,
           silent: input.silent ?? false,
+          stickerId: input.stickerId ?? null,
         },
       }),
     onMutate: (input) => {

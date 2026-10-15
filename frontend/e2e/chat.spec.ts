@@ -36,6 +36,8 @@ test("duas pessoas conversam em tempo real, da solicitação à leitura", async 
   browser,
   pageErrors,
 }) => {
+  // Fluxo longo com dois navegadores; sob carga paralela passa dos 30 s padrão.
+  test.slow()
   const suffix = test.info().project.name.startsWith("mobile") ? "m" : "d"
   const ana = `ana.${RUN}${suffix}`
   const bia = `bia.${RUN}${suffix}`
@@ -124,8 +126,60 @@ test("duas pessoas conversam em tempo real, da solicitação à leitura", async 
     pageB.getByRole("button", { name: /Mensagens fixadas/ })
   ).toBeVisible()
 
+  // Dados da mensagem: entregue e lida, com horário (MS-02).
+  await openActions(pageA, "Bia!")
+  await pageA.getByRole("menuitem", { name: "Dados da mensagem" }).click()
+  const info = pageA.getByRole("dialog", { name: "Dados da mensagem" })
+  await expect(info.getByText("Bia Conversa")).toBeVisible()
+  await expect(info.getByText("Lida")).toBeVisible()
+  await expect(info.getByText("Ainda não")).toHaveCount(0)
+  await pageA.keyboard.press("Escape")
+
+  // Favoritar (MS-04) aparece em Mensagens favoritas.
+  await openActions(pageA, "Tudo ótimo")
+  await pageA.getByRole("menuitem", { name: "Favoritar" }).click()
+  await expect(
+    row(pageA, "Tudo ótimo").getByRole("img", { name: "Favoritada" })
+  ).toBeVisible()
+
+  // Selecionar várias e encaminhar: chegam para a Bia com o selo.
+  await openActions(pageA, "Bia!")
+  await pageA.getByRole("menuitem", { name: "Selecionar" }).click()
+  await expect(pageA.getByText("1 selecionada")).toBeVisible()
+  await row(pageA, "Tudo ótimo").getByRole("checkbox").check()
+  await expect(pageA.getByText("2 selecionadas")).toBeVisible()
+  await pageA.getByRole("button", { name: "Encaminhar" }).click()
+  const forward = pageA.getByRole("dialog", { name: "Encaminhar para…" })
+  await forward.getByRole("checkbox").first().check()
+  await forward.getByRole("button", { name: "Encaminhar" }).click()
+  await expect(forward).toBeHidden()
+  await expect(pageB.getByText("Encaminhada", { exact: true })).toHaveCount(2)
+
   await expectNoSeriousA11yViolations(pageA)
   await expectNoHorizontalScroll(pageA)
+
+  // Não lidas (MS-14): com a Bia fora da conversa, duas mensagens novas viram contador, marcador e atalho.
+  await pageB.goto("/")
+  await send(pageA, "Primeira nova")
+  await send(pageA, "Segunda nova")
+  await expect(pageB.getByText("2 mensagens não lidas")).toBeVisible()
+  await pageB.getByRole("link", { name: /Ana Conversa/ }).click()
+  await expect(
+    pageB.getByRole("main").getByText("2 mensagens não lidas")
+  ).toBeVisible()
+  await pageB
+    .getByRole("button", { name: "Ir para a primeira não lida" })
+    .click()
+  await expect(row(pageB, "Primeira nova")).toBeInViewport()
+  await pageB.goto("/")
+  await pageB
+    .getByRole("button", { name: "Ações da conversa: Ana Conversa" })
+    .click()
+  await pageB.getByRole("menuitem", { name: "Marcar como não lida" }).click()
+  await expect(pageB.getByText("Marcada como não lida")).toBeAttached()
+
+  await pageA.goto("/starred")
+  await expect(pageA.getByText("Tudo ótimo com código")).toBeVisible()
   expect(pageErrors).toEqual([])
   await contextA.close()
   await contextB.close()

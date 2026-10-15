@@ -62,7 +62,7 @@ test("perfil, troca de @usuario e encerramento das outras sessões", async ({
   await watchErrors(otherPage, pageErrors)
   await loginThroughUi(otherPage, renamed)
   await expect(
-    otherPage.getByRole("complementary", { name: "Contatos" })
+    otherPage.getByRole("complementary", { name: "Conversas e contatos" })
   ).toBeVisible()
 
   await page.goto("/settings/sessions")

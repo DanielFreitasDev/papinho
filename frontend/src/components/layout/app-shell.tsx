@@ -13,6 +13,7 @@ import {
   QrCodeIcon,
   SettingsIcon,
   ShieldIcon,
+  StarIcon,
   UserPlusIcon,
   UsersIcon,
 } from "lucide-react"
@@ -29,24 +30,41 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { toast } from "@/components/ui/toast"
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { authQueries, useLogout } from "@/features/auth"
+import { authQueries, useLogout, type Me } from "@/features/auth"
+import {
+  ConversationList,
+  useOpenDirect,
+  useRealtimeSync,
+} from "@/features/chat"
 import { AddContactDialog, ContactList, MyLinkDialog } from "@/features/contact"
 import { InviteDialog } from "@/features/invite"
+import { errorMessage } from "@/lib/api-client"
 
 /**
  * Layout autenticado (UI-01): lista à esquerda e conteúdo à direita no desktop; no celular, pilha de telas —
- * a lista é a tela inicial e cada rota ocupa a tela inteira, com "voltar".
+ * a lista é a tela inicial e cada rota ocupa a tela inteira, com "voltar". Mantém o WebSocket ligado.
  */
 export function AppShell() {
+  const me = useQuery(authQueries.me())
+  if (!me.data) {
+    return null
+  }
+  return <SignedInShell me={me.data} />
+}
+
+function SignedInShell({ me }: { me: Me }) {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const me = useQuery(authQueries.me())
   const logout = useLogout()
+  const openDirect = useOpenDirect()
+  useRealtimeSync(me.account.id)
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   })
@@ -54,16 +72,13 @@ export function AppShell() {
   const [addOpen, setAddOpen] = useState(false)
   const [linkOpen, setLinkOpen] = useState(false)
   const [inviteOpen, setInviteOpen] = useState(false)
-
-  if (!me.data) {
-    return null
-  }
-  const { account, profile } = me.data
+  const [tab, setTab] = useState("conversations")
+  const { account, profile } = me
 
   return (
     <div className="grid h-dvh min-h-0 grid-cols-1 md:grid-cols-[minmax(18rem,26rem)_1fr]">
       <aside
-        aria-label={t("shell.contacts")}
+        aria-label={t("chat.sidebar")}
         className={cn(
           "min-h-0 flex-col border-r bg-sidebar text-sidebar-foreground",
           isHome ? "flex" : "hidden md:flex"
@@ -139,6 +154,12 @@ export function AppShell() {
                   {t("shell.invite")}
                 </DropdownMenuItem>
                 <DropdownMenuItem
+                  onClick={() => void navigate({ to: "/starred" })}
+                >
+                  <StarIcon />
+                  {t("chat.starredMessages")}
+                </DropdownMenuItem>
+                <DropdownMenuItem
                   onClick={() => void navigate({ to: "/settings/profile" })}
                 >
                   <SettingsIcon />
@@ -168,14 +189,50 @@ export function AppShell() {
             </DropdownMenuContent>
           </DropdownMenu>
         </header>
-        <h2 className="px-4 pt-2 pb-1 text-xs font-medium tracking-wide text-muted-foreground uppercase">
-          {t("shell.contacts")}
-        </h2>
-        <ScrollArea className="min-h-0 flex-1">
-          <div className="px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
-            <ContactList />
-          </div>
-        </ScrollArea>
+        <Tabs
+          value={tab}
+          onValueChange={(value) => setTab(String(value))}
+          className="min-h-0 flex-1 gap-1"
+        >
+          <TabsList className="mx-3 w-[calc(100%-1.5rem)]">
+            <TabsTrigger value="conversations">
+              {t("chat.conversations")}
+            </TabsTrigger>
+            <TabsTrigger value="contacts">{t("shell.contacts")}</TabsTrigger>
+          </TabsList>
+          <TabsContent value="conversations" className="min-h-0 flex-1">
+            <ScrollArea className="h-full">
+              <div className="px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+                <ConversationList meId={account.id} />
+              </div>
+            </ScrollArea>
+          </TabsContent>
+          <TabsContent value="contacts" className="min-h-0 flex-1">
+            <ScrollArea className="h-full">
+              <div className="px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+                <ContactList
+                  onOpen={async (contact) => {
+                    try {
+                      const conversation = await openDirect.mutateAsync(
+                        contact.username
+                      )
+                      setTab("conversations")
+                      await navigate({
+                        to: "/c/$conversationId",
+                        params: { conversationId: conversation.id },
+                      })
+                    } catch (error) {
+                      toast.add({
+                        title: errorMessage(error, t("common.genericError")),
+                        type: "error",
+                      })
+                    }
+                  }}
+                />
+              </div>
+            </ScrollArea>
+          </TabsContent>
+        </Tabs>
       </aside>
       <main
         className={cn(

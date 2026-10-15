@@ -10,6 +10,7 @@ import {
   createInvite,
   ensureAdmin,
   loginThroughUi,
+  openContactsTab,
   openMenuItem,
   PASSWORD,
   registerThroughUi,
@@ -53,6 +54,7 @@ test.describe.serial("contas e contatos", () => {
     await dialog.getByLabel("@usuario").fill(`@${ADMIN.toUpperCase()}`)
     await dialog.getByLabel("Apelido (só você vê)").fill("Chefe")
     await dialog.getByRole("button", { name: "Adicionar", exact: true }).click()
+    await openContactsTab(page)
     await expect(
       page.getByRole("complementary").getByText("Chefe")
     ).toBeVisible()
@@ -70,6 +72,7 @@ test.describe.serial("contas e contatos", () => {
     ).toBeVisible()
     // No celular a lista só aparece na tela inicial (navegação em pilha, UI-01).
     await admin.page.goto("/")
+    await openContactsTab(admin.page)
     await expect(
       admin.page.getByRole("complementary").getByText(`@${bruno}`)
     ).toBeVisible()
@@ -102,7 +105,7 @@ test.describe.serial("contas e contatos", () => {
 
     await loginThroughUi(page, bruno)
     await expect(
-      page.getByRole("complementary", { name: "Contatos" })
+      page.getByRole("complementary", { name: "Conversas e contatos" })
     ).toBeVisible()
     await page.goto("/settings/security")
     await expectNoSeriousA11yViolations(page)
@@ -125,7 +128,7 @@ test.describe.serial("contas e contatos", () => {
       .pressSequentially(totp(secret))
     await page.getByRole("button", { name: "Entrar", exact: true }).click()
     await expect(
-      page.getByRole("complementary", { name: "Contatos" })
+      page.getByRole("complementary", { name: "Conversas e contatos" })
     ).toBeVisible()
     expect(pageErrors).toEqual([])
   })
@@ -168,7 +171,7 @@ test.describe.serial("contas e contatos", () => {
     await page.goto("/login")
     await page.getByRole("button", { name: "Entrar com passkey" }).click()
     await expect(
-      page.getByRole("complementary", { name: "Contatos" })
+      page.getByRole("complementary", { name: "Conversas e contatos" })
     ).toBeVisible()
     await expect(page.getByText(`@${admin}`)).toBeVisible()
 

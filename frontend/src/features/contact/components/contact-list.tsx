@@ -55,8 +55,15 @@ import {
 } from "../api"
 import type { Contact } from "../types"
 
-/** Lista de contatos com estados de carregando, vazio e erro (UI-03) e ações por contato. */
-export function ContactList() {
+/**
+ * Lista de contatos com estados de carregando, vazio e erro (UI-03) e ações por contato. Com {@code onOpen}, tocar
+ * no contato abre a conversa com ele.
+ */
+export function ContactList({
+  onOpen,
+}: {
+  onOpen?: (contact: Contact) => void
+}) {
   const { t } = useTranslation()
   const contacts = useQuery(contactQueries.list())
   const [renaming, setRenaming] = useState<Contact | null>(null)
@@ -108,7 +115,11 @@ export function ContactList() {
     <>
       <ItemGroup aria-label={t("shell.contacts")}>
         {contacts.data.map((contact) => (
-          <Item key={contact.userId} size="sm">
+          <Item
+            key={contact.userId}
+            size="sm"
+            className={onOpen ? "relative hover:bg-muted" : undefined}
+          >
             <ItemMedia>
               <UserAvatar
                 userId={contact.userId}
@@ -118,13 +129,32 @@ export function ContactList() {
               />
             </ItemMedia>
             <ItemContent className="min-w-0">
-              <ItemTitle className="truncate">{contact.label}</ItemTitle>
-              <ItemDescription className="truncate">
-                @{contact.username}
-                {contact.about ? ` · ${contact.about}` : ""}
-              </ItemDescription>
+              {onOpen ? (
+                <button
+                  type="button"
+                  onClick={() => onOpen(contact)}
+                  aria-label={t("chat.startConversation", {
+                    name: contact.label,
+                  })}
+                  className="flex min-w-0 flex-col rounded-md text-left outline-none after:absolute after:inset-0 focus-visible:ring-3 focus-visible:ring-ring/50"
+                >
+                  <ItemTitle className="truncate">{contact.label}</ItemTitle>
+                  <ItemDescription className="truncate">
+                    @{contact.username}
+                    {contact.about ? ` · ${contact.about}` : ""}
+                  </ItemDescription>
+                </button>
+              ) : (
+                <>
+                  <ItemTitle className="truncate">{contact.label}</ItemTitle>
+                  <ItemDescription className="truncate">
+                    @{contact.username}
+                    {contact.about ? ` · ${contact.about}` : ""}
+                  </ItemDescription>
+                </>
+              )}
             </ItemContent>
-            <ItemActions>
+            <ItemActions className="relative z-10">
               <DropdownMenu>
                 <DropdownMenuTrigger
                   render={

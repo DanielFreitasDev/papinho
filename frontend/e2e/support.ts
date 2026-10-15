@@ -48,7 +48,7 @@ export async function registerThroughUi(
   const codes = await dialog.getByRole("listitem").allTextContents()
   await dialog.getByRole("button", { name: "Guardei os códigos" }).click()
   await expect(
-    page.getByRole("complementary", { name: "Contatos" })
+    page.getByRole("complementary", { name: "Conversas e contatos" })
   ).toBeVisible()
   return codes
 }
@@ -62,6 +62,14 @@ export async function loginThroughUi(
   await page.getByLabel("@usuario").fill(username)
   await page.getByLabel("Senha").fill(password)
   await page.getByRole("button", { name: "Entrar", exact: true }).click()
+}
+
+/** A barra lateral abre em "Conversas"; os contatos ficam na outra aba. */
+export async function openContactsTab(page: Page) {
+  await page
+    .getByRole("complementary")
+    .getByRole("tab", { name: "Contatos" })
+    .click()
 }
 
 export async function openMenuItem(page: Page, name: string) {
@@ -86,7 +94,7 @@ export async function ensureAdmin(browser: Browser, errors?: string[]) {
   }
   await loginThroughUi(page, ADMIN)
   await expect(
-    page.getByRole("complementary", { name: "Contatos" })
+    page.getByRole("complementary", { name: "Conversas e contatos" })
   ).toBeVisible()
   return { context, page }
 }

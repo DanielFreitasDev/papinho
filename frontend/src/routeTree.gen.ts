@@ -15,8 +15,11 @@ import { Route as RecoverRouteImport } from './routes/recover'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppAdminRouteImport } from './routes/_app/admin'
+import { Route as AppRequestsRouteImport } from './routes/_app/requests'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
+import { Route as AppStarredRouteImport } from './routes/_app/starred'
 import { Route as AppAddUsernameRouteImport } from './routes/_app/add.$username'
+import { Route as AppCConversationIdRouteImport } from './routes/_app/c.$conversationId'
 import { Route as AppSettingsIndexRouteImport } from './routes/_app/settings/index'
 import { Route as AppSettingsAccountRouteImport } from './routes/_app/settings/account'
 import { Route as AppSettingsAppearanceRouteImport } from './routes/_app/settings/appearance'
@@ -54,14 +57,29 @@ const AppAdminRoute = AppAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => AppRoute,
 } as any)
+const AppRequestsRoute = AppRequestsRouteImport.update({
+  id: '/requests',
+  path: '/requests',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppSettingsRoute = AppSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
   getParentRoute: () => AppRoute,
 } as any)
+const AppStarredRoute = AppStarredRouteImport.update({
+  id: '/starred',
+  path: '/starred',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppAddUsernameRoute = AppAddUsernameRouteImport.update({
   id: '/add/$username',
   path: '/add/$username',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppCConversationIdRoute = AppCConversationIdRouteImport.update({
+  id: '/c/$conversationId',
+  path: '/c/$conversationId',
   getParentRoute: () => AppRoute,
 } as any)
 const AppSettingsIndexRoute = AppSettingsIndexRouteImport.update({
@@ -106,8 +124,11 @@ export interface FileRoutesByFullPath {
   '/recover': typeof RecoverRoute
   '/register': typeof RegisterRoute
   '/admin': typeof AppAdminRoute
+  '/requests': typeof AppRequestsRoute
   '/settings': typeof AppSettingsRouteWithChildren
+  '/starred': typeof AppStarredRoute
   '/add/$username': typeof AppAddUsernameRoute
+  '/c/$conversationId': typeof AppCConversationIdRoute
   '/settings/account': typeof AppSettingsAccountRoute
   '/settings/appearance': typeof AppSettingsAppearanceRoute
   '/settings/blocked': typeof AppSettingsBlockedRoute
@@ -121,8 +142,11 @@ export interface FileRoutesByTo {
   '/recover': typeof RecoverRoute
   '/register': typeof RegisterRoute
   '/admin': typeof AppAdminRoute
+  '/requests': typeof AppRequestsRoute
+  '/starred': typeof AppStarredRoute
   '/': typeof AppIndexRoute
   '/add/$username': typeof AppAddUsernameRoute
+  '/c/$conversationId': typeof AppCConversationIdRoute
   '/settings/account': typeof AppSettingsAccountRoute
   '/settings/appearance': typeof AppSettingsAppearanceRoute
   '/settings/blocked': typeof AppSettingsBlockedRoute
@@ -138,9 +162,12 @@ export interface FileRoutesById {
   '/recover': typeof RecoverRoute
   '/register': typeof RegisterRoute
   '/_app/admin': typeof AppAdminRoute
+  '/_app/requests': typeof AppRequestsRoute
   '/_app/settings': typeof AppSettingsRouteWithChildren
+  '/_app/starred': typeof AppStarredRoute
   '/_app/': typeof AppIndexRoute
   '/_app/add/$username': typeof AppAddUsernameRoute
+  '/_app/c/$conversationId': typeof AppCConversationIdRoute
   '/_app/settings/account': typeof AppSettingsAccountRoute
   '/_app/settings/appearance': typeof AppSettingsAppearanceRoute
   '/_app/settings/blocked': typeof AppSettingsBlockedRoute
@@ -157,8 +184,11 @@ export interface FileRouteTypes {
     | '/recover'
     | '/register'
     | '/admin'
+    | '/requests'
     | '/settings'
+    | '/starred'
     | '/add/$username'
+    | '/c/$conversationId'
     | '/settings/account'
     | '/settings/appearance'
     | '/settings/blocked'
@@ -172,8 +202,11 @@ export interface FileRouteTypes {
     | '/recover'
     | '/register'
     | '/admin'
+    | '/requests'
+    | '/starred'
     | '/'
     | '/add/$username'
+    | '/c/$conversationId'
     | '/settings/account'
     | '/settings/appearance'
     | '/settings/blocked'
@@ -188,9 +221,12 @@ export interface FileRouteTypes {
     | '/recover'
     | '/register'
     | '/_app/admin'
+    | '/_app/requests'
     | '/_app/settings'
+    | '/_app/starred'
     | '/_app/'
     | '/_app/add/$username'
+    | '/_app/c/$conversationId'
     | '/_app/settings/account'
     | '/_app/settings/appearance'
     | '/_app/settings/blocked'
@@ -251,6 +287,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAdminRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/requests': {
+      id: '/_app/requests'
+      path: '/requests'
+      fullPath: '/requests'
+      preLoaderRoute: typeof AppRequestsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/settings': {
       id: '/_app/settings'
       path: '/settings'
@@ -258,11 +301,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSettingsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/starred': {
+      id: '/_app/starred'
+      path: '/starred'
+      fullPath: '/starred'
+      preLoaderRoute: typeof AppStarredRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/add/$username': {
       id: '/_app/add/$username'
       path: '/add/$username'
       fullPath: '/add/$username'
       preLoaderRoute: typeof AppAddUsernameRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/c/$conversationId': {
+      id: '/_app/c/$conversationId'
+      path: '/c/$conversationId'
+      fullPath: '/c/$conversationId'
+      preLoaderRoute: typeof AppCConversationIdRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/settings/': {
@@ -343,16 +400,22 @@ const AppSettingsRouteWithChildren = AppSettingsRoute._addFileChildren(
 
 interface AppRouteChildren {
   AppAdminRoute: typeof AppAdminRoute
+  AppRequestsRoute: typeof AppRequestsRoute
   AppSettingsRoute: typeof AppSettingsRouteWithChildren
+  AppStarredRoute: typeof AppStarredRoute
   AppIndexRoute: typeof AppIndexRoute
   AppAddUsernameRoute: typeof AppAddUsernameRoute
+  AppCConversationIdRoute: typeof AppCConversationIdRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
   AppAdminRoute: AppAdminRoute,
+  AppRequestsRoute: AppRequestsRoute,
   AppSettingsRoute: AppSettingsRouteWithChildren,
+  AppStarredRoute: AppStarredRoute,
   AppIndexRoute: AppIndexRoute,
   AppAddUsernameRoute: AppAddUsernameRoute,
+  AppCConversationIdRoute: AppCConversationIdRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

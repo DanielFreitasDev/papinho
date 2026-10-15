@@ -76,6 +76,13 @@ class SetupController {
                 .body(setup.qrCodeSvg());
     }
 
+    /** Ícone próprio: sem ele o navegador pede /favicon.ico, que na porta HTTP vira redirecionamento. */
+    @GetMapping("/favicon.svg")
+    ResponseEntity<String> favicon() {
+        return ResponseEntity.ok().cacheControl(NO_CACHE).contentType(MediaType.parseMediaType("image/svg+xml"))
+                .body(SetupService.template("pki/favicon.svg"));
+    }
+
     @GetMapping("/setup.css")
     ResponseEntity<String> stylesheet() {
         return ResponseEntity.ok().cacheControl(NO_CACHE).contentType(MediaType.parseMediaType("text/css;charset=UTF-8"))

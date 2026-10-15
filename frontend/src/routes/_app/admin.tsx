@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next"
 import { PageHeader } from "@/components/layout/page-header"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AdminSettingsForm, AdminUsers } from "@/features/admin"
+import { AdminReports } from "@/features/moderation"
 
 /** Painel do admin (AD-01); o servidor também exige ROLE_ADMIN em toda a API /admin. */
 export const Route = createFileRoute("/_app/admin")({
@@ -25,12 +26,16 @@ function AdminPage() {
           <TabsList>
             <TabsTrigger value="settings">{t("admin.settings")}</TabsTrigger>
             <TabsTrigger value="users">{t("admin.users")}</TabsTrigger>
+            <TabsTrigger value="reports">{t("admin.reports")}</TabsTrigger>
           </TabsList>
           <TabsContent value="settings" className="pt-3">
             <AdminSettingsForm />
           </TabsContent>
           <TabsContent value="users" className="pt-3">
             <AdminUsers />
+          </TabsContent>
+          <TabsContent value="reports" className="pt-3">
+            <AdminReports />
           </TabsContent>
         </Tabs>
       </div>

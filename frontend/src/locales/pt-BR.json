@@ -234,7 +234,8 @@
     "resetPassword": "Redefinir senha",
     "temporaryPassword": "Senha temporária de {{name}}",
     "temporaryPasswordDescription": "Envie por um canal seguro. Ela aparece só agora; peça para a pessoa trocá-la ao entrar.",
-    "you": "você"
+    "you": "você",
+    "reports": "Denúncias"
   },
   "chat": {
     "conversations": "Conversas",
@@ -323,6 +324,38 @@
     "notFound": "Conversa não encontrada",
     "goToOriginal": "Ir para a mensagem respondida",
     "deletedAccount": "Conta desativada",
-    "markedUnread": "Marcada como não lida"
+    "markedUnread": "Marcada como não lida",
+    "contactInfo": "Dados do contato",
+    "about": "Recado",
+    "displayNameIs": "Nome de exibição: {{name}}",
+    "addContact": "Adicionar aos contatos",
+    "contactAdded": "Contato adicionado",
+    "block": "Bloquear",
+    "blockName": "Bloquear {{name}}",
+    "unblockName": "Desbloquear {{name}}",
+    "blockConfirmTitle": "Bloquear {{name}}?",
+    "blockConfirmDescription": "A pessoa não poderá mandar mensagens nem ver sua foto, seu recado ou se você está online. Ela não é avisada.",
+    "blockedToast": "Pessoa bloqueada",
+    "unblockedToast": "Pessoa desbloqueada"
+  },
+  "moderation": {
+    "report": "Denunciar",
+    "reportName": "Denunciar {{name}}",
+    "reportTitle": "Denunciar {{name}}?",
+    "reportDescription": "As 5 últimas mensagens desta conversa serão enviadas ao administrador da instância. A pessoa não é avisada.",
+    "reason": "Motivo (opcional)",
+    "alsoBlock": "Bloquear {{name}} também",
+    "reported": "Denúncia enviada",
+    "open": "Abertas",
+    "closed": "Fechadas",
+    "empty": "Nenhuma denúncia",
+    "emptyDescription": "As denúncias dos usuários aparecem aqui.",
+    "reportOf": "{{reported}} denunciado por {{reporter}}",
+    "copiedMessages": "Últimas mensagens da conversa",
+    "noMessages": "A conversa não tinha mensagens.",
+    "resolve": "Marcar como resolvida",
+    "dismiss": "Arquivar",
+    "statusRESOLVED": "Resolvida",
+    "statusDISMISSED": "Arquivada"
   }
 }

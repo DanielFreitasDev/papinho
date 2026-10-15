@@ -1,4 +1,4 @@
-export { contactKeys, contactQueries, useBlock } from "./api"
+export { contactKeys, contactQueries, useAddContact, useBlock } from "./api"
 export type { Contact, Person, Blocked } from "./types"
 export { ContactList } from "./components/contact-list"
 export { AddContactDialog } from "./components/add-contact-dialog"

@@ -30,8 +30,11 @@ export function PresenceLine({ conversation }: { conversation: Conversation }) {
     text = t("chat.lastSeen", { when: formatWhen(presence.data.lastSeenAt) })
   }
   return (
-    <p className="truncate text-xs text-muted-foreground" aria-live="polite">
+    <span
+      className="block truncate text-xs font-normal text-muted-foreground"
+      aria-live="polite"
+    >
       {text}
-    </p>
+    </span>
   )
 }

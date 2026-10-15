@@ -234,7 +234,8 @@
     "resetPassword": "Reset password",
     "temporaryPassword": "Temporary password for {{name}}",
     "temporaryPasswordDescription": "Send it through a secure channel. It is shown only now; ask the person to change it after signing in.",
-    "you": "you"
+    "you": "you",
+    "reports": "Reports"
   },
   "chat": {
     "conversations": "Chats",
@@ -323,6 +324,38 @@
     "notFound": "Chat not found",
     "goToOriginal": "Go to replied message",
     "deletedAccount": "Account disabled",
-    "markedUnread": "Marked as unread"
+    "markedUnread": "Marked as unread",
+    "contactInfo": "Contact info",
+    "about": "About",
+    "displayNameIs": "Display name: {{name}}",
+    "addContact": "Add to contacts",
+    "contactAdded": "Contact added",
+    "block": "Block",
+    "blockName": "Block {{name}}",
+    "unblockName": "Unblock {{name}}",
+    "blockConfirmTitle": "Block {{name}}?",
+    "blockConfirmDescription": "They won't be able to message you or see your photo, about or online status. They are not notified.",
+    "blockedToast": "Person blocked",
+    "unblockedToast": "Person unblocked"
+  },
+  "moderation": {
+    "report": "Report",
+    "reportName": "Report {{name}}",
+    "reportTitle": "Report {{name}}?",
+    "reportDescription": "The last 5 messages of this conversation will be sent to the instance administrator. They are not notified.",
+    "reason": "Reason (optional)",
+    "alsoBlock": "Also block {{name}}",
+    "reported": "Report sent",
+    "open": "Open",
+    "closed": "Closed",
+    "empty": "No reports",
+    "emptyDescription": "User reports show up here.",
+    "reportOf": "{{reported}} reported by {{reporter}}",
+    "copiedMessages": "Last messages of the conversation",
+    "noMessages": "The conversation had no messages.",
+    "resolve": "Mark as resolved",
+    "dismiss": "Dismiss",
+    "statusRESOLVED": "Resolved",
+    "statusDISMISSED": "Dismissed"
   }
 }

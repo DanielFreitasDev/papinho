@@ -1,7 +1,7 @@
 # STATUS — progresso do Papinho
 
 Fonte de verdade do progresso (PROMPT.md §3.1). `feito` exige evidência **executada**; código sem
-verificação é `em andamento`. Última auditoria: 2026-10-15 (passada 2, Fase 3).
+verificação é `em andamento`. Última auditoria: 2026-10-15 (passada 3, Fase 4).
 
 Ambiente da passada 1: sandbox de nuvem com JDK 25.0.4 (Temurin, baixado), Node 24.22.0, pnpm 10.34.6,
 Docker 29 (daemon iniciado manualmente), Chromium do Playwright em `/opt/pw-browsers`, sem aparelhos reais.
@@ -14,6 +14,13 @@ CT-04 e o painel de dados do contato (UI-01); Fase 3 quase toda (upload tus, ima
 SSRF, áudio, transcrição). Fim da passada: backend **74 unitários + 64 de integração**, frontend **29 Vitest**,
 e2e **29 verdes** (desktop e celular; os 4 de `/setup` precisam de instância `lan` e rodam no CI), duas rodadas
 seguidas contra instância nova.
+
+Passada 3 (mesmo tipo de ambiente; Postgres pelo espelho `mirror.gcr.io` porque o Docker Hub e o ECR negaram):
+auditoria verde no início (backend 74 + 64, frontend 29, e2e 29). Fase 4 inteira: editar e apagar, grupos e
+convites, transmissão, temporárias (ShedLock), visualização única, enquetes, emojis/figurinhas/GIFs, agendadas,
+silenciosas e rascunho, mensagens salvas e atalhos. Fim da passada: backend **74 unitários + 87 de integração**
+(`./mvnw -B -pl backend verify`), frontend **33 Vitest** com lint, typecheck e format, e2e **37 verdes** (desktop
+e celular, 4 de `/setup` só no CI) em duas rodadas seguidas contra instância nova.
 
 ## Fase 0 — Fundação
 
@@ -48,7 +55,7 @@ seguidas contra instância nova.
 | ID-08 | Primeiro usuário vira admin | feito | `IdentityIT.shouldMakeFirstUserAdmin`; e2e `first-admin.setup.ts` | |
 | CT-01 | Adicionar contato por @usuario, link ou QR; apelido local | feito | `ContactIT` (por @usuario com apelido; link próprio e cartão); e2e adiciona por @usuario em maiúsculas e pelo link `/add/@usuario` | QR lido por câmera real não testado |
 | CT-02 | Solicitações de mensagem (aceitar, recusar, bloquear) | feito | `MessagingIT.shouldHandleMessageRequests` (vai para solicitações, leitura escondida até aceitar, recusar esconde); `RealtimeIT` presença só após aceitar; e2e aceitar pela UI | recusar e bloquear pela UI sem e2e (cobertos no servidor) |
-| CT-03 | Bloquear e desbloquear | em andamento | `ContactIT` (foto/recado); `MessagingIT.shouldEnforceBlocksAndMembership` (envio recusado nos dois sentidos); presença filtrada por bloqueio; e2e `moderation.spec.ts` bloqueia pelo painel (denúncia com bloqueio) e o outro lado não envia | "não pode adicionar a grupos" vem com GR-01 |
+| CT-03 | Bloquear e desbloquear | feito | `ContactIT` (foto/recado); `MessagingIT.shouldEnforceBlocksAndMembership` (envio recusado nos dois sentidos); `GroupIT.shouldRespectBlocksAndProtectPhoto` (bloqueado não é adicionado ao grupo); `GroupIT` link de convite recusa quem um admin bloqueou; presença filtrada por bloqueio; e2e `moderation.spec.ts` bloqueia pelo painel e o outro lado não envia | |
 | CT-04 | Denunciar usuário com as 5 últimas mensagens | feito | `ModerationIT` (copia as 5 últimas, bloqueia junto, IDOR 404, só admin vê e fecha); e2e `moderation.spec.ts` (denunciar pelo painel com bloqueio, admin vê as mensagens e resolve, axe) | módulo `moderation`; limite de 20 denúncias/hora por usuário |
 
 ## Fase 2 — Conversas individuais em tempo real
@@ -58,7 +65,7 @@ seguidas contra instância nova.
 | MS-01 | Formatação do WhatsApp, sanitizada | feito | `parse.test.ts` (10: marcadores, limites de palavra, mono literal, HTML vira texto, blocos, listas, citação, spoiler); e2e `chat.spec.ts` (negrito, spoiler que revela, mono) | render só monta elementos React; destaque de código por lowlight carregado sob demanda |
 | MS-02 | Status por mensagem e "Dados da mensagem" | feito | `MessagingIT.shouldTrackReceiptsAndUnread` (ponteiros, horários de entrega/leitura, só o autor vê); e2e enviada → lida e diálogo Dados da mensagem | leitura escondida em solicitação (CT-02); configurações de PV-06 na Fase 5 |
 | MS-03 | "digitando…" e "gravando áudio…" | feito | `RealtimeIT.shouldNotifyMessagesReceiptsAndTyping`; e2e `chat.spec.ts` ("digitando…") e `audio.spec.ts` ("gravando áudio…" no outro navegador durante a gravação) | |
-| MS-04 | Responder, encaminhar, reagir, mencionar, fixar, favoritar, selecionar | em andamento | `MessagingIT.shouldReactPinStarAndForward` (até 3 fixadas, selo após 5 saltos, favorita privada); e2e responder com salto, reagir, fixar, favoritar, selecionar duas e encaminhar | menção @usuario é reconhecida e vira link (unit); @todos depende de grupos (Fase 4) |
+| MS-04 | Responder, encaminhar, reagir, mencionar, fixar, favoritar, selecionar | feito | `MessagingIT.shouldReactPinStarAndForward` (até 3 fixadas, selo após 5 saltos, favorita privada); e2e responder com salto, reagir (inclusive "Mais reações"), fixar, favoritar, selecionar duas e encaminhar; `@todos` em destaque sem link no grupo (`groups.spec.ts`) | notificar menções mesmo silenciado vem com GR-05/NT-03 |
 | MS-14 | Marcador de não lidas, ir para a primeira, marcar como não lida | feito | `MessagingIT.shouldTrackReceiptsAndUnread`; e2e contador na lista, marcador "2 mensagens não lidas", botão leva à primeira, marcar como não lida | |
 | RT-01 | `seq` monotônico por conversa e `afterSeq` | feito | `MessagingIT.shouldSyncBySeqAndDeduplicate`, `shouldPageHistoryBackwards`; `cache.test.ts` (6: cursor, merge, janela, pendentes); e2e reação e fixar chegam por afterSeq | seq atribuído com trava de linha (`SequenceAllocator`); reconexão real com rede caída não testada em e2e |
 | RT-02 | `clientMessageId` idempotente | feito | `MessagingIT.shouldSyncBySeqAndDeduplicate` (reenvio devolve 200 com a mesma mensagem; outro chat dá 409); `cache.test.ts` pendente some ao confirmar | o botão "tentar de novo" reenvia com o mesmo id |
@@ -77,7 +84,7 @@ seguidas contra instância nova.
 | MD-06 | Antivírus ClamAV opcional | feito | `ClamAvScannerTest` (protocolo zINSTREAM contra clamd simulado: limpo, EICAR recusado, resposta estranha falha fechado); desligado por padrão (`PAPINHO_CLAMAV_ENABLED`) | não testado contra um clamd real |
 | AU-01 | Gravação com MediaRecorder, onda, trava, pré-escuta | feito | e2e `audio.spec.ts` com microfone falso do Chromium (gravação travada, "Parar e ouvir" com pré-escuta, enviar direto, cancelar) | segurar para gravar e arrastar para travar (toque) e AAC/MP4 do Safari não testados em aparelho real |
 | AU-02 | Velocidades, mini-player global, sequência | feito | e2e `audio.spec.ts` (1× → 1,5×, o segundo áudio assume a faixa ao fim do primeiro, mini-player fora da conversa e fechar) | |
-| AU-03 | Transcrição sob demanda/automática com cache | em andamento | `TranscriptionIT` (provedor chamado uma vez, cache para os demais, 404 para quem é de fora, 409 para o navegador e texto do navegador em cache, falha 502 sem vazar a chave); e2e "Transcrever" com provedor simulado | automática para recebidos sem e2e; "visualização única nunca persistida" depende de MS-08 (Fase 4) |
+| AU-03 | Transcrição sob demanda/automática com cache | em andamento | `TranscriptionIT` (provedor chamado uma vez, cache para os demais, 404 para quem é de fora, 409 para o navegador e texto do navegador em cache, falha 502 sem vazar a chave); `ViewOnceIT` (áudio de visualização única nunca é transcrito, 404); e2e "Transcrever" com provedor simulado | transcrição automática para recebidos sem e2e |
 | AU-04 | Whisper no navegador (Transformers.js, WebGPU/WASM) | bloqueado | worker com Transformers.js 4, runtime ONNX servido pelo JAR (`pnpm build` gera os `.wasm`), CSP com `wasm-unsafe-eval` e Hugging Face (`SecurityIT`) | sem acesso ao Hugging Face no sandbox para baixar o modelo e Chromium sem WebGPU: transcrição real não executada. Para desbloquear: rodar num navegador com internet e conferir download, progresso e texto |
 | AU-05 | Provedores OpenAI-compatible no servidor | feito | `TranscriptionIT` contra provedor simulado (multipart com `model` e `file`, `Authorization: Bearer`, User-Agent `Papinho/<versão>`, chave cifrada e nunca devolvida nem logada, saúde do Whisper próprio); e2e cadastro de provedor no admin | Groq/OpenAI reais não testados (sem chave e sem rede) |
 
@@ -87,17 +94,17 @@ seguidas contra instância nova.
 |---|---|---|---|---|
 | GR-01 | Grupos: dados, admins, permissões, sair silenciosamente | feito | `GroupIT` (criar só com contatos, avisos do sistema, leitura quando todos leram, só admins enviam/editam, promover, remover, sair sem aviso, membro mais antigo vira admin, bloqueio impede adicionar, foto só para membros, IDOR 404, responder em privado); e2e `groups.spec.ts` (desktop e celular: criar, avisos, nome de quem envia, painel com axe, só admins enviam, responder em privado) | quem sai perde o acesso ao histórico (diferente do WhatsApp); "quem pode me adicionar" vem com PV-07 |
 | GR-02 | Convite de grupo por link/QR com aprovação | feito | `GroupIT.shouldJoinByInviteLink` (prévia, entrar sem não lidas antigas, aprovação de entrada, só admins geram, redefinir e desativar invalidam); e2e link com QR Code no painel; limite de 60 consultas/entradas por hora | rota `/g/<código>` no SPA |
-| GR-03 | Lista de transmissão | pendente | | |
-| GR-04 | Lista de transmissão temporária | pendente | | |
+| GR-03 | Lista de transmissão | feito | `BroadcastIT.shouldFanOutToContactsOnly` (só contatos como destinatários, chega como conversa individual só para quem tem o dono nos contatos, lista é só do dono 404, sem enquete); e2e `groups.spec.ts` (criar pela UI e a mensagem chega na conversa individual) | editar/apagar depois só afeta a cópia do dono |
+| GR-04 | Lista de transmissão temporária | feito | `BroadcastIT.shouldHandleTemporaryLists` (timer da lista deixa a cópia temporária; lista vencida não envia, 403); diálogo com validade e timer | |
 | MS-05 | Editar com janela configurável | feito | `MessagingIT.shouldEditAndDeleteForEveryone` (só o autor, janela do admin 409, edição chega por afterSeq, aviso não se edita); e2e `messages.spec.ts` (menu Editar, selo "editada" no outro navegador, ↑ edita a última, Esc cancela) | |
 | MS-06 | Apagar para mim e para todos | feito | `MessagingIT` (para todos: só autor, janela, texto/anexo/reações/favoritas removidos, arquivo 404, resposta mostra apagada; para mim: some do histórico, do afterSeq e da prévia só de quem apagou, IDOR 404); e2e aviso nos dois navegadores e apagar para mim persistente após recarregar | apagar várias pela seleção |
 | MS-07 | Mensagens temporárias com job (ShedLock) | feito | `DisappearingIT` (timer 24 h/7 d/90 d com aviso, valores fora da lista 400, padrão para conversas e grupos novos, permissão no grupo, job apaga vencidas e arquivos, citação fica nula); e2e timer pelo painel com aviso nos dois lados | ShedLock 7.10.1 (`shedlock`, hora do banco); cliente esconde vencidas antes do job |
-| MS-08 | Visualização única | pendente | | |
-| MS-09 | Enquetes | pendente | | |
-| MS-10 | Emojis, figurinhas, GIFs opcionais | pendente | | |
-| MS-11 | Agendadas, silenciosas, rascunho sincronizado | pendente | | |
+| MS-08 | Visualização única | feito | `ViewOnceIT` (id do arquivo nunca vai ao cliente, rotas de mídia recusam até para quem enviou, token só para o destinatário, `no-store`, segunda abertura 410, token vencido 404, job tira o arquivo depois de aberto ou após 14 dias, áudio nunca transcrito); e2e `view-once.spec.ts` (abrir uma vez, cabeçalho `no-store`, marca d'água com o `@usuario`, aviso de captura, "Foto aberta" para os dois) | token vale 5 min para Range de vídeo (ADR 0012); sem service worker ainda (NT-04); desfoque fora de foco sem teste automatizado |
+| MS-09 | Enquetes | feito | `PollIT` (única troca o voto, múltipla, anônima esconde quem votou, encerrada 409, opções inválidas 400, resultados pelo afterSeq, IDOR 404, não edita nem encaminha); e2e voto da Hana aparece para o Gil com o nome dela | |
+| MS-10 | Emojis, figurinhas, GIFs opcionais | em andamento | seletor próprio sobre emojibase-data (`data.test.ts`: busca sem acento e recentes por pessoa); `StickerIT` (pacotes da instância, só WebP até 1 MB, só o dono gerencia, favoritas por pessoa, mensagem de figurinha, exclusão lógica); `GifIT` contra Tenor simulado (proxy da busca sem URL nem chave, prévia, host fora da lista 502, GIF vira mídia) e GIFs desligados por padrão (503); e2e emoji pelo campo, "Mais reações", criar pacote, enviar WebP e mandar figurinha | Tenor real não testado (sem chave e sem rede no sandbox); seletor sem tons de pele (ADR 0011) |
+| MS-11 | Agendadas, silenciosas, rascunho sincronizado | feito | `ScheduledIT` (agendada sai na hora como silenciosa, só quem agendou vê e cancela, passado 400, bloqueio marca falha; rascunho só do dono e apagado ao enviar); e2e rascunho sobrevive a recarregar, ícone de silenciosa no outro navegador, agendar e cancelar pela lista | "silenciosa" só marca a mensagem: as notificações (NT-01) a respeitarão na Fase 6 |
 | MS-12 | Mensagens salvas | feito | `GroupIT.shouldKeepSavedMessagesAndReplyPrivately` (uma por pessoa, idempotente, invisível aos outros); e2e menu "Mensagens salvas" envia e passa no axe | |
-| MS-13 | Atalhos de teclado e lista com `?` | pendente | | |
+| MS-13 | Atalhos de teclado e lista com `?` | feito | e2e `shortcuts.spec.ts` (Ctrl+K abre a paleta, busca "salvas" e abre, "?" mostra a lista e Esc fecha, "?" dentro do campo é texto) e `messages.spec.ts` (↑ edita a última, Esc fecha o painel de contato); Ctrl+V cola arquivo e arrastar e soltar vêm da Fase 3 (`media.spec.ts`) | |
 
 ## Fase 5 — Privacidade
 
@@ -137,7 +144,7 @@ seguidas contra instância nova.
 | AR-01 | WCAG 2.2 AA; RESPONSIVENESS.md aplicado | em andamento | e2e com axe nas telas existentes (inclui painel, visualizador, galeria, gravação, admin); `muted-foreground` escurecido para 4,5:1 sobre fundos cinza; fechar de toasts empilhados fora da ordem de foco | revisar a cada tela nova; tema escuro sem axe |
 | AR-02 | 320 px, alvos de 44 px, safe areas, teclado virtual | em andamento | e2e 320 px em `/`, `/login`, `/register` e `/setup`; alvos de 44 px em `pointer: coarse` (`index.css`) | teclado virtual só em aparelho real |
 | AR-03 | Fluxo só com teclado; axe sem críticas/sérias | em andamento | axe sem críticas/sérias em `/setup`, cadastro, admin com contatos e segurança | fluxo só com teclado não automatizado |
-| QA-03 | E2E dos fluxos críticos | em andamento | 29 verdes + 4 de `/setup` (desktop e celular): primeiro admin, convite, contatos, TOTP, passkey, perfil, sessões, setup, conversa entre dois navegadores, denúncia, upload (fotos, documento, cancelar), voz, prévia de link | faltam grupo, apagar para todos, privacidade recíproca, conversa trancada, bloqueio de tela |
+| QA-03 | E2E dos fluxos críticos | em andamento | 37 verdes + 4 de `/setup` (desktop e celular), duas rodadas seguidas: além dos anteriores, grupo (`groups.spec.ts`), apagar para todos e para mim (`messages.spec.ts`), visualização única, atalhos | faltam privacidade recíproca, conversa trancada e bloqueio de tela (Fase 5) |
 
 ## Requisitos transversais
 
@@ -145,13 +152,13 @@ seguidas contra instância nova.
 |---|---|---|---|---|
 | SG-01 | IDOR, Problem Details, sem segredos em logs | em andamento | Problem Details em 401/403/400/500 (`SecurityIT`); IDOR de conversa, mensagem, reação e encaminhar (`MessagingIT`), denúncia (`ModerationIT`), upload, mídia e galeria (`MediaIT`), transcrição (`TranscriptionIT`, inclusive chave fora dos logs); WebSocket só assina a própria fila (`WebSocketSecurityConfig`) | IDOR a cada endpoint novo |
 | SG-02 | CSP estrita, cabeçalhos, HSTS em produção | feito | `SecurityIT.shouldServeSpaShellWithSecurityHeaders`; e2e falha em qualquer violação de CSP | HSTS por `PAPINHO_HSTS=true` |
-| SG-03 | Rate limit em login, convites, desbloqueio, envio, upload | em andamento | `RateLimiter` (Bucket4j) em login por IP e conta, cadastro, recuperação, convites, ações sensíveis, criação de upload (200/h), denúncias, prévias de link e transcrição; `IdentityIT` 429 com Retry-After; "digitando" limitado por frequência | falta limite de envio de mensagens e de desbloqueio (PV-02/PV-03); `rate-limit-multiplier` só para e2e |
+| SG-03 | Rate limit em login, convites, desbloqueio, envio, upload | em andamento | `RateLimiter` (Bucket4j) em login por IP e conta, cadastro, recuperação, convites e links de grupo (60/h), ações sensíveis, criação de upload (200/h), denúncias, prévias de link, transcrição, GIFs e envio de mensagens/enquetes (120/min, `MessagingIT.shouldRateLimitSending`); `IdentityIT` 429 com Retry-After; "digitando" limitado por frequência | falta o limite de desbloqueio (PV-02/PV-03, Fase 5); `rate-limit-multiplier` só para e2e |
 | UI-02 | Temas, papel de parede, fonte, densidade | em andamento | Configurações > Aparência (claro/escuro/sistema) | papel de parede, fonte e densidade pendentes |
 | UI-03 | Estados carregando, vazio, erro, offline, sem permissão | em andamento | contatos com carregando/vazio/erro; não encontrado (e2e `smoke.spec.ts`) | offline vem com NT-05 |
 | UI-04 | Lista de mensagens performática | em andamento | `message-scroller` do shadcn com `content-visibility`, páginas de 50 e paginação para trás (`beforeSeq`) | sem medição com milhares de mensagens |
 | IN-01 | Textos externalizados; pt-BR completo, pronto para en | em andamento | `i18n.test.ts` garante as mesmas chaves em pt-BR e en; backend com `messages*.properties` | |
-| QA-01 | Backend: unitários, slice, integração, ArchUnit, Modulith, `./mvnw verify` | em andamento | `./mvnw -B -pl backend verify`: 74 unitários + 64 de integração verdes (inclui `MediaIT`, `LinkPreviewIT`, `TranscriptionIT`, `ModerationIT`, `ModularityTests` com os módulos novos) | cresce a cada fase |
-| QA-02 | Frontend: lint, typecheck, Vitest | feito | `pnpm lint`, `pnpm typecheck`, `pnpm format:check`, `pnpm test` (29), `pnpm build` locais e no job frontend do CI | |
+| QA-01 | Backend: unitários, slice, integração, ArchUnit, Modulith, `./mvnw verify` | em andamento | `./mvnw -B -pl backend verify`: 74 unitários + 86 de integração verdes na passada 3 (com `GroupIT`, `BroadcastIT`, `DisappearingIT`, `ViewOnceIT`, `PollIT`, `ScheduledIT`, `StickerIT`, `GifIT`, `ModularityTests`); depois, `MessagingIT` com o limite de envio (9) verde | cresce a cada fase |
+| QA-02 | Frontend: lint, typecheck, Vitest | feito | `pnpm lint`, `pnpm typecheck`, `pnpm format:check`, `pnpm test` (33), `pnpm build` locais | CI do GitHub não conferido nesta passada |
 
 ## Dúvidas registradas para o dono
 

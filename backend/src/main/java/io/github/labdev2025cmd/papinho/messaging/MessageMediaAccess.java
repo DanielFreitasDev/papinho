@@ -24,4 +24,10 @@ class MessageMediaAccess implements MediaAccessPolicy {
     public boolean canRead(UUID viewer, UUID mediaId) {
         return messages.attachmentVisibleTo(viewer, mediaId) || groups.photoVisibleTo(viewer, mediaId);
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean restricted(UUID mediaId) {
+        return messages.viewOnceAttachment(mediaId);
+    }
 }

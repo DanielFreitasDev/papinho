@@ -42,6 +42,10 @@ public class MessageService {
 
     /** Máximo de alterações devolvidas por chamada de sincronização. */
     public static final int MAX_SYNC = 500;
+    /** Visualização única (MS-08): tipos aceitos, validade do token e prazo para o arquivo sair. */
+    static final Set<String> VIEW_ONCE_KINDS = Set.of("IMAGE", "VIDEO", "AUDIO");
+    static final java.time.Duration VIEW_ONCE_TOKEN_TTL = java.time.Duration.ofMinutes(5);
+    static final int VIEW_ONCE_DAYS = 14;
     /** Limites da enquete (MS-09), como os do WhatsApp. */
     static final int MAX_POLL_QUESTION = 300;
     static final int MAX_POLL_OPTION = 100;
@@ -69,6 +73,8 @@ public class MessageService {
     private final HiddenMessages hidden;
     private final MessagingPreferences preferences;
     private final Polls polls;
+    private final ViewOnceOpens viewOnceOpens;
+    private final java.security.SecureRandom random = new java.security.SecureRandom();
     private final InstanceSettingsService settings;
     private final JsonMapper json;
     private final ApplicationEventPublisher events;
@@ -77,7 +83,7 @@ public class MessageService {
     MessageService(MessageRepository messages, MessageReactionRepository reactions, MessageStarRepository stars,
             ConversationService conversations, SequenceAllocator sequences, ReceiptLog receipts,
             UserDirectory users, ProfileService profiles, MediaService media, HiddenMessages hidden,
-            MessagingPreferences preferences, Polls polls,
+            MessagingPreferences preferences, Polls polls, ViewOnceOpens viewOnceOpens,
             InstanceSettingsService settings, JsonMapper json, ApplicationEventPublisher events, Clock clock) {
         this.messages = messages;
         this.reactions = reactions;
@@ -91,6 +97,7 @@ public class MessageService {
         this.hidden = hidden;
         this.preferences = preferences;
         this.polls = polls;
+        this.viewOnceOpens = viewOnceOpens;
         this.settings = settings;
         this.json = json;
         this.events = events;
@@ -104,6 +111,16 @@ public class MessageService {
     @Transactional
     public SendResult send(UUID me, UUID conversationId, UUID clientMessageId, String body,
             @Nullable UUID replyToId, @Nullable UUID attachmentId) {
+        return send(me, conversationId, clientMessageId, body, replyToId, attachmentId, false);
+    }
+
+    /**
+     * Envia; com {@code viewOnce} o anexo (foto, vídeo ou áudio ainda não usado em outra mensagem) vira de
+     * visualização única (MS-08).
+     */
+    @Transactional
+    public SendResult send(UUID me, UUID conversationId, UUID clientMessageId, String body,
+            @Nullable UUID replyToId, @Nullable UUID attachmentId, boolean viewOnce) {
         ConversationMember member = conversations.requireMember(me, conversationId);
         sequences.lock(conversationId);
         var existing = messages.findBySenderIdAndClientMessageId(me, clientMessageId);
@@ -120,6 +137,11 @@ public class MessageService {
         }
         validateBody(body, attachment != null);
         conversations.requireSendable(me, conversationId);
+        if (viewOnce && (attachment == null || !VIEW_ONCE_KINDS.contains(attachment.kind())
+                || messages.existsByAttachmentId(attachment.id())
+                || conversations.find(conversationId).kind() == ConversationKind.SELF)) {
+            throw new InvalidMessageException("view once needs a new photo, video or audio");
+        }
         if (replyToId != null) {
             Message target = messages.findById(replyToId).filter(m -> !m.deleted() && !m.system())
                     .orElseThrow(() -> new InvalidMessageException("reply target outside conversation"));
@@ -131,7 +153,84 @@ public class MessageService {
             member.changeState(MemberState.ACTIVE);
         }
         Message saved = append(me, conversationId, clientMessageId, body, replyToId, 0, attachment);
+        if (viewOnce) {
+            saved.markViewOnce();
+            messages.flush();
+        }
         return new SendResult(toViews(me, List.of(saved)).getFirst(), true);
+    }
+
+    /**
+     * Abre uma mensagem de visualização única (MS-08): emite, uma única vez por destinatário, um token de curta
+     * duração para o conteúdo. Quem enviou não abre; quem já abriu recebe 410.
+     */
+    @Transactional
+    public ViewOnceGrant openViewOnce(UUID me, UUID messageId) {
+        Message message = requireVisible(me, messageId);
+        if (!message.viewOnce() || me.equals(message.senderId())) {
+            throw new InvalidMessageException("not a view once message for you");
+        }
+        Message.Attachment attachment = message.attachment();
+        if (attachment == null) {
+            throw new MessagingExceptions.ViewOnceGoneException();
+        }
+        byte[] bytes = new byte[32];
+        random.nextBytes(bytes);
+        String token = java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+        Instant now = clock.instant();
+        if (!viewOnceOpens.open(messageId, me, sha256(token), now, now.plus(VIEW_ONCE_TOKEN_TTL))) {
+            throw new MessagingExceptions.ViewOnceGoneException();
+        }
+        sequences.lock(message.conversationId());
+        touch(message);
+        MediaView file = media.describe(List.of(attachment.id())).get(attachment.id());
+        return new ViewOnceGrant(token, attachment.kind(), file == null ? "" : file.contentType());
+    }
+
+    /** Conteúdo pelo token (de quem o recebeu e enquanto vale); senão 404. */
+    @Transactional(readOnly = true)
+    public MediaService.Content viewOnceContent(UUID me, String token) throws java.io.IOException {
+        UUID messageId = viewOnceOpens.messageOfToken(sha256(token), me, clock.instant())
+                .orElseThrow(NotFoundException::new);
+        Message message = messages.findById(messageId).orElseThrow(NotFoundException::new);
+        Message.Attachment attachment = message.attachment();
+        if (attachment == null) {
+            throw new NotFoundException();
+        }
+        return media.grantedContent(attachment.id());
+    }
+
+    /**
+     * Tira do servidor os arquivos de visualização única que todos já abriram (com os tokens vencidos) ou que
+     * passaram de {@value #VIEW_ONCE_DAYS} dias (MS-08). Devolve quantos tirou.
+     */
+    @Transactional
+    public int purgeViewOnce(int limit) {
+        Instant now = clock.instant();
+        List<UUID> ids = viewOnceOpens.purgeable(now, now.minus(java.time.Duration.ofDays(VIEW_ONCE_DAYS)), limit);
+        for (Message message : messages.findAllById(ids)) {
+            sequences.lock(message.conversationId());
+            UUID file = message.purgeViewOnce(sequences.nextChange(message.conversationId()));
+            messages.flush();
+            if (file != null && !messages.existsByAttachmentId(file)) {
+                media.delete(file);
+            }
+            notifyChanged(message.conversationId());
+        }
+        return ids.size();
+    }
+
+    /** Token para abrir o conteúdo em {@code /api/v1/view-once/{token}}. */
+    public record ViewOnceGrant(String token, String kind, String contentType) {
+    }
+
+    private static String sha256(String value) {
+        try {
+            return java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256")
+                    .digest(value.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+        } catch (java.security.NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     /** Alterações depois de {@code afterSeq}, em ordem de alteração (RT-01). */
@@ -170,7 +269,7 @@ public class MessageService {
         for (UUID id : new LinkedHashSet<>(messageIds)) {
             Message message = messages.findById(id).orElseThrow(NotFoundException::new);
             conversations.requireMember(me, message.conversationId());
-            if (message.deleted() || message.kind() != MessageKind.USER) {
+            if (message.deleted() || message.kind() != MessageKind.USER || message.viewOnce()) {
                 throw new InvalidMessageException("cannot forward");
             }
             sources.add(message);
@@ -676,6 +775,9 @@ public class MessageService {
         Map<UUID, MediaView> files = media.describe(attachmentIds);
         Map<UUID, Polls.Poll> pollsById = polls.find(page.stream().filter(m -> m.kind() == MessageKind.POLL)
                 .map(Message::id).toList());
+        List<UUID> viewOnceIds = page.stream().filter(Message::viewOnce).map(Message::id).toList();
+        Set<UUID> openedByMe = viewOnceOpens.openedBy(me, viewOnceIds);
+        Map<UUID, Long> openCounts = viewOnceOpens.counts(viewOnceIds);
         Instant now = clock.instant();
         return page.stream().map(m -> {
             Message reply = m.replyToId() == null ? null : replies.get(m.replyToId());
@@ -683,13 +785,17 @@ public class MessageService {
                     : new ReplyPreview(reply.id(), reply.conversationId(), reply.seq(), reply.senderId(),
                             preview(reply.body()), reply.attachment() == null ? null : reply.attachment().kind(),
                             reply.deleted());
-            MediaView attachment = m.attachment() == null ? null : files.get(m.attachment().id());
+            // O id do arquivo de visualização única nunca vai para o cliente: só abre por token (MS-08).
+            MediaView attachment = m.attachment() == null || m.viewOnce() ? null : files.get(m.attachment().id());
+            ViewOnceView viewOnce = !m.viewOnce() ? null
+                    : new ViewOnceView(m.attachmentKind() == null ? "IMAGE" : m.attachmentKind(),
+                            openedByMe.contains(m.id()), openCounts.getOrDefault(m.id(), 0L), m.attachment() == null);
             return new MessageView(m.id(), m.conversationId(), m.seq(), m.changeSeq(), m.kind(), m.senderId(),
                     m.clientMessageId(), m.body(), m.createdAt(), replyTo, m.forwardCount(),
                     m.forwardCount() >= FORWARDED_MANY, m.pinnedAt(),
                     reactionsByMessage.getOrDefault(m.id(), List.of()), starred.contains(m.id()),
                     attachment == null ? null : AttachmentView.of(attachment), m.editedAt(), m.deleted(),
-                    m.expiresAt(), PollView.of(pollsById.get(m.id()), me, now));
+                    m.expiresAt(), PollView.of(pollsById.get(m.id()), me, now), viewOnce);
         }).toList();
     }
 
@@ -717,7 +823,18 @@ public class MessageService {
             UUID clientMessageId, String body, Instant createdAt, @Nullable ReplyPreview replyTo, int forwardCount,
             boolean forwardedMany, @Nullable Instant pinnedAt, List<ReactionView> reactions, boolean starred,
             @Nullable AttachmentView attachment, @Nullable Instant editedAt, boolean deleted,
-            @Nullable Instant expiresAt, @Nullable PollView poll) {
+            @Nullable Instant expiresAt, @Nullable PollView poll, @Nullable ViewOnceView viewOnce) {
+    }
+
+    /**
+     * Mensagem de visualização única (MS-08), sem o arquivo.
+     *
+     * @param kind IMAGE, VIDEO ou AUDIO
+     * @param openedByMe já abri (não abre de novo)
+     * @param openedCount quantas pessoas abriram (para quem enviou)
+     * @param expired o arquivo já saiu do servidor
+     */
+    public record ViewOnceView(String kind, boolean openedByMe, long openedCount, boolean expired) {
     }
 
     /**

@@ -100,8 +100,23 @@ public class MediaService {
         });
     }
 
+    /**
+     * Conteúdo para um acesso já autorizado pelo módulo dono do arquivo (token de visualização única, MS-08), sem
+     * passar pelas políticas.
+     */
+    @Transactional(readOnly = true)
+    public Content grantedContent(UUID id) throws IOException {
+        MediaFile file = files.findById(id).orElseThrow(MediaExceptions.NotFoundException::new);
+        Resource resource = storage.resource(MediaFile.contentKey(id))
+                .orElseThrow(MediaExceptions.NotFoundException::new);
+        return new Content(resource, file.contentType(), file.filename(), ContentTypes.inline(file.contentType()));
+    }
+
     private MediaFile requireReadable(UUID viewer, UUID id) {
         MediaFile file = files.findById(id).orElseThrow(MediaExceptions.NotFoundException::new);
+        if (policies.stream().anyMatch(p -> p.restricted(id))) {
+            throw new MediaExceptions.NotFoundException();
+        }
         if (viewer.equals(file.ownerId()) || policies.stream().anyMatch(p -> p.canRead(viewer, id))) {
             return file;
         }

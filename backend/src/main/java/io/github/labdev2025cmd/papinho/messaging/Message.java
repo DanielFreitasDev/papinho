@@ -69,6 +69,9 @@ class Message {
 
     private @Nullable Instant expiresAt;
 
+    @Column(nullable = false)
+    private boolean viewOnce;
+
     protected Message() {
         this.conversationId = new UUID(0, 0);
         this.kind = MessageKind.USER;
@@ -176,6 +179,28 @@ class Message {
 
     void expireAt(@Nullable Instant expiresAt) {
         this.expiresAt = expiresAt;
+    }
+
+    /** Visualização única (MS-08): o anexo só abre por token, uma vez por destinatário. */
+    boolean viewOnce() {
+        return viewOnce;
+    }
+
+    void markViewOnce() {
+        this.viewOnce = true;
+    }
+
+    /** Tipo do anexo, que fica mesmo depois de o arquivo de visualização única sair do servidor. */
+    @Nullable String attachmentKind() {
+        return attachmentKind;
+    }
+
+    /** Tira o arquivo de visualização única (todos abriram ou passou o prazo); devolve o id dele. */
+    @Nullable UUID purgeViewOnce(long changeSeq) {
+        UUID removed = attachmentId;
+        this.attachmentId = null;
+        changed(changeSeq);
+        return removed;
     }
 
     boolean deleted() {

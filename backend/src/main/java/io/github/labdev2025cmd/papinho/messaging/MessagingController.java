@@ -129,7 +129,7 @@ class MessagingController {
     ResponseEntity<MessageService.MessageView> send(@PathVariable UUID conversationId,
             @Valid @RequestBody SendMessageRequest body) {
         MessageService.SendResult result = messages.send(CurrentUser.id(), conversationId, body.clientMessageId(),
-                body.body(), body.replyToId(), body.attachmentId());
+                body.body(), body.replyToId(), body.attachmentId(), Boolean.TRUE.equals(body.viewOnce()));
         return ResponseEntity.status(result.created() ? HttpStatus.CREATED : HttpStatus.OK).body(result.message());
     }
 
@@ -198,6 +198,26 @@ class MessagingController {
         return messages.star(CurrentUser.id(), messageId, false);
     }
 
+    /** Emite o token único para abrir uma mensagem de visualização única (MS-08). */
+    @PostMapping("/messages/{messageId}/view-once")
+    MessageService.ViewOnceGrant openViewOnce(@PathVariable UUID messageId) {
+        return messages.openViewOnce(CurrentUser.id(), messageId);
+    }
+
+    /** Conteúdo de visualização única pelo token: nunca vai para cache (navegador, proxy ou service worker). */
+    @GetMapping("/view-once/{token}")
+    ResponseEntity<org.springframework.core.io.Resource> viewOnceContent(
+            @PathVariable @jakarta.validation.constraints.Pattern(regexp = "[A-Za-z0-9_-]{20,64}") String token)
+            throws java.io.IOException {
+        io.github.labdev2025cmd.papinho.media.MediaService.Content content = messages.viewOnceContent(
+                CurrentUser.id(), token);
+        return ResponseEntity.ok().contentType(org.springframework.http.MediaType.parseMediaType(
+                content.contentType())).cacheControl(org.springframework.http.CacheControl.noStore())
+                .header(org.springframework.http.HttpHeaders.PRAGMA, "no-cache")
+                .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "inline")
+                .body(content.resource());
+    }
+
     /** Edita o texto de uma mensagem própria dentro da janela (MS-05). */
     @PatchMapping("/messages/{messageId}")
     MessageService.MessageView edit(@PathVariable UUID messageId, @Valid @RequestBody EditMessageRequest body) {
@@ -248,7 +268,7 @@ class MessagingController {
     }
 
     record SendMessageRequest(@NotNull UUID clientMessageId, @NotNull @Size(max = Message.MAX_BODY_LENGTH) String body,
-            @Nullable UUID replyToId, @Nullable UUID attachmentId) {
+            @Nullable UUID replyToId, @Nullable UUID attachmentId, @Nullable Boolean viewOnce) {
     }
 
     record ForwardRequest(@NotEmpty @Size(max = 20) List<@NotNull UUID> messageIds,

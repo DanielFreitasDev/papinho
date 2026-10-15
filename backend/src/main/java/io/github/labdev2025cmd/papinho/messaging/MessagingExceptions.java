@@ -93,4 +93,11 @@ final class MessagingExceptions {
             super(HttpStatus.CONFLICT, "poll-closed", "This poll is closed");
         }
     }
+
+    /** Visualização única já aberta por esta pessoa ou arquivo já removido (MS-08). */
+    static class ViewOnceGoneException extends ApiException {
+        ViewOnceGoneException() {
+            super(HttpStatus.GONE, "view-once-gone", "This view once message was already opened");
+        }
+    }
 }

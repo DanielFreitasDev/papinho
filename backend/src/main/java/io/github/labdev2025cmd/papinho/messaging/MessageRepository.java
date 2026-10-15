@@ -37,13 +37,19 @@ interface MessageRepository extends JpaRepository<Message, UUID> {
     @Query(value = """
             select exists (select 1 from messages m
               join conversation_members cm on cm.conversation_id = m.conversation_id
-             where m.attachment_id = :mediaId and cm.user_id = :viewer and cm.state in ('ACTIVE', 'REQUEST'))
+             where m.attachment_id = :mediaId and not m.view_once
+               and cm.user_id = :viewer and cm.state in ('ACTIVE', 'REQUEST'))
             """, nativeQuery = true)
     boolean attachmentVisibleTo(UUID viewer, UUID mediaId);
 
+    /** O arquivo é de uma mensagem de visualização única (só abre por token, MS-08)? */
+    @Query(value = "select exists (select 1 from messages m where m.attachment_id = :mediaId and m.view_once)",
+            nativeQuery = true)
+    boolean viewOnceAttachment(UUID mediaId);
+
     /** Galeria (MD-03): mensagens com anexo destes tipos, da mais nova para a mais antiga. */
     @Query("select m from Message m where m.conversationId = :conversationId and m.attachmentKind in :kinds "
-            + "and m.seq < :beforeSeq order by m.seq desc")
+            + "and m.attachmentId is not null and m.viewOnce = false and m.seq < :beforeSeq order by m.seq desc")
     List<Message> findWithAttachments(UUID conversationId, java.util.Collection<String> kinds, long beforeSeq,
             Limit limit);
 

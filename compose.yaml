@@ -1,0 +1,21 @@
+# Infraestrutura de desenvolvimento: PostgreSQL 18. Credenciais descartáveis, nunca de produção.
+# O backend sobe este arquivo sozinho no perfil "local" (spring-boot-docker-compose).
+services:
+  postgres:
+    image: 'postgres:18-alpine'
+    environment:
+      POSTGRES_DB: papinho
+      POSTGRES_USER: papinho
+      POSTGRES_PASSWORD: papinho
+    ports:
+      - '127.0.0.1:5432:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U papinho -d papinho']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  postgres-data:

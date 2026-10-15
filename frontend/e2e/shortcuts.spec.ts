@@ -13,8 +13,9 @@ test("paleta de comandos e lista de atalhos pelo teclado", async ({
   await expect(palette).toBeVisible()
   await expectNoSeriousA11yViolations(page)
   await page.keyboard.type("salvas")
+  // O admin é compartilhado: depois de um projeto, "Mensagens salvas" também aparece entre as conversas.
   await expect(
-    palette.getByRole("option", { name: "Mensagens salvas" })
+    palette.getByRole("option", { name: "Mensagens salvas" }).first()
   ).toBeVisible()
   await page.keyboard.press("Enter")
   await expect(palette).toBeHidden()

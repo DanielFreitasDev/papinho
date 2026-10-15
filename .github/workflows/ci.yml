@@ -1,0 +1,131 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend (./mvnw verify)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+      # Testcontainers usa o Docker do runner; openssl prova as Name Constraints da CA da LAN.
+      - name: Verificar (unitários, slice, integração, ArchUnit e Modulith)
+        run: ./mvnw -B verify
+      - name: Relatórios de teste
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: backend-test-reports
+          path: |
+            backend/target/surefire-reports
+            backend/target/failsafe-reports
+
+  frontend:
+    name: Frontend (lint, typecheck, Vitest, build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: frontend/.nvmrc
+      - name: Ativar pnpm (versão do packageManager)
+        run: corepack enable
+      - name: Instalar dependências
+        run: pnpm install --frozen-lockfile
+      - run: pnpm format:check
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build
+
+  e2e:
+    name: E2E (Playwright + axe)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [frontend]
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_DB: papinho
+          POSTGRES_USER: papinho
+          POSTGRES_PASSWORD: papinho
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U papinho -d papinho"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      DATABASE_URL: jdbc:postgresql://localhost:5432/papinho
+      DATABASE_USERNAME: papinho
+      DATABASE_PASSWORD: papinho
+      PAPINHO_PKI_DIR: ${{ github.workspace }}/.ci-pki
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: frontend/.nvmrc
+      - name: Ativar pnpm
+        run: corepack enable
+      - name: Gerar papinho.jar
+        run: ./mvnw -B -q install -DskipTests
+      - name: Subir o Papinho (padrão e perfil lan)
+        run: |
+          java -jar backend/target/papinho.jar pki init --ip 127.0.0.1 --network 127.0.0.0/8
+          nohup java -jar backend/target/papinho.jar --server.port=8080 > papinho.log 2>&1 &
+          nohup java -jar backend/target/papinho.jar --spring.profiles.active=lan \
+            --app.pki.http-port=8081 --app.pki.public-http-port=8081 --app.pki.public-https-port=8443 \
+            > papinho-lan.log 2>&1 &
+          for i in $(seq 1 90); do
+            curl -fs http://localhost:8080/actuator/health > /dev/null && curl -fs http://localhost:8081/setup > /dev/null && exit 0
+            sleep 2
+          done
+          cat papinho.log papinho-lan.log
+          exit 1
+      - name: Instalar dependências e Chromium
+        working-directory: frontend
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm exec playwright install --with-deps chromium
+      - name: Rodar e2e
+        working-directory: frontend
+        env:
+          PAPINHO_E2E_URL: http://localhost:8080
+          PAPINHO_E2E_SETUP_URL: http://localhost:8081/setup
+        run: pnpm e2e
+      - name: Relatório do Playwright e logs
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: e2e-report
+          path: |
+            frontend/playwright-report
+            frontend/test-results
+            papinho.log
+            papinho-lan.log

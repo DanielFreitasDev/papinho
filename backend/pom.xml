@@ -15,6 +15,7 @@
 		<bouncycastle.version>1.86</bouncycastle.version>
 		<zxing.version>3.5.4</zxing.version>
 		<archunit.version>1.5.1</archunit.version>
+		<bucket4j.version>8.21.0</bucket4j.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -74,6 +75,12 @@
 			<groupId>org.bouncycastle</groupId>
 			<artifactId>bcpkix-jdk18on</artifactId>
 			<version>${bouncycastle.version}</version>
+		</dependency>
+		<!-- Limite de tentativas em login, convites, códigos e envio (SG-03) -->
+		<dependency>
+			<groupId>com.bucket4j</groupId>
+			<artifactId>bucket4j_jdk17-core</artifactId>
+			<version>${bucket4j.version}</version>
 		</dependency>
 		<!-- QR Code da página /setup e dos convites -->
 		<dependency>

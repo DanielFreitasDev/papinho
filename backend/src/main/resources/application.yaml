@@ -62,14 +62,8 @@ server:
     include-binding-errors: never
   servlet:
     session:
+      # O cookie da sessão é definido em shared/security/SessionCookieConfig (ADR 0003).
       timeout: 30d
-      cookie:
-        # ADR 0003: __Host- exige Secure, Path=/ e nenhum Domain; o navegador recusa o cookie de outra forma.
-        name: __Host-SESSION
-        http-only: true
-        secure: true
-        same-site: lax
-        path: /
 
 management:
   endpoints:
@@ -100,3 +94,10 @@ app:
     http-port: ${PAPINHO_HTTP_PORT:8080}
     public-http-port: ${PAPINHO_PUBLIC_HTTP_PORT:80}
     public-https-port: ${PAPINHO_PUBLIC_HTTPS_PORT:443}
+  crypto:
+    key: ${PAPINHO_CRYPTO_KEY:}
+    key-file: ${PAPINHO_DATA_DIR:${user.home}/.papinho}/secret.key
+  storage:
+    dir: ${PAPINHO_STORAGE_DIR:${PAPINHO_DATA_DIR:${user.home}/.papinho}/files}
+  identity:
+    rp-name: Papinho

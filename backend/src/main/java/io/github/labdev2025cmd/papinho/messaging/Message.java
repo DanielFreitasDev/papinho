@@ -67,6 +67,8 @@ class Message {
 
     private @Nullable Instant deletedAt;
 
+    private @Nullable Instant expiresAt;
+
     protected Message() {
         this.conversationId = new UUID(0, 0);
         this.kind = MessageKind.USER;
@@ -165,6 +167,15 @@ class Message {
 
     @Nullable Instant deletedAt() {
         return deletedAt;
+    }
+
+    /** Quando some (mensagem temporária, MS-07); nulo = não expira. */
+    @Nullable Instant expiresAt() {
+        return expiresAt;
+    }
+
+    void expireAt(@Nullable Instant expiresAt) {
+        this.expiresAt = expiresAt;
     }
 
     boolean deleted() {

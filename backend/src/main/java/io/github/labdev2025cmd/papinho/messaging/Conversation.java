@@ -36,6 +36,8 @@ class Conversation {
     @Column(nullable = false, insertable = false, updatable = false)
     private long lastSeq;
 
+    private @Nullable Integer disappearingSeconds;
+
     @Column(nullable = false)
     private Instant createdAt;
 
@@ -91,6 +93,15 @@ class Conversation {
 
     @Nullable UUID createdBy() {
         return createdBy;
+    }
+
+    /** Timer das mensagens temporárias (MS-07), em segundos; nulo = desligado. */
+    @Nullable Integer disappearingSeconds() {
+        return disappearingSeconds;
+    }
+
+    void changeDisappearing(@Nullable Integer seconds) {
+        this.disappearingSeconds = seconds;
     }
 
     void touch(Instant now) {

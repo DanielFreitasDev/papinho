@@ -18,6 +18,7 @@
 		<bucket4j.version>8.21.0</bucket4j.version>
 		<tika.version>3.3.3</tika.version>
 		<jsoup.version>1.23.2</jsoup.version>
+		<shedlock.version>7.10.1</shedlock.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -82,6 +83,17 @@
 			<groupId>org.bouncycastle</groupId>
 			<artifactId>bcpkix-jdk18on</artifactId>
 			<version>${bouncycastle.version}</version>
+		</dependency>
+		<!-- Jobs agendados com trava no banco: só uma instância roda cada vez (MS-07) -->
+		<dependency>
+			<groupId>net.javacrumbs.shedlock</groupId>
+			<artifactId>shedlock-spring</artifactId>
+			<version>${shedlock.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>net.javacrumbs.shedlock</groupId>
+			<artifactId>shedlock-provider-jdbc-template</artifactId>
+			<version>${shedlock.version}</version>
 		</dependency>
 		<!-- Limite de tentativas em login, convites, códigos e envio (SG-03) -->
 		<dependency>

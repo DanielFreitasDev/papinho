@@ -42,13 +42,14 @@ public class ConversationService {
     private final UserDirectory users;
     private final ProfileService profiles;
     private final ContactQueries contacts;
+    private final MessagingPreferences preferences;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
     ConversationService(ConversationRepository conversations, ConversationMemberRepository members,
             GroupDetailsRepository groups, ConversationQueries queries, SequenceAllocator sequences,
             ReceiptLog receipts, UserDirectory users, ProfileService profiles, ContactQueries contacts,
-            ApplicationEventPublisher events, Clock clock) {
+            MessagingPreferences preferences, ApplicationEventPublisher events, Clock clock) {
         this.conversations = conversations;
         this.members = members;
         this.groups = groups;
@@ -58,6 +59,7 @@ public class ConversationService {
         this.users = users;
         this.profiles = profiles;
         this.contacts = contacts;
+        this.preferences = preferences;
         this.events = events;
         this.clock = clock;
     }
@@ -76,7 +78,10 @@ public class ConversationService {
         sequences.lockKey(key);
         Conversation conversation = conversations.findByDirectKey(key).orElseGet(() -> {
             Instant now = clock.instant();
-            Conversation created = conversations.saveAndFlush(Conversation.direct(me, other.id(), now));
+            Conversation direct = Conversation.direct(me, other.id(), now);
+            // Conversa nova herda o timer padrão de quem a abriu (MS-07).
+            direct.changeDisappearing(preferences.defaultDisappearing(me));
+            Conversation created = conversations.saveAndFlush(direct);
             members.save(new ConversationMember(created.id(), me, MemberState.ACTIVE, now));
             MemberState otherState = contacts.isContact(other.id(), me) ? MemberState.ACTIVE : MemberState.REQUEST;
             members.save(new ConversationMember(created.id(), other.id(), otherState, now));
@@ -174,6 +179,19 @@ public class ConversationService {
     ConversationMember requireMember(UUID me, UUID conversationId) {
         return members.findById(new ConversationMember.Key(conversationId, me))
                 .filter(member -> VISIBLE.contains(member.state())).orElseThrow(NotFoundException::new);
+    }
+
+    /** Num grupo com "só admins editam os dados", só admins (GR-01, MS-07). */
+    void requireGroupEditor(ConversationMember member) {
+        GroupDetails group = groups.findById(member.conversationId()).orElseThrow(NotFoundException::new);
+        if (group.onlyAdminsEditInfo() && !member.admin()) {
+            throw new MessagingExceptions.OnlyAdminsException();
+        }
+    }
+
+    /** Conversa pelo id, sem checar participação (quem chama já checou). */
+    Conversation find(UUID conversationId) {
+        return conversations.findById(conversationId).orElseThrow(NotFoundException::new);
     }
 
     /** Conversa de que {@code me} participa (ativa ou solicitação); senão 404. */
@@ -328,7 +346,8 @@ public class ConversationService {
         long peerDeliveredSeq = self ? row.lastSeq() : row.peerDeliveredSeq();
         return new ConversationView(row.id(), row.kind().name(), row.state(), peerView, null, row.lastSeq(),
                 preview(row, Map.of()), row.unreadCount(), row.firstUnreadSeq(), row.markedUnread(), row.readSeq(),
-                peerDeliveredSeq, peerReadSeq, row.updatedAt(), !blockedByMe && peer.active(), blockedByMe);
+                peerDeliveredSeq, peerReadSeq, row.updatedAt(), !blockedByMe && peer.active(), blockedByMe,
+                row.disappearingSeconds());
     }
 
     /** Nome como {@code me} vê cada pessoa: apelido do contato, nome de exibição ou {@code @usuario}. */
@@ -357,7 +376,8 @@ public class ConversationService {
         boolean canSend = row.state() == MemberState.ACTIVE && (!group.onlyAdminsSend() || admin);
         return new ConversationView(row.id(), row.kind().name(), row.state(), null, groupView, row.lastSeq(),
                 preview(row, senderLabels), row.unreadCount(), row.firstUnreadSeq(), row.markedUnread(), row.readSeq(),
-                row.peerDeliveredSeq(), row.peerReadSeq(), row.updatedAt(), canSend, false);
+                row.peerDeliveredSeq(), row.peerReadSeq(), row.updatedAt(), canSend, false,
+                row.disappearingSeconds());
     }
 
     private static @Nullable MessagePreview preview(ConversationQueries.Row row, Map<UUID, String> senderLabels) {
@@ -380,11 +400,13 @@ public class ConversationService {
      * @param peerReadSeq até onde a outra pessoa leu (num grupo, todos); nulo enquanto ela não aceitou a conversa
      *     (CT-02)
      * @param canSend posso escrever (não bloqueei, a conta dela está ativa; no grupo, as permissões)
+     * @param disappearingSeconds timer das mensagens temporárias (MS-07); nulo = desligado
      */
     public record ConversationView(UUID id, String kind, MemberState state, @Nullable PeerView peer,
             @Nullable GroupView group, long lastSeq, @Nullable MessagePreview lastMessage, long unreadCount,
             @Nullable Long firstUnreadSeq, boolean markedUnread, long readSeq, long peerDeliveredSeq,
-            @Nullable Long peerReadSeq, Instant updatedAt, boolean canSend, boolean blockedByMe) {
+            @Nullable Long peerReadSeq, Instant updatedAt, boolean canSend, boolean blockedByMe,
+            @Nullable Integer disappearingSeconds) {
     }
 
     /**

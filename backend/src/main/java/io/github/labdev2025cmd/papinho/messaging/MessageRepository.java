@@ -12,6 +12,10 @@ interface MessageRepository extends JpaRepository<Message, UUID> {
 
     Optional<Message> findBySenderIdAndClientMessageId(UUID senderId, UUID clientMessageId);
 
+    /** Mensagens temporárias vencidas (MS-07), das mais antigas. */
+    @Query("select m from Message m where m.expiresAt <= :now order by m.expiresAt")
+    List<Message> findExpired(java.time.Instant now, Limit limit);
+
     /** Alguma mensagem ainda usa o arquivo (encaminhar copia a referência)? */
     boolean existsByAttachmentId(UUID attachmentId);
 

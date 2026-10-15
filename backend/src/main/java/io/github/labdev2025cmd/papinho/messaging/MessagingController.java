@@ -59,6 +59,23 @@ class MessagingController {
         return conversations.openSelf(CurrentUser.id());
     }
 
+    /** Timer de mensagens temporárias da conversa (MS-07): 86400, 604800, 7776000 ou nulo. */
+    @PutMapping("/conversations/{conversationId}/disappearing")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    void disappearing(@PathVariable UUID conversationId, @RequestBody DisappearingRequest body) {
+        messages.changeDisappearing(CurrentUser.id(), conversationId, body.seconds());
+    }
+
+    @GetMapping("/messaging/preferences")
+    MessageService.Preferences preferences() {
+        return messages.preferences(CurrentUser.id());
+    }
+
+    @PutMapping("/messaging/preferences")
+    MessageService.Preferences changePreferences(@RequestBody MessageService.Preferences body) {
+        return messages.changePreferences(CurrentUser.id(), body.defaultDisappearingSeconds());
+    }
+
     @GetMapping("/conversations/{conversationId}")
     ConversationService.ConversationView get(@PathVariable UUID conversationId) {
         return conversations.view(CurrentUser.id(), conversationId);
@@ -196,6 +213,9 @@ class MessagingController {
     }
 
     record OpenDirectRequest(@NotBlank @Size(max = 64) String username) {
+    }
+
+    record DisappearingRequest(@Nullable Integer seconds) {
     }
 
     record PointerRequest(@PositiveOrZero long seq) {

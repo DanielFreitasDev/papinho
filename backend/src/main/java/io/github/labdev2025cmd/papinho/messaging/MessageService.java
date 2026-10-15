@@ -63,6 +63,7 @@ public class MessageService {
     private final ProfileService profiles;
     private final MediaService media;
     private final HiddenMessages hidden;
+    private final MessagingPreferences preferences;
     private final InstanceSettingsService settings;
     private final JsonMapper json;
     private final ApplicationEventPublisher events;
@@ -71,6 +72,7 @@ public class MessageService {
     MessageService(MessageRepository messages, MessageReactionRepository reactions, MessageStarRepository stars,
             ConversationService conversations, SequenceAllocator sequences, ReceiptLog receipts,
             UserDirectory users, ProfileService profiles, MediaService media, HiddenMessages hidden,
+            MessagingPreferences preferences,
             InstanceSettingsService settings, JsonMapper json, ApplicationEventPublisher events, Clock clock) {
         this.messages = messages;
         this.reactions = reactions;
@@ -82,6 +84,7 @@ public class MessageService {
         this.profiles = profiles;
         this.media = media;
         this.hidden = hidden;
+        this.preferences = preferences;
         this.settings = settings;
         this.json = json;
         this.events = events;
@@ -395,6 +398,83 @@ public class MessageService {
     }
 
     /**
+     * Liga, troca ou desliga o timer de mensagens temporárias da conversa (MS-07); vale para as mensagens enviadas
+     * daqui em diante e deixa um aviso na conversa. Num grupo com "só admins editam os dados", só admins.
+     */
+    @Transactional
+    public void changeDisappearing(UUID me, UUID conversationId, @Nullable Integer seconds) {
+        ConversationMember member = conversations.requireMember(me, conversationId);
+        if (seconds != null && !MessagingPreferences.TIMERS.contains(seconds)) {
+            throw new InvalidMessageException("timer");
+        }
+        Conversation conversation = conversations.find(conversationId);
+        if (conversation.kind() == ConversationKind.GROUP) {
+            conversations.requireGroupEditor(member);
+        } else if (conversation.kind() == ConversationKind.DIRECT
+                && conversations.blockedWithSomeone(me, conversationId)) {
+            throw new MessagingExceptions.BlockedException();
+        }
+        if (java.util.Objects.equals(conversation.disappearingSeconds(), seconds)) {
+            return;
+        }
+        sequences.lock(conversationId);
+        conversation.changeDisappearing(seconds);
+        if (member.state() == MemberState.REQUEST) {
+            member.changeState(MemberState.ACTIVE);
+        }
+        appendSystem(conversationId, me, new SystemNotice("timer",
+                new SystemNotice.Person(me, profiles.own(me).displayName()), List.of(),
+                seconds == null ? null : seconds.toString()));
+        events.publishEvent(new MessagingEvents.ConversationUpdated(conversationId,
+                conversations.audience(conversationId)));
+    }
+
+    @Transactional(readOnly = true)
+    public Preferences preferences(UUID me) {
+        return new Preferences(preferences.defaultDisappearing(me));
+    }
+
+    /** Timer padrão para conversas novas (MS-07). */
+    @Transactional
+    public Preferences changePreferences(UUID me, @Nullable Integer defaultDisappearingSeconds) {
+        if (defaultDisappearingSeconds != null && !MessagingPreferences.TIMERS.contains(defaultDisappearingSeconds)) {
+            throw new InvalidMessageException("timer");
+        }
+        preferences.changeDefaultDisappearing(me, defaultDisappearingSeconds, clock.instant());
+        return new Preferences(defaultDisappearingSeconds);
+    }
+
+    /**
+     * Apaga até {@code limit} mensagens temporárias vencidas (MS-07): a linha, as reações, as favoritas e o arquivo
+     * (quando nenhuma outra mensagem o usa). Devolve quantas apagou.
+     */
+    @Transactional
+    public int purgeExpired(int limit) {
+        List<Message> expired = messages.findExpired(clock.instant(), Limit.of(limit));
+        if (expired.isEmpty()) {
+            return 0;
+        }
+        Set<UUID> files = new HashSet<>();
+        Set<UUID> touched = new HashSet<>();
+        for (Message message : expired) {
+            if (message.attachment() != null) {
+                files.add(message.attachment().id());
+            }
+            touched.add(message.conversationId());
+        }
+        messages.deleteAll(expired);
+        messages.flush();
+        files.stream().filter(id -> !messages.existsByAttachmentId(id)).forEach(media::delete);
+        touched.forEach(id -> events.publishEvent(new MessagingEvents.ConversationUpdated(id,
+                conversations.audience(id))));
+        return expired.size();
+    }
+
+    /** @param defaultDisappearingSeconds timer das conversas novas; nulo = desligado */
+    public record Preferences(@Nullable Integer defaultDisappearingSeconds) {
+    }
+
+    /**
      * Aviso do sistema na conversa (GR-01): entra na sequência como uma mensagem e chega a todos pelo
      * {@code afterSeq}.
      */
@@ -440,9 +520,13 @@ public class MessageService {
             @Nullable UUID replyToId, int forwardCount, Message.@Nullable Attachment attachment) {
         Instant now = clock.instant();
         long seq = sequences.next(conversationId, now);
-        Message saved = messages.saveAndFlush(
-                new Message(conversationId, seq, me, clientMessageId, body, replyToId, forwardCount, attachment,
-                        now));
+        Message message = new Message(conversationId, seq, me, clientMessageId, body, replyToId, forwardCount,
+                attachment, now);
+        Integer timer = conversations.find(conversationId).disappearingSeconds();
+        if (timer != null) {
+            message.expireAt(now.plusSeconds(timer));
+        }
+        Message saved = messages.saveAndFlush(message);
         // Quem envia já "leu" a própria mensagem: o marcador de não lidas começa depois dela.
         conversations.requireMember(me, conversationId).advanceRead(seq);
         notifyChanged(conversationId);
@@ -526,7 +610,8 @@ public class MessageService {
                     m.clientMessageId(), m.body(), m.createdAt(), replyTo, m.forwardCount(),
                     m.forwardCount() >= FORWARDED_MANY, m.pinnedAt(),
                     reactionsByMessage.getOrDefault(m.id(), List.of()), starred.contains(m.id()),
-                    attachment == null ? null : AttachmentView.of(attachment), m.editedAt(), m.deleted());
+                    attachment == null ? null : AttachmentView.of(attachment), m.editedAt(), m.deleted(),
+                    m.expiresAt());
         }).toList();
     }
 
@@ -546,12 +631,14 @@ public class MessageService {
      * @param starred favoritada por quem pediu
      * @param editedAt quando foi editada pela última vez (selo "editada", MS-05)
      * @param deleted apagada para todos: sem texto nem anexo, mostra "Esta mensagem foi apagada" (MS-06)
+     * @param expiresAt quando a mensagem temporária some (MS-07); o cliente esconde as vencidas antes do job
      */
     public record MessageView(UUID id, UUID conversationId, long seq, long changeSeq, MessageKind kind,
             @Nullable UUID senderId,
             UUID clientMessageId, String body, Instant createdAt, @Nullable ReplyPreview replyTo, int forwardCount,
             boolean forwardedMany, @Nullable Instant pinnedAt, List<ReactionView> reactions, boolean starred,
-            @Nullable AttachmentView attachment, @Nullable Instant editedAt, boolean deleted) {
+            @Nullable AttachmentView attachment, @Nullable Instant editedAt, boolean deleted,
+            @Nullable Instant expiresAt) {
     }
 
     /** Anexo como o cliente o vê; o conteúdo vem de {@code /api/v1/media/{id}/content}. */

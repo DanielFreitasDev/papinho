@@ -56,6 +56,7 @@ public class GroupService {
     private final ProfileService profiles;
     private final ContactQueries contacts;
     private final MediaService media;
+    private final MessagingPreferences preferences;
     private final RateLimiter rateLimiter;
     private final ApplicationEventPublisher events;
     private final Clock clock;
@@ -64,8 +65,8 @@ public class GroupService {
     GroupService(ConversationRepository conversations, ConversationMemberRepository members,
             GroupDetailsRepository groups, ConversationService conversationService, MessageService messages,
             MessageRepository messageRepository, SequenceAllocator sequences, UserDirectory users,
-            ProfileService profiles, ContactQueries contacts, MediaService media, RateLimiter rateLimiter,
-            ApplicationEventPublisher events, Clock clock) {
+            ProfileService profiles, ContactQueries contacts, MediaService media, MessagingPreferences preferences,
+            RateLimiter rateLimiter, ApplicationEventPublisher events, Clock clock) {
         this.conversations = conversations;
         this.members = members;
         this.groups = groups;
@@ -77,6 +78,7 @@ public class GroupService {
         this.profiles = profiles;
         this.contacts = contacts;
         this.media = media;
+        this.preferences = preferences;
         this.rateLimiter = rateLimiter;
         this.events = events;
         this.clock = clock;
@@ -94,7 +96,9 @@ public class GroupService {
         }
         targets.forEach(target -> requireAddable(me, target));
         Instant now = clock.instant();
-        Conversation conversation = conversations.saveAndFlush(Conversation.group(me, now));
+        Conversation group = Conversation.group(me, now);
+        group.changeDisappearing(preferences.defaultDisappearing(me));
+        Conversation conversation = conversations.saveAndFlush(group);
         UUID id = conversation.id();
         groups.saveAndFlush(new GroupDetails(id, cleanName, validDescription(description), now));
         members.save(new ConversationMember(id, me, MemberState.ACTIVE, MemberRole.ADMIN, now));

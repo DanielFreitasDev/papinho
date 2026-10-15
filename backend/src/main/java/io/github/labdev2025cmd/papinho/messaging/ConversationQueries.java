@@ -22,7 +22,7 @@ import org.springframework.stereotype.Component;
 class ConversationQueries {
 
     private static final String LIST = """
-            select c.id, c.kind, c.last_seq, c.updated_at, c.created_by,
+            select c.id, c.kind, c.last_seq, c.updated_at, c.created_by, c.disappearing_seconds,
                    me.state, me.role, me.read_seq, me.marked_unread,
                    peer.user_id as peer_id, peer.state as peer_state,
                    case when c.kind = 'GROUP' then grp.delivered else peer.delivered_seq end as peer_delivered_seq,
@@ -92,7 +92,8 @@ class ConversationQueries {
         long firstUnread = rs.getLong("first_unread_seq");
         return new Row(rs.getObject("id", UUID.class), ConversationKind.valueOf(rs.getString("kind")),
                 rs.getLong("last_seq"), instant(rs.getObject("updated_at", OffsetDateTime.class)),
-                rs.getObject("created_by", UUID.class), MemberState.valueOf(rs.getString("state")),
+                rs.getObject("created_by", UUID.class), rs.getObject("disappearing_seconds", Integer.class),
+                MemberState.valueOf(rs.getString("state")),
                 MemberRole.valueOf(rs.getString("role")), rs.getLong("member_count"),
                 rs.getLong("read_seq"), rs.getBoolean("marked_unread"), rs.getObject("peer_id", UUID.class),
                 rs.getString("peer_state") == null ? null : MemberState.valueOf(rs.getString("peer_state")),
@@ -106,7 +107,7 @@ class ConversationQueries {
 
     /** Linha crua da lista; o serviço aplica as regras de privacidade antes de expor. */
     record Row(UUID id, ConversationKind kind, long lastSeq, Instant updatedAt, @Nullable UUID createdBy,
-            MemberState state, MemberRole role, long memberCount, long readSeq, boolean markedUnread,
+            @Nullable Integer disappearingSeconds, MemberState state, MemberRole role, long memberCount, long readSeq, boolean markedUnread,
             @Nullable UUID peerId,
             @Nullable MemberState peerState, long peerDeliveredSeq, long peerReadSeq, long unreadCount,
             @Nullable Long firstUnreadSeq, @Nullable LastMessage last) {

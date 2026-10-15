@@ -48,6 +48,10 @@ class Message {
     @Column(nullable = false)
     private int forwardCount;
 
+    private @Nullable UUID attachmentId;
+
+    private @Nullable String attachmentKind;
+
     private @Nullable Instant pinnedAt;
 
     @Column(nullable = false)
@@ -61,7 +65,7 @@ class Message {
     }
 
     Message(UUID conversationId, long seq, UUID senderId, UUID clientMessageId, String body,
-            @Nullable UUID replyToId, int forwardCount, Instant now) {
+            @Nullable UUID replyToId, int forwardCount, @Nullable Attachment attachment, Instant now) {
         this.conversationId = conversationId;
         this.seq = seq;
         this.changeSeq = seq;
@@ -70,6 +74,10 @@ class Message {
         this.body = body;
         this.replyToId = replyToId;
         this.forwardCount = forwardCount;
+        if (attachment != null) {
+            this.attachmentId = attachment.id();
+            this.attachmentKind = attachment.kind();
+        }
         this.createdAt = now;
     }
 
@@ -112,6 +120,11 @@ class Message {
         return forwardCount;
     }
 
+    /** Anexo da mensagem (MD-01), se houver. */
+    @Nullable Attachment attachment() {
+        return attachmentId == null || attachmentKind == null ? null : new Attachment(attachmentId, attachmentKind);
+    }
+
     @Nullable Instant pinnedAt() {
         return pinnedAt;
     }
@@ -133,5 +146,9 @@ class Message {
     void unpin(long changeSeq) {
         this.pinnedAt = null;
         changed(changeSeq);
+    }
+
+    /** Referência ao arquivo do módulo de mídia e o tipo dele (IMAGE, VIDEO, AUDIO, DOCUMENT). */
+    record Attachment(UUID id, String kind) {
     }
 }

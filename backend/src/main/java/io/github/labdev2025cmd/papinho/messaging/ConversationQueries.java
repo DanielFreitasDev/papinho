@@ -30,11 +30,13 @@ class ConversationQueries {
                    (select min(m.seq) from messages m where m.conversation_id = c.id and m.seq > me.read_seq
                        and m.sender_id is distinct from me.user_id) as first_unread_seq,
                    last.id as last_id, last.seq as last_seq_of_message, last.sender_id as last_sender_id,
-                   left(last.body, 200) as last_body, last.created_at as last_created_at
+                   left(last.body, 200) as last_body, last.created_at as last_created_at,
+                   last.attachment_kind as last_attachment_kind
               from conversation_members me
               join conversations c on c.id = me.conversation_id
               left join conversation_members peer on peer.conversation_id = c.id and peer.user_id <> me.user_id
-              left join lateral (select m.id, m.seq, m.sender_id, m.body, m.created_at from messages m
+              left join lateral (select m.id, m.seq, m.sender_id, m.body, m.created_at, m.attachment_kind
+                                   from messages m
                                   where m.conversation_id = c.id order by m.seq desc limit 1) last on true
              where me.user_id = :userId and me.state in (:states)
                and (:conversationId::uuid is null and (c.last_seq > 0 or c.created_by = me.user_id)
@@ -70,7 +72,8 @@ class ConversationQueries {
         LastMessage last = lastId == null ? null
                 : new LastMessage(lastId, rs.getLong("last_seq_of_message"),
                         rs.getObject("last_sender_id", UUID.class), rs.getString("last_body"),
-                        instant(rs.getObject("last_created_at", OffsetDateTime.class)));
+                        instant(rs.getObject("last_created_at", OffsetDateTime.class)),
+                        rs.getString("last_attachment_kind"));
         long firstUnread = rs.getLong("first_unread_seq");
         return new Row(rs.getObject("id", UUID.class), ConversationKind.valueOf(rs.getString("kind")),
                 rs.getLong("last_seq"), instant(rs.getObject("updated_at", OffsetDateTime.class)),
@@ -92,6 +95,7 @@ class ConversationQueries {
             @Nullable Long firstUnreadSeq, @Nullable LastMessage last) {
     }
 
-    record LastMessage(UUID id, long seq, @Nullable UUID senderId, String body, Instant createdAt) {
+    record LastMessage(UUID id, long seq, @Nullable UUID senderId, String body, Instant createdAt,
+            @Nullable String attachmentKind) {
     }
 }

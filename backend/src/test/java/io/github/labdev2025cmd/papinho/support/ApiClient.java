@@ -65,6 +65,11 @@ public final class ApiClient {
         return send(builder, null);
     }
 
+    /** Requisição montada pelo teste (cabeçalhos e corpo próprios, como os do tus), com cookies, CSRF e IP. */
+    public MvcTestResult perform(AbstractMockHttpServletRequestBuilder<?> builder) {
+        return send(builder, null);
+    }
+
     /** Lê o corpo JSON da resposta. */
     public JsonNode json(MvcTestResult result) {
         return json.readTree(result.getResponse().getContentAsByteArray());

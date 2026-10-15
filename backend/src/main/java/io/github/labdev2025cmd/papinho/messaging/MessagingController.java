@@ -105,7 +105,7 @@ class MessagingController {
     ResponseEntity<MessageService.MessageView> send(@PathVariable UUID conversationId,
             @Valid @RequestBody SendMessageRequest body) {
         MessageService.SendResult result = messages.send(CurrentUser.id(), conversationId, body.clientMessageId(),
-                body.body(), body.replyToId());
+                body.body(), body.replyToId(), body.attachmentId());
         return ResponseEntity.status(result.created() ? HttpStatus.CREATED : HttpStatus.OK).body(result.message());
     }
 
@@ -168,7 +168,7 @@ class MessagingController {
     }
 
     record SendMessageRequest(@NotNull UUID clientMessageId, @NotNull @Size(max = Message.MAX_BODY_LENGTH) String body,
-            @Nullable UUID replyToId) {
+            @Nullable UUID replyToId, @Nullable UUID attachmentId) {
     }
 
     record ForwardRequest(@NotEmpty @Size(max = 20) List<@NotNull UUID> messageIds,

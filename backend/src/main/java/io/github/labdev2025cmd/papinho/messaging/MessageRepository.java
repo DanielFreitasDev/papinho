@@ -25,4 +25,12 @@ interface MessageRepository extends JpaRepository<Message, UUID> {
     @Query("select m from Message m where m.conversationId = :conversationId and m.pinnedAt is not null "
             + "order by m.pinnedAt")
     List<Message> findPinned(UUID conversationId);
+
+    /** O arquivo está em alguma mensagem de uma conversa visível para {@code viewer} (acesso à mídia)? */
+    @Query(value = """
+            select exists (select 1 from messages m
+              join conversation_members cm on cm.conversation_id = m.conversation_id
+             where m.attachment_id = :mediaId and cm.user_id = :viewer and cm.state in ('ACTIVE', 'REQUEST'))
+            """, nativeQuery = true)
+    boolean attachmentVisibleTo(UUID viewer, UUID mediaId);
 }

@@ -24,6 +24,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import io.github.labdev2025cmd.papinho.identity.UserDirectory;
 import io.github.labdev2025cmd.papinho.identity.UserDirectory.UserSummary;
+import io.github.labdev2025cmd.papinho.media.MediaService;
+import io.github.labdev2025cmd.papinho.media.MediaView;
 import io.github.labdev2025cmd.papinho.messaging.MessagingExceptions.InvalidMessageException;
 import io.github.labdev2025cmd.papinho.messaging.MessagingExceptions.NotFoundException;
 import io.github.labdev2025cmd.papinho.profile.ProfileService;
@@ -57,12 +59,14 @@ public class MessageService {
     private final ReceiptLog receipts;
     private final UserDirectory users;
     private final ProfileService profiles;
+    private final MediaService media;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
     MessageService(MessageRepository messages, MessageReactionRepository reactions, MessageStarRepository stars,
             ConversationService conversations, SequenceAllocator sequences, ReceiptLog receipts,
-            UserDirectory users, ProfileService profiles, ApplicationEventPublisher events, Clock clock) {
+            UserDirectory users, ProfileService profiles, MediaService media, ApplicationEventPublisher events,
+            Clock clock) {
         this.messages = messages;
         this.reactions = reactions;
         this.stars = stars;
@@ -71,6 +75,7 @@ public class MessageService {
         this.receipts = receipts;
         this.users = users;
         this.profiles = profiles;
+        this.media = media;
         this.events = events;
         this.clock = clock;
     }
@@ -81,7 +86,7 @@ public class MessageService {
      */
     @Transactional
     public SendResult send(UUID me, UUID conversationId, UUID clientMessageId, String body,
-            @Nullable UUID replyToId) {
+            @Nullable UUID replyToId, @Nullable UUID attachmentId) {
         ConversationMember member = conversations.requireMember(me, conversationId);
         sequences.lock(conversationId);
         var existing = messages.findBySenderIdAndClientMessageId(me, clientMessageId);
@@ -91,7 +96,12 @@ public class MessageService {
             }
             return new SendResult(toViews(me, List.of(existing.get())).getFirst(), false);
         }
-        validateBody(body);
+        Message.Attachment attachment = null;
+        if (attachmentId != null) {
+            MediaView file = media.requireOwned(me, attachmentId);
+            attachment = new Message.Attachment(file.id(), file.kind().name());
+        }
+        validateBody(body, attachment != null);
         if (conversations.blockedWithSomeone(me, conversationId)) {
             throw new MessagingExceptions.BlockedException();
         }
@@ -102,7 +112,7 @@ public class MessageService {
         if (member.state() == MemberState.REQUEST) {
             member.changeState(MemberState.ACTIVE);
         }
-        Message saved = append(me, conversationId, clientMessageId, body, replyToId, 0);
+        Message saved = append(me, conversationId, clientMessageId, body, replyToId, 0, attachment);
         return new SendResult(toViews(me, List.of(saved)).getFirst(), true);
     }
 
@@ -155,7 +165,8 @@ public class MessageService {
             }
             sequences.lock(target);
             for (Message source : sources) {
-                created.add(append(me, target, UUID.randomUUID(), source.body(), null, source.forwardCount() + 1));
+                created.add(append(me, target, UUID.randomUUID(), source.body(), null, source.forwardCount() + 1,
+                        source.attachment()));
             }
         }
         return toViews(me, created);
@@ -281,11 +292,12 @@ public class MessageService {
     }
 
     private Message append(UUID me, UUID conversationId, UUID clientMessageId, String body,
-            @Nullable UUID replyToId, int forwardCount) {
+            @Nullable UUID replyToId, int forwardCount, Message.@Nullable Attachment attachment) {
         Instant now = clock.instant();
         long seq = sequences.next(conversationId, now);
         Message saved = messages.saveAndFlush(
-                new Message(conversationId, seq, me, clientMessageId, body, replyToId, forwardCount, now));
+                new Message(conversationId, seq, me, clientMessageId, body, replyToId, forwardCount, attachment,
+                        now));
         // Quem envia já "leu" a própria mensagem: o marcador de não lidas começa depois dela.
         conversations.requireMember(me, conversationId).advanceRead(seq);
         notifyChanged(conversationId);
@@ -317,8 +329,8 @@ public class MessageService {
         }
     }
 
-    private static void validateBody(String body) {
-        if (body.isBlank()) {
+    private static void validateBody(String body, boolean hasAttachment) {
+        if (body.isBlank() && !hasAttachment) {
             throw new InvalidMessageException("blank body");
         }
         if (body.length() > Message.MAX_BODY_LENGTH) {
@@ -346,14 +358,29 @@ public class MessageService {
         });
         Map<UUID, Message> replies = messages.findAllById(replyIds).stream()
                 .collect(Collectors.toMap(Message::id, Function.identity()));
+        Set<UUID> attachmentIds = new HashSet<>();
+        page.forEach(m -> {
+            if (m.attachment() != null) {
+                attachmentIds.add(m.attachment().id());
+            }
+        });
+        replies.values().forEach(m -> {
+            if (m.attachment() != null) {
+                attachmentIds.add(m.attachment().id());
+            }
+        });
+        Map<UUID, MediaView> files = media.describe(attachmentIds);
         return page.stream().map(m -> {
             Message reply = m.replyToId() == null ? null : replies.get(m.replyToId());
             ReplyPreview replyTo = reply == null ? null
-                    : new ReplyPreview(reply.id(), reply.seq(), reply.senderId(), preview(reply.body()));
+                    : new ReplyPreview(reply.id(), reply.seq(), reply.senderId(), preview(reply.body()),
+                            reply.attachment() == null ? null : reply.attachment().kind());
+            MediaView attachment = m.attachment() == null ? null : files.get(m.attachment().id());
             return new MessageView(m.id(), m.conversationId(), m.seq(), m.changeSeq(), m.senderId(),
                     m.clientMessageId(), m.body(), m.createdAt(), replyTo, m.forwardCount(),
                     m.forwardCount() >= FORWARDED_MANY, m.pinnedAt(),
-                    reactionsByMessage.getOrDefault(m.id(), List.of()), starred.contains(m.id()));
+                    reactionsByMessage.getOrDefault(m.id(), List.of()), starred.contains(m.id()),
+                    attachment == null ? null : AttachmentView.of(attachment));
         }).toList();
     }
 
@@ -374,11 +401,23 @@ public class MessageService {
      */
     public record MessageView(UUID id, UUID conversationId, long seq, long changeSeq, @Nullable UUID senderId,
             UUID clientMessageId, String body, Instant createdAt, @Nullable ReplyPreview replyTo, int forwardCount,
-            boolean forwardedMany, @Nullable Instant pinnedAt, List<ReactionView> reactions, boolean starred) {
+            boolean forwardedMany, @Nullable Instant pinnedAt, List<ReactionView> reactions, boolean starred,
+            @Nullable AttachmentView attachment) {
+    }
+
+    /** Anexo como o cliente o vê; o conteúdo vem de {@code /api/v1/media/{id}/content}. */
+    public record AttachmentView(UUID id, String kind, String contentType, long size, String filename,
+            @Nullable Integer width, @Nullable Integer height, @Nullable String thumbhash, boolean hasThumbnail) {
+
+        static AttachmentView of(MediaView view) {
+            return new AttachmentView(view.id(), view.kind().name(), view.contentType(), view.size(),
+                    view.filename(), view.width(), view.height(), view.thumbhash(), view.hasThumbnail());
+        }
     }
 
     /** Trecho da mensagem respondida, para o salto até a original. */
-    public record ReplyPreview(UUID id, long seq, @Nullable UUID senderId, String body) {
+    public record ReplyPreview(UUID id, long seq, @Nullable UUID senderId, String body,
+            @Nullable String attachmentKind) {
     }
 
     public record ReactionView(UUID userId, String emoji) {

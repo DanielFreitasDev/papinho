@@ -1,6 +1,11 @@
 package io.github.labdev2025cmd.papinho.contact;
 
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
+
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +31,19 @@ public class ContactQueries implements ProfileVisibilityPolicy {
     @Transactional(readOnly = true)
     public boolean isContact(UUID owner, UUID other) {
         return contacts.existsById(new Contact.Key(owner, other));
+    }
+
+    /**
+     * Quais destes estão nos contatos de {@code owner}, com o apelido local (nulo quando não há apelido).
+     * Quem não é contato fica fora do mapa.
+     */
+    @Transactional(readOnly = true)
+    public Map<UUID, @Nullable String> contactNicknames(UUID owner, Collection<UUID> others) {
+        Map<UUID, @Nullable String> result = new HashMap<>();
+        if (!others.isEmpty()) {
+            contacts.findByOwnerAndContacts(owner, others).forEach(c -> result.put(c.contactId(), c.nickname()));
+        }
+        return result;
     }
 
     /** {@code blocker} bloqueou {@code blocked}? */

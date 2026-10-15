@@ -43,6 +43,17 @@ test("grava, pré-escuta e envia voz; o outro lado toca em sequência e no mini-
   await expect(plays).toHaveCount(2)
   await expectNoSeriousA11yViolations(hana.page)
 
+  // Transcrição sob demanda (AU-03): o provedor é simulado; a busca real é coberta pelo TranscriptionIT.
+  await hana.context.route("**/api/v1/media/*/transcript", (route) =>
+    route.request().method() === "POST"
+      ? route.fulfill({
+          json: { mediaId: "x", text: "Oi, chego às oito", source: "GROQ" },
+        })
+      : route.continue()
+  )
+  await hana.page.getByRole("button", { name: "Transcrever" }).first().click()
+  await expect(hana.page.getByText("Oi, chego às oito")).toBeVisible()
+
   // Toca o primeiro em 1,5× e o segundo começa sozinho quando ele acaba.
   await plays.first().click()
   const speed = hana.page.getByRole("button", { name: /^Velocidade 1×/ })

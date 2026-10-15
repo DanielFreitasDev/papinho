@@ -104,5 +104,20 @@ test("denúncia com bloqueio chega à fila do admin", async ({
   await card.getByRole("button", { name: "Marcar como resolvida" }).click()
   await expect(card).toBeHidden()
 
+  // Provedores de transcrição (AU-05): cadastrar um Whisper próprio; a chave nunca volta para a tela.
+  await owner.page.getByRole("tab", { name: "Transcrição" }).click()
+  await owner.page
+    .getByRole("main")
+    .getByRole("button", { name: "Adicionar", exact: true })
+    .click()
+  const provider = owner.page.getByRole("listitem").filter({ hasText: "Groq" })
+  await provider.getByLabel("Chave da API").fill("chave-secreta-e2e")
+  await provider.getByRole("button", { name: "Salvar" }).click()
+  await expect(provider.getByText("chave configurada")).toBeVisible()
+  await expect(provider.getByLabel("Chave da API")).toHaveValue("")
+  await expectNoSeriousA11yViolations(owner.page)
+  await provider.getByRole("button", { name: "Remover" }).click()
+  await expect(provider).toBeHidden()
+
   await Promise.all([contextD.close(), contextE.close(), owner.context.close()])
 })

@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <title>Instalar a CA do Papinho</title>
+  <link rel="stylesheet" href="/setup/setup.css">
+  <script src="/setup/setup.js" defer></script>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Conectar ao Papinho com segurança</h1>
+    <p>O Papinho desta rede usa um certificado próprio. Instale a <strong>CA da LAN</strong> uma vez neste
+      aparelho e depois acesse <a href="{{APP_URL}}">{{APP_URL}}</a> sem avisos de segurança.</p>
+  </header>
+
+  <section aria-labelledby="ca-title" class="card">
+    <h2 id="ca-title">1. Baixe a CA</h2>
+    <div class="downloads">
+      <a class="button" href="/setup/ca.crt" download="papinho-ca.crt">Baixar papinho-ca.crt</a>
+      <a class="button secondary" href="/setup/ca.pem" download="papinho-ca.pem">Baixar papinho-ca.pem</a>
+      <a class="button secondary" href="/setup/papinho-ca.mobileconfig">Perfil para iPhone e iPad</a>
+    </div>
+    <p>Confira a impressão digital <abbr title="Secure Hash Algorithm 256">SHA-256</abbr> com a que o dono do
+      servidor mostrou ao rodar <code>pki init</code>:</p>
+    <p class="fingerprint"><code id="fingerprint">{{FINGERPRINT}}</code></p>
+    <p class="note">Esta CA só consegue validar <strong>{{HOSTNAME}}</strong> e IPs da rede local
+      (<em>Name Constraints</em>). Ela não serve para falsificar outros sites.</p>
+    <figure class="qr">
+      {{QR_SVG}}
+      <figcaption>Aponte a câmera do celular para abrir esta página: {{SETUP_URL}}</figcaption>
+    </figure>
+  </section>
+
+  <section aria-labelledby="install-title" class="card">
+    <h2 id="install-title">2. Instale conforme o seu aparelho</h2>
+    <p id="detected" class="detected" hidden></p>
+
+    <details id="os-linux" data-os="linux">
+      <summary>Linux (Ubuntu/Debian, Fedora, Arch)</summary>
+      <p>Comando único, que confere a impressão digital antes de instalar no sistema e nos navegadores
+        (Chrome/Chromium e Firefox via <code>certutil</code>):</p>
+      <pre><code>{{SCRIPT_CMD}}</code></pre>
+      <p>Para remover: <code>{{SCRIPT_CMD}} -s -- --uninstall</code></p>
+      <h3>Manualmente</h3>
+      <ul>
+        <li><strong>Ubuntu/Debian:</strong>
+          <code>sudo cp papinho-ca.crt /usr/local/share/ca-certificates/ &amp;&amp; sudo update-ca-certificates</code></li>
+        <li><strong>Fedora:</strong>
+          <code>sudo cp papinho-ca.pem /etc/pki/ca-trust/source/anchors/ &amp;&amp; sudo update-ca-trust</code></li>
+        <li><strong>Arch:</strong> <code>sudo trust anchor --store papinho-ca.pem</code></li>
+        <li><strong>Chrome/Chromium:</strong>
+          <code>certutil -d sql:$HOME/.pki/nssdb -A -t "C,," -n "Papinho LAN CA" -i papinho-ca.pem</code>
+          (pacote <code>libnss3-tools</code>, <code>nss-tools</code> ou <code>nss</code>)</li>
+      </ul>
+    </details>
+
+    <details id="os-windows" data-os="windows">
+      <summary>Windows</summary>
+      <ol>
+        <li>Baixe <strong>papinho-ca.crt</strong> e dê dois cliques nele.</li>
+        <li>Escolha <em>Instalar Certificado</em> › <em>Máquina Local</em>.</li>
+        <li>Marque <em>Colocar todos os certificados no repositório a seguir</em> e escolha
+          <em>Autoridades de Certificação Raiz Confiáveis</em>.</li>
+        <li>Conclua e reabra o navegador.</li>
+      </ol>
+      <p>Pelo PowerShell como administrador:
+        <code>Import-Certificate -FilePath .\papinho-ca.crt -CertStoreLocation Cert:\LocalMachine\Root</code></p>
+    </details>
+
+    <details id="os-macos" data-os="macos">
+      <summary>macOS</summary>
+      <ol>
+        <li>Baixe <strong>papinho-ca.crt</strong> e abra-o: o <em>Acesso às Chaves</em> pergunta onde guardar;
+          escolha <em>Sistema</em>.</li>
+        <li>No Acesso às Chaves, dê dois cliques em <em>Papinho LAN CA</em> › <em>Confiar</em> ›
+          <em>Ao usar este certificado: Sempre Confiar</em>.</li>
+      </ol>
+      <p>Pelo Terminal:
+        <code>sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain papinho-ca.crt</code></p>
+    </details>
+
+    <details id="os-ios" data-os="ios">
+      <summary>iPhone e iPad (iOS/iPadOS)</summary>
+      <ol>
+        <li>No <strong>Safari</strong>, toque em <em>Perfil para iPhone e iPad</em> e permita o download.</li>
+        <li>Abra <em>Ajustes</em> › <em>Perfil Transferido</em> › <em>Instalar</em>.</li>
+        <li>Depois, em <em>Ajustes</em> › <em>Geral</em> › <em>Sobre</em> ›
+          <em>Ajustes de Confiança de Certificado</em>, ligue a confiança total em <em>Papinho LAN CA</em>.</li>
+      </ol>
+      <p class="note">Sem o passo 3 o iOS instala o perfil mas continua mostrando o aviso de segurança.</p>
+    </details>
+
+    <details id="os-android" data-os="android">
+      <summary>Android</summary>
+      <ol>
+        <li>Baixe <strong>papinho-ca.crt</strong>.</li>
+        <li>Abra <em>Configurações</em> › <em>Segurança e privacidade</em> › <em>Mais configurações de
+          segurança</em> › <em>Criptografia e credenciais</em> › <em>Instalar um certificado</em> ›
+          <em>Certificado de CA</em> (os nomes variam por fabricante; procure por "certificado").</li>
+        <li>Escolha o arquivo baixado e confirme.</li>
+      </ol>
+      <p class="note">O Chrome do Android confia em CAs instaladas pelo usuário; alguns apps não.</p>
+    </details>
+
+    <details id="browser-firefox" data-browser="firefox">
+      <summary>Firefox (qualquer sistema)</summary>
+      <p>O Firefox pode usar um repositório próprio de certificados.</p>
+      <ol>
+        <li>Abra <em>Configurações</em> › <em>Privacidade e Segurança</em> › <em>Certificados</em> ›
+          <em>Ver certificados</em> › aba <em>Autoridades</em> › <em>Importar</em>.</li>
+        <li>Escolha <strong>papinho-ca.crt</strong> e marque
+          <em>Confiar nesta CA para identificar sites</em>.</li>
+      </ol>
+      <p>No Linux, o script acima já faz isso nos perfis do Firefox quando o <code>certutil</code> está instalado.</p>
+    </details>
+  </section>
+
+  <section aria-labelledby="next-title" class="card">
+    <h2 id="next-title">3. Abra o Papinho</h2>
+    <p><a class="button" href="{{APP_URL}}">Abrir {{APP_URL}}</a></p>
+    <p class="note">Se o endereço não abrir, o nome <strong>{{HOSTNAME}}</strong> ainda não é resolvido
+      nesta rede: peça ao dono do servidor para configurar o DNS do roteador ou o mDNS (Avahi).</p>
+  </section>
+</main>
+</body>
+</html>

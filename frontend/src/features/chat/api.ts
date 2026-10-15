@@ -119,18 +119,22 @@ export const chatQueries = {
 }
 
 const syncing = new Map<string, Promise<void>>()
+const syncAgain = new Set<string>()
 
 /**
  * Traz o que mudou desde o cursor da conversa (RT-01). Chamadas simultâneas para a mesma conversa são
- * agrupadas; com {@code hasMore} continua até alcançar o fim.
+ * agrupadas; com {@code hasMore} continua até alcançar o fim. Um aviso que chega durante uma sincronização
+ * agenda mais uma rodada ao final: a busca em andamento pode ter começado antes da mudança avisada.
  */
 export function syncConversation(queryClient: QueryClient, id: string) {
   const running = syncing.get(id)
   if (running) {
+    syncAgain.add(id)
     return running
   }
   const task = (async () => {
     for (let round = 0; round < 20; round++) {
+      syncAgain.delete(id)
       const cache = queryClient.getQueryData<ConversationCache>(
         chatKeys.messages(id)
       )
@@ -144,7 +148,7 @@ export function syncConversation(queryClient: QueryClient, id: string) {
         chatKeys.messages(id),
         (current) => (current ? applyChanges(current, page) : current)
       )
-      if (!page.hasMore) {
+      if (!page.hasMore && !syncAgain.has(id)) {
         return
       }
     }

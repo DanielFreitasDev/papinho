@@ -91,6 +91,15 @@ class SecurityIT {
     }
 
     @Test
+    @DisplayName("rota do SPA com ponto no caminho (@usuario com ponto) também devolve o index.html")
+    void shouldServeSpaForRoutesWithDots() {
+        assertThat(mvc.get().uri("/add/ana.silva")).hasStatusOk().bodyText().contains("<div id=\"root\">");
+        assertThat(mvc.get().uri("/login")).as("rota do SPA, não o endpoint de passkey").hasStatusOk();
+        assertThat(mvc.get().uri("/register?invite=abc")).hasStatusOk();
+        assertThat(mvc.get().uri("/assets/inexistente.css")).hasStatus(HttpStatus.NOT_FOUND);
+    }
+
+    @Test
     @DisplayName("asset com hash tem cache imutável; arquivo inexistente é 404")
     void shouldCacheHashedAssets() {
         assertThat(mvc.get().uri("/assets/app-abc123.js")).hasStatusOk()

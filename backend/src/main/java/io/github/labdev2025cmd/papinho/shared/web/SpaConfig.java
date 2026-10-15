@@ -3,6 +3,7 @@ package io.github.labdev2025cmd.papinho.shared.web;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.List;
+import java.util.regex.Pattern;
 
 import org.jspecify.annotations.Nullable;
 import org.springframework.context.annotation.Configuration;
@@ -24,9 +25,16 @@ class SpaConfig implements WebMvcConfigurer {
     private static final String[] ASSET_LOCATIONS = {"classpath:/META-INF/resources/assets/",
             "classpath:/static/assets/"};
 
+    /**
+     * Extensões de arquivo estático: um caminho terminado nelas que não existe é 404, não o shell do SPA.
+     * Não basta "tem ponto": rotas do app como {@code /add/ana.silva} carregam o {@code @usuario} com ponto.
+     */
+    private static final Pattern STATIC_FILE = Pattern.compile(
+            "(?i).*\\.(js|mjs|css|map|json|webmanifest|txt|xml|html|ico|png|jpe?g|gif|svg|webp|avif|woff2?|ttf|"
+                    + "otf|wasm|mp3|mp4|webm|ogg|pdf|zip)$");
+
     /** Caminhos que nunca recebem o index.html: um 404 de verdade é mais útil que o shell do SPA. */
-    private static final List<String> NON_SPA_PREFIXES = List.of("api", "actuator", "ws", "setup", "login",
-            "logout", "webauthn");
+    private static final List<String> NON_SPA_PREFIXES = List.of("api", "actuator", "ws", "setup", "webauthn");
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
@@ -53,10 +61,10 @@ class SpaConfig implements WebMvcConfigurer {
             if (requested != null) {
                 return requested;
             }
-            // API, actuator, setup e arquivos com extensão inexistentes continuam sendo 404 de verdade.
+            // API, actuator, setup e arquivos estáticos inexistentes continuam sendo 404 de verdade.
             boolean notSpaRoute = NON_SPA_PREFIXES.stream()
                     .anyMatch(prefix -> resourcePath.equals(prefix) || resourcePath.startsWith(prefix + "/"))
-                    || resourcePath.contains(".");
+                    || STATIC_FILE.matcher(resourcePath).matches();
             return notSpaRoute ? null : super.getResource("index.html", location);
         }
     }

@@ -42,8 +42,8 @@ import org.springframework.security.web.util.matcher.RequestMatcher;
 public class SecurityConfig {
 
     /** Prefixos que nunca são rotas do SPA; um GET neles não cai na cadeia pública do shell. */
-    private static final Set<String> NON_SPA_PREFIXES = Set.of("/api/", "/ws", "/actuator", "/setup", "/login",
-            "/logout", "/webauthn");
+    private static final Set<String> NON_SPA_PREFIXES = Set.of("/api/", "/ws", "/actuator", "/setup",
+            "/login/webauthn", "/webauthn/");
 
     private final SecurityProperties properties;
     private final ProblemDetailsSecurityHandler problemHandler;

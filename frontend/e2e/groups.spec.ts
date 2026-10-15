@@ -24,7 +24,7 @@ async function send(page: Page, text: string) {
  * Fase 4: grupo entre dois navegadores (GR-01) — criar, avisos do sistema, nome de quem envia, permissões, link
  * de convite (GR-02), responder em privado — e mensagens salvas (MS-12).
  */
-test("grupo com avisos, permissões, convite e responder em privado", async ({
+test("grupo, enquete, figurinha, convite, transmissão e responder em privado", async ({
   browser,
   pageErrors,
 }) => {
@@ -136,6 +136,55 @@ test("grupo com avisos, permissões, convite e responder em privado", async ({
   await gil.page.getByRole("link", { name: /Hana Grupo/ }).click()
   const privateReply = row(gil.page, "Respondendo só para você")
   await expect(privateReply.getByText("Bem-vinda ao grupo!")).toBeVisible()
+
+  // Figurinhas (MS-10): o Gil cria um pacote, envia um WebP e manda a figurinha no grupo.
+  await gil.page.goto("/")
+  await gil.page.getByRole("link", { name: new RegExp(groupName) }).click()
+  await gil.page.getByRole("button", { name: "Emojis" }).click()
+  await gil.page.getByRole("tab", { name: "Figurinhas" }).click()
+  await gil.page.getByRole("button", { name: "Gerenciar figurinhas" }).click()
+  const manager = gil.page.getByRole("dialog", { name: "Gerenciar figurinhas" })
+  await manager.getByLabel("Nome do pacote").fill(`Gatos ${tag}`)
+  await manager.getByRole("button", { name: "Criar pacote" }).click()
+  const webp = await gil.page.evaluate(() => {
+    const canvas = document.createElement("canvas")
+    canvas.width = 96
+    canvas.height = 96
+    const context = canvas.getContext("2d")!
+    context.fillStyle = "#f97316"
+    context.beginPath()
+    context.arc(48, 48, 40, 0, Math.PI * 2)
+    context.fill()
+    return canvas.toDataURL("image/webp")
+  })
+  const stickerChooser = gil.page.waitForEvent("filechooser")
+  await manager
+    .locator("section", { hasText: `Gatos ${tag}` })
+    .getByRole("button", { name: "Adicionar" })
+    .click()
+  await (
+    await stickerChooser
+  ).setFiles({
+    name: "gato.webp",
+    mimeType: "image/webp",
+    buffer: Buffer.from(webp.split(",")[1], "base64"),
+  })
+  await expect(
+    manager.locator("section", { hasText: `Gatos ${tag}` }).getByRole("img")
+  ).toHaveCount(1)
+  await expectNoSeriousA11yViolations(gil.page)
+  await gil.page.keyboard.press("Escape")
+  await gil.page.getByRole("button", { name: "Emojis" }).click()
+  await gil.page.getByRole("tab", { name: "Figurinhas" }).click()
+  await gil.page
+    .getByRole("button", { name: /Enviar figurinha/ })
+    .first()
+    .click()
+  await hana.page.goto("/")
+  await hana.page.getByRole("link", { name: new RegExp(groupName) }).click()
+  await expect(
+    hana.page.getByRole("main").getByRole("img", { name: "Figurinha" })
+  ).toBeVisible()
 
   // Lista de transmissão (GR-03): chega para a Hana na conversa individual com o Gil.
   await openMenuItem(gil.page, "Nova lista de transmissão")

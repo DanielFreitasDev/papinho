@@ -85,18 +85,18 @@ seguidas contra instância nova.
 
 | ID | Descrição curta | Status | Evidência | Observações |
 |---|---|---|---|---|
-| GR-01 | Grupos: dados, admins, permissões, sair silenciosamente | pendente | | |
-| GR-02 | Convite de grupo por link/QR com aprovação | pendente | | |
+| GR-01 | Grupos: dados, admins, permissões, sair silenciosamente | feito | `GroupIT` (criar só com contatos, avisos do sistema, leitura quando todos leram, só admins enviam/editam, promover, remover, sair sem aviso, membro mais antigo vira admin, bloqueio impede adicionar, foto só para membros, IDOR 404, responder em privado); e2e `groups.spec.ts` (desktop e celular: criar, avisos, nome de quem envia, painel com axe, só admins enviam, responder em privado) | quem sai perde o acesso ao histórico (diferente do WhatsApp); "quem pode me adicionar" vem com PV-07 |
+| GR-02 | Convite de grupo por link/QR com aprovação | feito | `GroupIT.shouldJoinByInviteLink` (prévia, entrar sem não lidas antigas, aprovação de entrada, só admins geram, redefinir e desativar invalidam); e2e link com QR Code no painel; limite de 60 consultas/entradas por hora | rota `/g/<código>` no SPA |
 | GR-03 | Lista de transmissão | pendente | | |
 | GR-04 | Lista de transmissão temporária | pendente | | |
-| MS-05 | Editar com janela configurável | pendente | | |
-| MS-06 | Apagar para mim e para todos | pendente | | |
-| MS-07 | Mensagens temporárias com job (ShedLock) | pendente | | |
+| MS-05 | Editar com janela configurável | feito | `MessagingIT.shouldEditAndDeleteForEveryone` (só o autor, janela do admin 409, edição chega por afterSeq, aviso não se edita); e2e `messages.spec.ts` (menu Editar, selo "editada" no outro navegador, ↑ edita a última, Esc cancela) | |
+| MS-06 | Apagar para mim e para todos | feito | `MessagingIT` (para todos: só autor, janela, texto/anexo/reações/favoritas removidos, arquivo 404, resposta mostra apagada; para mim: some do histórico, do afterSeq e da prévia só de quem apagou, IDOR 404); e2e aviso nos dois navegadores e apagar para mim persistente após recarregar | apagar várias pela seleção |
+| MS-07 | Mensagens temporárias com job (ShedLock) | feito | `DisappearingIT` (timer 24 h/7 d/90 d com aviso, valores fora da lista 400, padrão para conversas e grupos novos, permissão no grupo, job apaga vencidas e arquivos, citação fica nula); e2e timer pelo painel com aviso nos dois lados | ShedLock 7.10.1 (`shedlock`, hora do banco); cliente esconde vencidas antes do job |
 | MS-08 | Visualização única | pendente | | |
 | MS-09 | Enquetes | pendente | | |
 | MS-10 | Emojis, figurinhas, GIFs opcionais | pendente | | |
 | MS-11 | Agendadas, silenciosas, rascunho sincronizado | pendente | | |
-| MS-12 | Mensagens salvas | pendente | | |
+| MS-12 | Mensagens salvas | feito | `GroupIT.shouldKeepSavedMessagesAndReplyPrivately` (uma por pessoa, idempotente, invisível aos outros); e2e menu "Mensagens salvas" envia e passa no axe | |
 | MS-13 | Atalhos de teclado e lista com `?` | pendente | | |
 
 ## Fase 5 — Privacidade

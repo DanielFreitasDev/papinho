@@ -55,7 +55,7 @@ export async function expectNoSeriousA11yViolations(page: Page) {
     serious.map(
       (violation) =>
         `${violation.id}: ${violation.help} → ${violation.nodes
-          .map((node) => node.target.join(" "))
+          .map((node) => `${node.target.join(" ")} ${node.html.slice(0, 160)}`)
           .join(", ")}`
     )
   ).toEqual([])

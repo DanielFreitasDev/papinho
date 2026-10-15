@@ -76,7 +76,10 @@ test("duas pessoas conversam em tempo real, da solicitação à leitura", async 
   await send(pageA, "Oi *Bia*! ||segredo||")
   const first = row(pageA, "Bia!")
   await expect(first.locator("strong", { hasText: "Bia" })).toBeVisible()
-  await expect(first.getByRole("img", { name: "Enviada" })).toBeVisible()
+  // A Bia está com o app aberto: o tique pode virar "Entregue" antes de a asserção rodar.
+  await expect(
+    first.getByRole("img", { name: /^(Enviada|Entregue)$/ })
+  ).toBeVisible()
 
   // A Bia não tem a Ana nos contatos: a mensagem chega como solicitação, em tempo real.
   await pageB.getByRole("link", { name: "1 solicitação de mensagem" }).click()

@@ -30,7 +30,8 @@ the product's own name-constrained CA) and may later deploy it on a VPS behind a
   `pnpm typecheck` (`tsc -b`), `pnpm test` (Vitest), `pnpm build`.
 - E2E (in `frontend/`): `PAPINHO_E2E_URL=http://localhost:8080 pnpm e2e` against a running jar; add
   `PAPINHO_E2E_SETUP_URL=http://localhost:8080/setup` for a `lan`-profile instance. A preinstalled Chromium can
-  be used with `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/path/to/chrome`.
+  be used with `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/path/to/chrome`. Run it against a freshly started jar with an
+  empty database: the `primeiro-admin` project creates the first admin, and rate limits live in memory.
 - LAN PKI: `java -jar backend/target/papinho.jar pki init|renew|status`; run with `--spring.profiles.active=lan`.
 - Install-script check: `scripts/verify-install-ca.sh` (Docker + a `lan` instance reachable as papinho.lan).
 

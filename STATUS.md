@@ -1,10 +1,11 @@
 # STATUS — progresso do Papinho
 
 Fonte de verdade do progresso (PROMPT.md §3.1). `feito` exige evidência **executada**; código sem
-verificação é `em andamento`. Última auditoria: 2026-10-15 (passada 1).
+verificação é `em andamento`. Última auditoria: 2026-10-15 (passada 1, fim da Fase 1).
 
 Ambiente da passada 1: sandbox de nuvem com JDK 25.0.4 (Temurin, baixado), Node 24.22.0, pnpm 10.34.6,
 Docker 29 (daemon iniciado manualmente), Chromium do Playwright em `/opt/pw-browsers`, sem aparelhos reais.
+A passada 1 cobriu a Fase 0 e a Fase 1 (exceto o que depende de mensagens: CT-02, CT-04, e-mail de ID-05).
 
 ## Fase 0 — Fundação
 
@@ -15,8 +16,8 @@ Docker 29 (daemon iniciado manualmente), Chromium do Playwright em `/opt/pw-brow
 | F0-CTX | AGENTS.md, CLAUDE.md, LEARNING.md, STATUS.md | feito | arquivos na raiz; `CLAUDE.md` importa `AGENTS.md` e `LEARNING.md` | descoberta em sessão nova não verificada |
 | F0-ADR | ADRs 0001–0010 | feito | `docs/adr/` | |
 | F0-COMPOSE | `compose.yaml` com PostgreSQL 18 | feito | `spring-boot:run` no perfil local subiu `papinho-postgres-1` e o health respondeu UP | |
-| F0-SEC | Segurança base (cadeias, denyAll, CSRF spa, CSP, Problem Details, Argon2) | feito | `SecurityIT` (11 testes) e `LanSetupIT.shouldIssueStrictCsrfCookieOverTls`; e2e sem violação de CSP | cookie `__Host-SESSION` só é emitido a partir do login (Fase 1) |
-| QA-04 | CI no GitHub Actions: backend, frontend e e2e em jobs separados | em andamento | `.github/workflows/ci.yml`; job frontend verde no run 38756807315 | aguardando backend e e2e do primeiro run |
+| F0-SEC | Segurança base (cadeias, denyAll, CSRF spa, CSP, Problem Details, Argon2) | feito | `SecurityIT` (12 testes) e `LanSetupIT.shouldIssueStrictCsrfCookieOverTls`; e2e sem violação de CSP | `__Host-SESSION` provado em `IdentityIT` |
+| QA-04 | CI no GitHub Actions: backend, frontend e e2e em jobs separados | feito | `.github/workflows/ci.yml`; runs 38757286112 e 38769083331 verdes nos três jobs | e2e sobe instância padrão e perfil lan |
 | QA-05 | README pt-BR (dev, LAN, CA, backup, produção) | em andamento | `README.md` | backup depende de BK-03 (Fase 7) |
 | PK-01 | `pki init` com BouncyCastle: CA P-256 10 anos com Name Constraints; servidor ≤398 dias; chave 0600 | feito | `CertificateAuthorityTest` (7) e `PkiCommandTest` (5); `openssl verify` e `certutil -V` recusam domínio/IP de fora | PKIX do JDK ignora NC da âncora (LEARNING) |
 | PK-02 | TLS por SSL bundle com HTTP/2; porta HTTP só com `/setup/**` e redirecionamento | feito | `LanSetupIT` (HTTP/2 validado pela CA; 301 para HTTPS; POST recusado); `curl --http2` manual no perfil lan | |
@@ -29,18 +30,18 @@ Docker 29 (daemon iniciado manualmente), Chromium do Playwright em `/opt/pw-brow
 
 | ID | Descrição curta | Status | Evidência | Observações |
 |---|---|---|---|---|
-| ID-01 | Cadastro com `@usuario` único normalizado, reservados, UUID v7 | pendente | | |
-| ID-02 | Nome de exibição, foto (recorte, EXIF, miniaturas), recado | pendente | | |
-| ID-03 | Troca de `@usuario` com cooldown e reserva de 30 dias | pendente | | |
-| ID-04 | Login por senha (Argon2, ≥12, vazada opcional) e passkey; Bucket4j; erros uniformes | pendente | | |
-| ID-05 | Códigos de recuperação, TOTP opcional, e-mail opcional | pendente | | |
-| ID-06 | Sessões ativas: listar, revogar, encerrar outras | pendente | | |
-| ID-07 | Modos de cadastro; convites por link/QR com expiração e usos | pendente | | |
-| ID-08 | Primeiro usuário vira admin | pendente | | |
-| CT-01 | Adicionar contato por @usuario, link ou QR; apelido local | pendente | | |
-| CT-02 | Solicitações de mensagem (aceitar, recusar, bloquear) | pendente | | |
-| CT-03 | Bloquear e desbloquear | pendente | | |
-| CT-04 | Denunciar usuário com as 5 últimas mensagens | pendente | | |
+| ID-01 | Cadastro com `@usuario` único normalizado, reservados, UUID v7 | feito | `IdentityIT` (unicidade sem caixa, reservados, formato, UUID v7); e2e `accounts.spec.ts` cadastro com checagem de disponibilidade | |
+| ID-02 | Nome de exibição, foto (recorte, EXIF, miniaturas), recado | feito | `ProfileIT` (EXIF removido, 512 e 96 px, não-imagem 422); e2e `profile.spec.ts` (recorte, salvar foto, recado) | HEIC depende do navegador decodificar |
+| ID-03 | Troca de `@usuario` com cooldown e reserva de 30 dias | feito | `IdentityIT.shouldReserveOldUsername`; e2e `profile.spec.ts` (troca e aviso do cooldown) | cooldown configurável pelo admin |
+| ID-04 | Login por senha (Argon2, ≥12, vazada opcional) e passkey; Bucket4j; erros uniformes | feito | `IdentityIT` (erro uniforme, 429 com Retry-After, senha <12), `SecurityIT` (Argon2), `PasswordPolicyTest` (vazada só quando ligada); e2e senha errada e passkey com autenticador virtual | passkey em aparelho real não testada; WebAuthn exige hostname (não IP) |
+| ID-05 | Códigos de recuperação, TOTP opcional, e-mail opcional | em andamento | `IdentityIT` (TOTP exigido depois de ativado; código de recuperação redefine senha, desliga TOTP, uso único); e2e TOTP e diálogo dos 10 códigos | falta e-mail opcional de recuperação (precisa de SMTP configurável) |
+| ID-06 | Sessões ativas: listar, revogar, encerrar outras | feito | `IdentityIT.shouldManageSessions`; e2e `profile.spec.ts` (encerrar as outras derruba a sessão do outro navegador) | |
+| ID-07 | Modos de cadastro; convites por link/QR com expiração e usos | feito | `IdentityIT` (aberto/convite/fechado; revogado, esgotado e vencido recusados; QR em SVG); e2e convite usado em outro contexto | |
+| ID-08 | Primeiro usuário vira admin | feito | `IdentityIT.shouldMakeFirstUserAdmin`; e2e `first-admin.setup.ts` | |
+| CT-01 | Adicionar contato por @usuario, link ou QR; apelido local | feito | `ContactIT` (por @usuario com apelido; link próprio e cartão); e2e adiciona por @usuario em maiúsculas e pelo link `/add/@usuario` | QR lido por câmera real não testado |
+| CT-02 | Solicitações de mensagem (aceitar, recusar, bloquear) | pendente | | depende das conversas (Fase 2) |
+| CT-03 | Bloquear e desbloquear | em andamento | `ContactIT` (bloqueado não vê foto/recado; desbloquear devolve) | UI pronta (lista e Configurações > Bloqueados) sem e2e; efeito em mensagens vem com a Fase 2 |
+| CT-04 | Denunciar usuário com as 5 últimas mensagens | pendente | | depende das mensagens (Fase 2) |
 
 ## Fase 2 — Conversas individuais em tempo real
 
@@ -54,7 +55,7 @@ Docker 29 (daemon iniciado manualmente), Chromium do Playwright em `/opt/pw-brow
 | RT-01 | `seq` monotônico por conversa e `afterSeq` | pendente | | |
 | RT-02 | `clientMessageId` idempotente | pendente | | |
 | RT-03 | Presença com heartbeat; aba em segundo plano não conta | pendente | | |
-| UI-01 | Duas colunas no desktop, pilha no celular | pendente | | |
+| UI-01 | Duas colunas no desktop, pilha no celular | em andamento | shell `app-shell.tsx`; e2e roda os fluxos em desktop e Pixel 7 | falta a coluna da conversa (Fase 2) |
 
 ## Fase 3 — Mídia, áudio e links
 
@@ -123,12 +124,12 @@ Docker 29 (daemon iniciado manualmente), Chromium do Playwright em `/opt/pw-brow
 | BK-01 | Exportar conversa em ZIP | pendente | | |
 | BK-02 | Exportar dados da conta e excluir conta | pendente | | |
 | BK-03 | Backup e restauração da instância | pendente | | |
-| AD-01 | Painel do admin | pendente | | |
-| AD-02 | Configurações da instância no banco | pendente | | |
+| AD-01 | Painel do admin | em andamento | `/admin`: configurações da instância e usuários (desativar); `IdentityIT` desativação derruba sessões | faltam métricas, armazenamento, denúncias |
+| AD-02 | Configurações da instância no banco | em andamento | `instance_settings` com modo de cadastro, cooldown, janelas, cota, senha vazada; `IdentityIT.shouldApplyRegistrationModes` | novas chaves entram com as fases |
 | AR-01 | WCAG 2.2 AA; RESPONSIVENESS.md aplicado | em andamento | e2e com axe nas telas existentes | revisar a cada tela nova |
-| AR-02 | 320 px, alvos de 44 px, safe areas, teclado virtual | em andamento | e2e 320 px em `/` e `/setup` | |
-| AR-03 | Fluxo só com teclado; axe sem críticas/sérias | em andamento | axe sem críticas/sérias em `/` e `/setup` | |
-| QA-03 | E2E dos fluxos críticos | em andamento | infraestrutura Playwright + axe pronta (`frontend/e2e`) | fluxos dependem das fases 1–5 |
+| AR-02 | 320 px, alvos de 44 px, safe areas, teclado virtual | em andamento | e2e 320 px em `/`, `/login`, `/register` e `/setup`; alvos de 44 px em `pointer: coarse` (`index.css`) | teclado virtual só em aparelho real |
+| AR-03 | Fluxo só com teclado; axe sem críticas/sérias | em andamento | axe sem críticas/sérias em `/setup`, cadastro, admin com contatos e segurança | fluxo só com teclado não automatizado |
+| QA-03 | E2E dos fluxos críticos | em andamento | 23 testes verdes (desktop e celular): primeiro admin, convite, contatos, TOTP, passkey, perfil, sessões, setup | faltam mensagens, mídia, grupos, offline |
 
 ## Requisitos transversais
 
@@ -136,13 +137,13 @@ Docker 29 (daemon iniciado manualmente), Chromium do Playwright em `/opt/pw-brow
 |---|---|---|---|---|
 | SG-01 | IDOR, Problem Details, sem segredos em logs | em andamento | Problem Details em 401/403/400/500 (`SecurityIT`) | IDOR a cada endpoint novo |
 | SG-02 | CSP estrita, cabeçalhos, HSTS em produção | feito | `SecurityIT.shouldServeSpaShellWithSecurityHeaders`; e2e falha em qualquer violação de CSP | HSTS por `PAPINHO_HSTS=true` |
-| SG-03 | Rate limit em login, convites, desbloqueio, envio, upload | pendente | | Bucket4j na Fase 1 |
-| UI-02 | Temas, papel de parede, fonte, densidade | pendente | | ThemeProvider claro/escuro/sistema já existe |
-| UI-03 | Estados carregando, vazio, erro, offline, sem permissão | em andamento | não encontrado e carregando/erro do status do servidor | |
+| SG-03 | Rate limit em login, convites, desbloqueio, envio, upload | em andamento | `RateLimiter` (Bucket4j) em login por IP e conta, cadastro, recuperação, convites, ações sensíveis; `IdentityIT` 429 com Retry-After | faltam envio, upload e desbloqueio (fases 2, 3 e 5) |
+| UI-02 | Temas, papel de parede, fonte, densidade | em andamento | Configurações > Aparência (claro/escuro/sistema) | papel de parede, fonte e densidade pendentes |
+| UI-03 | Estados carregando, vazio, erro, offline, sem permissão | em andamento | contatos com carregando/vazio/erro; não encontrado (e2e `smoke.spec.ts`) | offline vem com NT-05 |
 | UI-04 | Lista de mensagens performática | pendente | | |
 | IN-01 | Textos externalizados; pt-BR completo, pronto para en | em andamento | `i18n.test.ts` garante as mesmas chaves em pt-BR e en; backend com `messages*.properties` | |
-| QA-01 | Backend: unitários, slice, integração, ArchUnit, Modulith, `./mvnw verify` | em andamento | `./mvnw -pl backend verify`: 37 testes verdes (19 unitários, 18 integração) | CI do backend em execução |
-| QA-02 | Frontend: lint, typecheck, Vitest | feito | `pnpm lint`, `pnpm typecheck`, `pnpm test` (3) locais e no job frontend do CI | |
+| QA-01 | Backend: unitários, slice, integração, ArchUnit, Modulith, `./mvnw verify` | em andamento | `./mvnw -B verify` na raiz: 21 unitários + 42 de integração verdes; job backend do CI verde | cresce a cada fase |
+| QA-02 | Frontend: lint, typecheck, Vitest | feito | `pnpm lint`, `pnpm typecheck`, `pnpm format:check`, `pnpm test` (12) locais e no job frontend do CI | |
 
 ## Dúvidas registradas para o dono
 

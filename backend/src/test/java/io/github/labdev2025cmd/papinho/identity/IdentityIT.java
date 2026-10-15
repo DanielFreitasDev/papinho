@@ -32,6 +32,9 @@ class IdentityIT {
     void shouldMakeFirstUserAdmin() {
         ApiClient client = clients.create().bootstrap();
         assertThat(client.json(client.get("/api/v1/instance")).get("setupRequired").asBoolean()).isTrue();
+        var anonymous = client.get("/api/v1/auth/session");
+        assertThat(anonymous).hasStatusOk();
+        assertThat(client.json(anonymous).get("me").isNull()).isTrue();
 
         JsonNode body = Accounts.register(client, "@Ana.Silva", null);
 
@@ -43,6 +46,8 @@ class IdentityIT {
         assertThat(body.get("me").get("profile").get("displayName").asString()).isEqualTo("Pessoa @Ana.Silva");
         assertThat(client.cookie("__Host-SESSION")).isNotBlank();
         assertThat(client.get("/api/v1/me")).hasStatusOk();
+        assertThat(client.json(client.get("/api/v1/auth/session")).get("me").get("account").get("username")
+                .asString()).isEqualTo("ana.silva");
         assertThat(jdbc.queryForObject("select id::text from user_accounts", String.class)).satisfies(
                 id -> assertThat(java.util.UUID.fromString(id).version()).isEqualTo(7));
     }

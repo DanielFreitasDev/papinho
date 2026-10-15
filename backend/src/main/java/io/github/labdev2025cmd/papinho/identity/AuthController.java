@@ -72,6 +72,16 @@ class AuthController {
         return me(CurrentUser.id());
     }
 
+    /**
+     * Sessão atual para o SPA, pública: devolve {@code me = null} sem sessão em vez de 401, para o primeiro
+     * carregamento não gerar erro no console nem precisar tratar exceção.
+     */
+    @GetMapping("/auth/session")
+    SessionResponse session() {
+        return new SessionResponse(CurrentUser.get().map(PapinhoUser::id).filter(identity::isActive)
+                .map(this::me).orElse(null));
+    }
+
     private MeResponse me(UUID userId) {
         return new MeResponse(identity.account(userId), profiles.own(userId));
     }
@@ -87,6 +97,10 @@ class AuthController {
 
     record RecoverRequest(@NotBlank @Size(max = 64) String username, @NotBlank @Size(max = 32) String recoveryCode,
             @NotBlank @Size(max = 512) String newPassword) {
+    }
+
+    /** Sessão do SPA: {@code me} nulo quando não há login. */
+    record SessionResponse(@Nullable MeResponse me) {
     }
 
     /** Conta e perfil do usuário autenticado. */

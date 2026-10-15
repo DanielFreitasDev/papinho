@@ -106,6 +106,12 @@ class ViewOnceIT {
         request.put("attachmentId", photo);
         assertThat(ana.post(messages(), request)).as("arquivo já usado em mensagem comum").hasStatus(400);
 
+        String voice = Uploads.upload(ana, Uploads.ogg(4096), "voz.ogg", "audio/ogg");
+        String audioMessage = send(voice, true).get("id").asString();
+        assertThat(bruno.post("/api/v1/media/" + voice + "/transcript", null))
+                .as("áudio de visualização única nunca é transcrito (AU-03)").hasStatus(404);
+        assertThat(audioMessage).isNotBlank();
+
         String other = Uploads.upload(ana, Images.png(40, 40), "outra.png", "image/png");
         String id = send(other, true).get("id").asString();
         jdbc.update("update messages set created_at = now() - interval '15 days' where id = ?", UUID.fromString(id));

@@ -31,6 +31,7 @@ import io.github.labdev2025cmd.papinho.messaging.MessagingExceptions.InvalidMess
 import io.github.labdev2025cmd.papinho.messaging.MessagingExceptions.NotFoundException;
 import io.github.labdev2025cmd.papinho.profile.ProfileService;
 import io.github.labdev2025cmd.papinho.profile.ProfileView;
+import io.github.labdev2025cmd.papinho.shared.security.RateLimiter;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
@@ -76,6 +77,7 @@ public class MessageService {
     private final ViewOnceOpens viewOnceOpens;
     private final Broadcasts broadcasts;
     private final StickerService stickers;
+    private final RateLimiter rateLimiter;
     private final io.github.labdev2025cmd.papinho.contact.ContactQueries contactsOf;
     private final java.security.SecureRandom random = new java.security.SecureRandom();
     private final InstanceSettingsService settings;
@@ -87,7 +89,7 @@ public class MessageService {
             ConversationService conversations, SequenceAllocator sequences, ReceiptLog receipts,
             UserDirectory users, ProfileService profiles, MediaService media, HiddenMessages hidden,
             MessagingPreferences preferences, Polls polls, ViewOnceOpens viewOnceOpens, Broadcasts broadcasts,
-            StickerService stickers,
+            StickerService stickers, RateLimiter rateLimiter,
             io.github.labdev2025cmd.papinho.contact.ContactQueries contactsOf,
             InstanceSettingsService settings, JsonMapper json, ApplicationEventPublisher events, Clock clock) {
         this.messages = messages;
@@ -105,6 +107,7 @@ public class MessageService {
         this.viewOnceOpens = viewOnceOpens;
         this.broadcasts = broadcasts;
         this.stickers = stickers;
+        this.rateLimiter = rateLimiter;
         this.contactsOf = contactsOf;
         this.settings = settings;
         this.json = json;
@@ -139,6 +142,8 @@ public class MessageService {
             }
             return new SendResult(toViews(me, List.of(existing.get())).getFirst(), false);
         }
+        // Reenvio idempotente não gasta o limite; só mensagens novas (SG-03).
+        rateLimiter.consume(RateLimiter.Policy.MESSAGE_BY_USER, me.toString());
         Message.Attachment attachment = null;
         if (attachmentId != null) {
             MediaView file = media.requireOwned(me, attachmentId);
@@ -593,6 +598,7 @@ public class MessageService {
             }
             return new SendResult(toViews(me, List.of(existing.get())).getFirst(), false);
         }
+        rateLimiter.consume(RateLimiter.Policy.MESSAGE_BY_USER, me.toString());
         String cleanQuestion = question.strip();
         List<String> cleanOptions = options.stream().map(String::strip).toList();
         if (cleanQuestion.isEmpty() || cleanQuestion.length() > MAX_POLL_QUESTION || cleanOptions.size() < 2

@@ -283,6 +283,25 @@ class MessagingIT {
     }
 
     @Test
+    @DisplayName("envio tem limite por pessoa (SG-03); reenvio idempotente não conta")
+    void shouldRateLimitSending() {
+        String conversation = open(ana, "bruno");
+        // O balde reabastece aos poucos durante o laço: conta quantas passam até o primeiro 429.
+        int accepted = 0;
+        var limited = ana.post(messages(conversation), Map.of("clientMessageId", UUID.randomUUID(), "body", "0"));
+        while (limited.getResponse().getStatus() == 201 && accepted < 200) {
+            accepted++;
+            limited = ana.post(messages(conversation), Map.of("clientMessageId", UUID.randomUUID(), "body",
+                    "rajada " + accepted));
+        }
+        assertThat(accepted).isBetween(120, 160);
+        assertThat(limited).hasStatus(429);
+        assertThat(ana.json(limited).get("retryAfterSeconds").asLong()).isPositive();
+        assertThat(bruno.post("/api/v1/contacts", Map.of("username", "ana"))).as("outra pessoa segue livre")
+                .hasStatus(201);
+    }
+
+    @Test
     @DisplayName("apagar para mim esconde só de quem apagou, também no histórico, na sincronização e na prévia")
     void shouldHideForMe() {
         String conversation = open(ana, "bruno");

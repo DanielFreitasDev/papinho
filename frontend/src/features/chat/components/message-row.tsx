@@ -32,8 +32,9 @@ import { Message, MessageContent } from "@/components/ui/message"
 import { toast } from "@/components/ui/toast"
 import type { Track } from "@/features/media"
 import { formatTime } from "@/lib/format"
+import { LinkPreviewCard } from "@/features/linkpreview"
 import { MessageText } from "../format/message-text"
-import { plainText } from "../format/parse"
+import { firstLink, plainText } from "../format/parse"
 import type {
   Attachment,
   AttachmentKind,
@@ -201,6 +202,9 @@ export function MessageRow({
               </button>
             ) : null}
             {message.body ? <MessageText text={message.body} /> : null}
+            {message.id && !message.attachment && firstLink(message.body) ? (
+              <LinkPreviewCard url={firstLink(message.body)!} />
+            ) : null}
             <span className="flex items-center justify-end gap-1 self-end text-[0.7rem] leading-none opacity-70">
               {message.pinned ? (
                 <PinIcon

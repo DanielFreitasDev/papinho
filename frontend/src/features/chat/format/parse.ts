@@ -280,3 +280,38 @@ function flattenInline(nodes: Inline[]): string {
     })
     .join("")
 }
+
+/** Primeiro link http(s) do texto (prévia, MD-04), fora de blocos de código. */
+export function firstLink(text: string): string | null {
+  const walk = (inline: Inline[]): string | null => {
+    for (const node of inline) {
+      if (node.type === "link") {
+        return node.href
+      }
+      if ("children" in node) {
+        const found = walk(node.children)
+        if (found) {
+          return found
+        }
+      }
+    }
+    return null
+  }
+  const blocks = (list: Block[]): string | null => {
+    for (const block of list) {
+      const found =
+        block.type === "paragraph"
+          ? walk(block.children)
+          : block.type === "quote"
+            ? blocks(block.children)
+            : block.type === "list"
+              ? (block.items.map(walk).find(Boolean) ?? null)
+              : null
+      if (found) {
+        return found
+      }
+    }
+    return null
+  }
+  return blocks(parseMessage(text))
+}

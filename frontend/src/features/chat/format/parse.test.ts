@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { parseInline, parseMessage, plainText } from "./parse"
+import { firstLink, parseInline, parseMessage, plainText } from "./parse"
 
 describe("formatação do WhatsApp (MS-01)", () => {
   it("reconhece negrito, itálico, riscado e mono", () => {
@@ -141,5 +141,15 @@ describe("formatação do WhatsApp (MS-01)", () => {
 
   it("texto puro para prévias esconde o spoiler", () => {
     expect(plainText("*Oi* ||surpresa|| `x`")).toBe("Oi ▒▒▒ x")
+  })
+
+  it("acha o primeiro link fora de código (prévia, MD-04)", () => {
+    expect(firstLink("veja https://a.com/x. e https://b.com")).toBe(
+      "https://a.com/x"
+    )
+    expect(firstLink("```\nhttps://code.com\n```\n> https://q.com")).toBe(
+      "https://q.com"
+    )
+    expect(firstLink("sem link")).toBeNull()
   })
 })

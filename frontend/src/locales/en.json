@@ -417,5 +417,15 @@
     "speed": "Speed {{rate}}; tap to change",
     "miniPlayer": "Audio playing",
     "closePlayer": "Close player"
+  },
+  "linkPreview": {
+    "load": "Load {{provider}}: {{title}}",
+    "player": "Player: {{title}}",
+    "privacyNote": "{{provider}} only loads when you tap.",
+    "provider": {
+      "YOUTUBE": "YouTube",
+      "VIMEO": "Vimeo",
+      "SPOTIFY": "Spotify"
+    }
   }
 }

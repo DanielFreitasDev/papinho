@@ -417,5 +417,15 @@
     "speed": "Velocidade {{rate}}; tocar para trocar",
     "miniPlayer": "Áudio tocando",
     "closePlayer": "Fechar o tocador"
+  },
+  "linkPreview": {
+    "load": "Carregar {{provider}}: {{title}}",
+    "player": "Player: {{title}}",
+    "privacyNote": "O {{provider}} só é carregado quando você toca.",
+    "provider": {
+      "YOUTUBE": "YouTube",
+      "VIMEO": "Vimeo",
+      "SPOTIFY": "Spotify"
+    }
   }
 }

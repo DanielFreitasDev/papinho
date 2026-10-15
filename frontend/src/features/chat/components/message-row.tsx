@@ -167,6 +167,7 @@ export function MessageRow({
                           title: senderName,
                         },
                         queue: audioQueue,
+                        received: !mine,
                       }
                     : undefined
                 }

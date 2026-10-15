@@ -63,7 +63,7 @@ export function AttachmentView({
   attachment: Attachment
   onOpenImage: (id: string) => void
   /** Faixa no tocador global; sem ela, o áudio usa o controle nativo (galeria). */
-  audio?: { track: Track; queue: Track[] }
+  audio?: { track: Track; queue: Track[]; received: boolean }
 }) {
   const { t, i18n } = useTranslation()
   const blur = useMemo(
@@ -119,7 +119,13 @@ export function AttachmentView({
       )
     case "AUDIO":
       if (audio) {
-        return <AudioMessage track={audio.track} queue={audio.queue} />
+        return (
+          <AudioMessage
+            track={audio.track}
+            queue={audio.queue}
+            received={audio.received}
+          />
+        )
       }
       return (
         <audio

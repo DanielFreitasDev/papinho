@@ -149,7 +149,8 @@
     "security": "Segurança",
     "sessions": "Sessões",
     "blocked": "Bloqueados",
-    "appearance": "Aparência"
+    "appearance": "Aparência",
+    "transcription": "Transcrição"
   },
   "profile": {
     "about": "Recado",
@@ -236,7 +237,8 @@
     "temporaryPassword": "Senha temporária de {{name}}",
     "temporaryPasswordDescription": "Envie por um canal seguro. Ela aparece só agora; peça para a pessoa trocá-la ao entrar.",
     "you": "você",
-    "reports": "Denúncias"
+    "reports": "Denúncias",
+    "transcription": "Transcrição"
   },
   "chat": {
     "conversations": "Conversas",
@@ -426,6 +428,44 @@
       "YOUTUBE": "YouTube",
       "VIMEO": "Vimeo",
       "SPOTIFY": "Spotify"
+    }
+  },
+  "transcription": {
+    "label": "Transcrição",
+    "transcribe": "Transcrever",
+    "working": "Transcrevendo…",
+    "downloading": "Baixando o modelo de transcrição ({{percent}})…",
+    "failed": "Não foi possível transcrever.",
+    "empty": "(sem fala reconhecida)",
+    "provider": "Onde transcrever",
+    "providerHelp": "No navegador, o áudio não sai do seu aparelho; no servidor, o Papinho envia o áudio ao provedor configurado pelo administrador.",
+    "instanceDefault": "Padrão da instância ({{name}})",
+    "browser": "No navegador (Whisper)",
+    "auto": "Transcrever automaticamente os áudios recebidos",
+    "browserModel": "Modelo no navegador",
+    "modelBase": "Whisper base (≈80 MB)",
+    "modelSmall": "Whisper small quantizado (≈250 MB, mais preciso)",
+    "browserHelp": "Baixado uma vez por aparelho, na primeira transcrição. Usa WebGPU quando disponível.",
+    "adminDefault": "Padrão da instância",
+    "newProvider": "Novo provedor",
+    "add": "Adicionar",
+    "name": "Nome",
+    "baseUrl": "Endereço base",
+    "model": "Modelo",
+    "hotwords": "Palavras-chave (hotwords)",
+    "apiKey": "Chave da API",
+    "apiKeyHelp": "Fica cifrada no servidor e nunca é mostrada de novo. Deixe em branco para manter a atual.",
+    "maxMegabytes": "Tamanho máximo do áudio (MB)",
+    "enabled": "Ativo",
+    "hasKey": "chave configurada",
+    "checkHealth": "Verificar saúde",
+    "healthy": "O provedor respondeu",
+    "unhealthy": "O provedor não respondeu",
+    "kind": {
+      "GROQ": "Groq",
+      "WHISPER": "Whisper próprio",
+      "OPENAI": "OpenAI",
+      "CUSTOM": "URL personalizada"
     }
   }
 }

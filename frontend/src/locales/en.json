@@ -149,7 +149,8 @@
     "security": "Security",
     "sessions": "Sessions",
     "blocked": "Blocked",
-    "appearance": "Appearance"
+    "appearance": "Appearance",
+    "transcription": "Transcription"
   },
   "profile": {
     "about": "About",
@@ -236,7 +237,8 @@
     "temporaryPassword": "Temporary password for {{name}}",
     "temporaryPasswordDescription": "Send it through a secure channel. It is shown only now; ask the person to change it after signing in.",
     "you": "you",
-    "reports": "Reports"
+    "reports": "Reports",
+    "transcription": "Transcription"
   },
   "chat": {
     "conversations": "Chats",
@@ -426,6 +428,44 @@
       "YOUTUBE": "YouTube",
       "VIMEO": "Vimeo",
       "SPOTIFY": "Spotify"
+    }
+  },
+  "transcription": {
+    "label": "Transcript",
+    "transcribe": "Transcribe",
+    "working": "Transcribing…",
+    "downloading": "Downloading the transcription model ({{percent}})…",
+    "failed": "Could not transcribe.",
+    "empty": "(no speech recognized)",
+    "provider": "Where to transcribe",
+    "providerHelp": "In the browser, the audio never leaves your device; on the server, Papinho sends the audio to the provider configured by the administrator.",
+    "instanceDefault": "Instance default ({{name}})",
+    "browser": "In the browser (Whisper)",
+    "auto": "Automatically transcribe received audio",
+    "browserModel": "Browser model",
+    "modelBase": "Whisper base (≈80 MB)",
+    "modelSmall": "Whisper small quantized (≈250 MB, more accurate)",
+    "browserHelp": "Downloaded once per device, on the first transcription. Uses WebGPU when available.",
+    "adminDefault": "Instance default",
+    "newProvider": "New provider",
+    "add": "Add",
+    "name": "Name",
+    "baseUrl": "Base URL",
+    "model": "Model",
+    "hotwords": "Hotwords",
+    "apiKey": "API key",
+    "apiKeyHelp": "Encrypted on the server and never shown again. Leave blank to keep the current one.",
+    "maxMegabytes": "Maximum audio size (MB)",
+    "enabled": "Enabled",
+    "hasKey": "key set",
+    "checkHealth": "Check health",
+    "healthy": "The provider answered",
+    "unhealthy": "The provider did not answer",
+    "kind": {
+      "GROQ": "Groq",
+      "WHISPER": "Self-hosted Whisper",
+      "OPENAI": "OpenAI",
+      "CUSTOM": "Custom URL"
     }
   }
 }

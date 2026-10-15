@@ -9,6 +9,7 @@ import {
   usePlayer,
   type Track,
 } from "@/features/media"
+import { TranscriptView } from "@/features/transcription"
 
 /**
  * Áudio na conversa (AU-02): tocar/pausar no tocador global, barra de posição e velocidade 1×, 1,5× e 2×. A
@@ -17,9 +18,12 @@ import {
 export function AudioMessage({
   track,
   queue,
+  received,
 }: {
   track: Track
   queue: Track[]
+  /** Recebido (não enviado por mim): pode ser transcrito automaticamente. */
+  received: boolean
 }) {
   const { t, i18n } = useTranslation()
   const state = usePlayer()
@@ -29,49 +33,52 @@ export function AudioMessage({
   const duration = active ? state.duration : 0
   const rate = formatRate(state.rate, i18n.language)
   return (
-    <div
-      className="flex w-64 max-w-full items-center gap-2"
-      onClick={(event) => event.stopPropagation()}
-    >
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        aria-label={playing ? t("audio.pause") : t("audio.play")}
-        aria-pressed={playing}
-        onClick={() => player.toggle(track, queue)}
+    <div className="flex flex-col gap-1">
+      <div
+        className="flex w-64 max-w-full items-center gap-2"
+        onClick={(event) => event.stopPropagation()}
       >
-        {playing ? <PauseIcon /> : <PlayIcon />}
-      </Button>
-      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <input
-          type="range"
-          min={0}
-          max={duration || 1}
-          step={0.1}
-          value={position}
-          disabled={!active}
-          aria-label={t("audio.position")}
-          aria-valuetext={formatDuration(position)}
-          onChange={(event) => player.seek(Number(event.target.value))}
-          className="h-1.5 w-full accent-primary"
-        />
-        <span className="text-xs tabular-nums opacity-80">
-          {formatDuration(position)}
-          {duration ? ` / ${formatDuration(duration)}` : ""}
-        </span>
-      </span>
-      {active ? (
         <Button
           type="button"
-          variant="outline"
-          size="sm"
-          aria-label={t("audio.speed", { rate })}
-          onClick={() => player.cycleRate()}
+          variant="ghost"
+          size="icon"
+          aria-label={playing ? t("audio.pause") : t("audio.play")}
+          aria-pressed={playing}
+          onClick={() => player.toggle(track, queue)}
         >
-          {rate}
+          {playing ? <PauseIcon /> : <PlayIcon />}
         </Button>
-      ) : null}
+        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <input
+            type="range"
+            min={0}
+            max={duration || 1}
+            step={0.1}
+            value={position}
+            disabled={!active}
+            aria-label={t("audio.position")}
+            aria-valuetext={formatDuration(position)}
+            onChange={(event) => player.seek(Number(event.target.value))}
+            className="h-1.5 w-full accent-primary"
+          />
+          <span className="text-xs tabular-nums opacity-80">
+            {formatDuration(position)}
+            {duration ? ` / ${formatDuration(duration)}` : ""}
+          </span>
+        </span>
+        {active ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            aria-label={t("audio.speed", { rate })}
+            onClick={() => player.cycleRate()}
+          >
+            {rate}
+          </Button>
+        ) : null}
+      </div>
+      <TranscriptView mediaId={track.mediaId} received={received} />
     </div>
   )
 }

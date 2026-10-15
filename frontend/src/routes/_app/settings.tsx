@@ -11,6 +11,7 @@ const SECTIONS = [
   { to: "/settings/sessions", key: "settings.sessions" },
   { to: "/settings/blocked", key: "settings.blocked" },
   { to: "/settings/appearance", key: "settings.appearance" },
+  { to: "/settings/transcription", key: "settings.transcription" },
 ] as const
 
 export const Route = createFileRoute("/_app/settings")({

@@ -27,6 +27,7 @@ import { Route as AppSettingsBlockedRouteImport } from './routes/_app/settings/b
 import { Route as AppSettingsProfileRouteImport } from './routes/_app/settings/profile'
 import { Route as AppSettingsSecurityRouteImport } from './routes/_app/settings/security'
 import { Route as AppSettingsSessionsRouteImport } from './routes/_app/settings/sessions'
+import { Route as AppSettingsTranscriptionRouteImport } from './routes/_app/settings/transcription'
 
 const AppRoute = AppRouteImport.update({
   id: '/_app',
@@ -117,6 +118,12 @@ const AppSettingsSessionsRoute = AppSettingsSessionsRouteImport.update({
   path: '/sessions',
   getParentRoute: () => AppSettingsRoute,
 } as any)
+const AppSettingsTranscriptionRoute =
+  AppSettingsTranscriptionRouteImport.update({
+    id: '/transcription',
+    path: '/transcription',
+    getParentRoute: () => AppSettingsRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
@@ -135,6 +142,7 @@ export interface FileRoutesByFullPath {
   '/settings/profile': typeof AppSettingsProfileRoute
   '/settings/security': typeof AppSettingsSecurityRoute
   '/settings/sessions': typeof AppSettingsSessionsRoute
+  '/settings/transcription': typeof AppSettingsTranscriptionRoute
   '/settings/': typeof AppSettingsIndexRoute
 }
 export interface FileRoutesByTo {
@@ -153,6 +161,7 @@ export interface FileRoutesByTo {
   '/settings/profile': typeof AppSettingsProfileRoute
   '/settings/security': typeof AppSettingsSecurityRoute
   '/settings/sessions': typeof AppSettingsSessionsRoute
+  '/settings/transcription': typeof AppSettingsTranscriptionRoute
   '/settings': typeof AppSettingsIndexRoute
 }
 export interface FileRoutesById {
@@ -174,6 +183,7 @@ export interface FileRoutesById {
   '/_app/settings/profile': typeof AppSettingsProfileRoute
   '/_app/settings/security': typeof AppSettingsSecurityRoute
   '/_app/settings/sessions': typeof AppSettingsSessionsRoute
+  '/_app/settings/transcription': typeof AppSettingsTranscriptionRoute
   '/_app/settings/': typeof AppSettingsIndexRoute
 }
 export interface FileRouteTypes {
@@ -195,6 +205,7 @@ export interface FileRouteTypes {
     | '/settings/profile'
     | '/settings/security'
     | '/settings/sessions'
+    | '/settings/transcription'
     | '/settings/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -213,6 +224,7 @@ export interface FileRouteTypes {
     | '/settings/profile'
     | '/settings/security'
     | '/settings/sessions'
+    | '/settings/transcription'
     | '/settings'
   id:
     | '__root__'
@@ -233,6 +245,7 @@ export interface FileRouteTypes {
     | '/_app/settings/profile'
     | '/_app/settings/security'
     | '/_app/settings/sessions'
+    | '/_app/settings/transcription'
     | '/_app/settings/'
   fileRoutesById: FileRoutesById
 }
@@ -371,6 +384,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSettingsSessionsRouteImport
       parentRoute: typeof AppSettingsRoute
     }
+    '/_app/settings/transcription': {
+      id: '/_app/settings/transcription'
+      path: '/transcription'
+      fullPath: '/settings/transcription'
+      preLoaderRoute: typeof AppSettingsTranscriptionRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
   }
 }
 
@@ -381,6 +401,7 @@ interface AppSettingsRouteChildren {
   AppSettingsProfileRoute: typeof AppSettingsProfileRoute
   AppSettingsSecurityRoute: typeof AppSettingsSecurityRoute
   AppSettingsSessionsRoute: typeof AppSettingsSessionsRoute
+  AppSettingsTranscriptionRoute: typeof AppSettingsTranscriptionRoute
   AppSettingsIndexRoute: typeof AppSettingsIndexRoute
 }
 
@@ -391,6 +412,7 @@ const AppSettingsRouteChildren: AppSettingsRouteChildren = {
   AppSettingsProfileRoute: AppSettingsProfileRoute,
   AppSettingsSecurityRoute: AppSettingsSecurityRoute,
   AppSettingsSessionsRoute: AppSettingsSessionsRoute,
+  AppSettingsTranscriptionRoute: AppSettingsTranscriptionRoute,
   AppSettingsIndexRoute: AppSettingsIndexRoute,
 }
 

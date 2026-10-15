@@ -53,6 +53,12 @@ class MessagingController {
         return conversations.openDirect(CurrentUser.id(), body.username());
     }
 
+    /** "Mensagens salvas" (MS-12): abre (ou cria) a conversa consigo mesmo. */
+    @PostMapping("/conversations/saved")
+    ConversationService.ConversationView openSaved() {
+        return conversations.openSelf(CurrentUser.id());
+    }
+
     @GetMapping("/conversations/{conversationId}")
     ConversationService.ConversationView get(@PathVariable UUID conversationId) {
         return conversations.view(CurrentUser.id(), conversationId);

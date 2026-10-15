@@ -31,6 +31,7 @@ import io.github.labdev2025cmd.papinho.messaging.MessagingExceptions.InvalidMess
 import io.github.labdev2025cmd.papinho.messaging.MessagingExceptions.NotFoundException;
 import io.github.labdev2025cmd.papinho.profile.ProfileService;
 import io.github.labdev2025cmd.papinho.profile.ProfileView;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Mensagens: enviar com {@code clientMessageId} idempotente, sincronizar por {@code afterSeq}, histórico,
@@ -63,13 +64,14 @@ public class MessageService {
     private final MediaService media;
     private final HiddenMessages hidden;
     private final InstanceSettingsService settings;
+    private final JsonMapper json;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
     MessageService(MessageRepository messages, MessageReactionRepository reactions, MessageStarRepository stars,
             ConversationService conversations, SequenceAllocator sequences, ReceiptLog receipts,
             UserDirectory users, ProfileService profiles, MediaService media, HiddenMessages hidden,
-            InstanceSettingsService settings, ApplicationEventPublisher events, Clock clock) {
+            InstanceSettingsService settings, JsonMapper json, ApplicationEventPublisher events, Clock clock) {
         this.messages = messages;
         this.reactions = reactions;
         this.stars = stars;
@@ -81,6 +83,7 @@ public class MessageService {
         this.media = media;
         this.hidden = hidden;
         this.settings = settings;
+        this.json = json;
         this.events = events;
         this.clock = clock;
     }
@@ -107,13 +110,13 @@ public class MessageService {
             attachment = new Message.Attachment(file.id(), file.kind().name());
         }
         validateBody(body, attachment != null);
-        if (conversations.blockedWithSomeone(me, conversationId)) {
-            throw new MessagingExceptions.BlockedException();
-        }
+        conversations.requireSendable(me, conversationId);
         if (replyToId != null) {
-            messages.findById(replyToId).filter(m -> m.conversationId().equals(conversationId))
-                    .filter(m -> !m.deleted())
+            Message target = messages.findById(replyToId).filter(m -> !m.deleted() && !m.system())
                     .orElseThrow(() -> new InvalidMessageException("reply target outside conversation"));
+            if (!target.conversationId().equals(conversationId) && !privateReply(me, conversationId, target)) {
+                throw new InvalidMessageException("reply target outside conversation");
+            }
         }
         if (member.state() == MemberState.REQUEST) {
             member.changeState(MemberState.ACTIVE);
@@ -158,7 +161,7 @@ public class MessageService {
         for (UUID id : new LinkedHashSet<>(messageIds)) {
             Message message = messages.findById(id).orElseThrow(NotFoundException::new);
             conversations.requireMember(me, message.conversationId());
-            if (message.deleted()) {
+            if (message.deleted() || message.system()) {
                 throw new InvalidMessageException("deleted message");
             }
             sources.add(message);
@@ -166,10 +169,7 @@ public class MessageService {
         sources.sort(Comparator.comparing(Message::createdAt).thenComparingLong(Message::seq));
         List<Message> created = new ArrayList<>();
         for (UUID target : new LinkedHashSet<>(conversationIds)) {
-            ConversationMember member = conversations.requireMember(me, target);
-            if (conversations.blockedWithSomeone(me, target)) {
-                throw new MessagingExceptions.BlockedException();
-            }
+            ConversationMember member = conversations.requireSendable(me, target);
             if (member.state() == MemberState.REQUEST) {
                 member.changeState(MemberState.ACTIVE);
             }
@@ -186,7 +186,7 @@ public class MessageService {
     @Transactional
     public MessageView react(UUID me, UUID messageId, @Nullable String emoji) {
         Message message = requireVisible(me, messageId);
-        if (message.deleted() && emoji != null) {
+        if ((message.deleted() || message.system()) && emoji != null) {
             throw new InvalidMessageException("deleted message");
         }
         sequences.lock(message.conversationId());
@@ -215,7 +215,7 @@ public class MessageService {
         Message message = requireVisible(me, messageId);
         sequences.lock(message.conversationId());
         Instant now = clock.instant();
-        if (pinned && message.deleted()) {
+        if (pinned && (message.deleted() || message.system())) {
             throw new InvalidMessageException("deleted message");
         }
         if (pinned && message.pinnedAt() == null) {
@@ -302,7 +302,8 @@ public class MessageService {
                 message.seq());
         Map<UUID, Instant> read = receipts.coveredAt(message.conversationId(), ReceiptLog.Kind.READ, message.seq());
         List<ConversationMember> others = conversations.membersOf(message.conversationId()).stream()
-                .filter(m -> !m.userId().equals(me)).toList();
+                .filter(m -> !m.userId().equals(me))
+                .filter(m -> m.state() == MemberState.ACTIVE || m.state() == MemberState.REQUEST).toList();
         Set<UUID> ids = others.stream().map(ConversationMember::userId).collect(Collectors.toSet());
         Map<UUID, UserSummary> summaries = users.findAllById(ids).stream()
                 .collect(Collectors.toMap(UserSummary::id, Function.identity()));
@@ -325,13 +326,15 @@ public class MessageService {
      */
     @Transactional(readOnly = true)
     public ReportSnapshot reportSnapshot(UUID me, UUID conversationId, int count) {
-        conversations.requireMember(me, conversationId);
+        if (conversations.requireConversation(me, conversationId).kind() != ConversationKind.DIRECT) {
+            throw new NotFoundException();
+        }
         UUID peer = conversations.membersOf(conversationId).stream().map(ConversationMember::userId)
                 .filter(id -> !id.equals(me)).findFirst().orElseThrow(NotFoundException::new);
         List<Message> latest = new ArrayList<>(messages.findBefore(conversationId, Long.MAX_VALUE,
                 Limit.of(Math.clamp(count, 1, MAX_PAGE))));
         latest.sort(Comparator.comparingLong(Message::seq));
-        return new ReportSnapshot(peer, latest.stream().filter(m -> !m.deleted())
+        return new ReportSnapshot(peer, latest.stream().filter(m -> !m.deleted() && !m.system())
                 .map(m -> new SnapshotMessage(m.id(), m.senderId(), m.body(), m.createdAt())).toList());
     }
 
@@ -391,8 +394,36 @@ public class MessageService {
                 .publishEvent(new MessagingEvents.MessagesHidden(conversationId, List.copyOf(ids), me)));
     }
 
+    /**
+     * Aviso do sistema na conversa (GR-01): entra na sequência como uma mensagem e chega a todos pelo
+     * {@code afterSeq}.
+     */
+    void appendSystem(UUID conversationId, UUID actor, SystemNotice notice) {
+        Instant now = clock.instant();
+        long seq = sequences.next(conversationId, now);
+        messages.saveAndFlush(new Message(conversationId, seq, MessageKind.SYSTEM, actor, UUID.randomUUID(),
+                json.writeValueAsString(notice), null, 0, null, now));
+        conversations.membersOf(conversationId).stream().filter(m -> m.userId().equals(actor)).findFirst()
+                .ifPresent(m -> m.advanceRead(seq));
+        notifyChanged(conversationId);
+    }
+
+    /**
+     * "Responder em privado" (GR-01): a conversa individual pode citar uma mensagem de um grupo de que eu participo
+     * quando quem a escreveu é a outra pessoa desta conversa.
+     */
+    private boolean privateReply(UUID me, UUID conversationId, Message target) {
+        if (target.senderId() == null || target.senderId().equals(me)) {
+            return false;
+        }
+        boolean inDirect = conversations.membersOf(conversationId).stream()
+                .anyMatch(m -> m.userId().equals(target.senderId()));
+        return inDirect && isVisible(me, target.conversationId())
+                && conversations.requireConversation(me, conversationId).kind() == ConversationKind.DIRECT;
+    }
+
     private void requireAuthorWithin(UUID me, Message message, java.time.Duration window) {
-        if (!me.equals(message.senderId()) || message.deleted()) {
+        if (!me.equals(message.senderId()) || message.deleted() || message.system()) {
             throw new MessagingExceptions.NotAuthorException();
         }
         if (message.createdAt().plus(window).isBefore(clock.instant())) {
@@ -487,10 +518,11 @@ public class MessageService {
         return page.stream().map(m -> {
             Message reply = m.replyToId() == null ? null : replies.get(m.replyToId());
             ReplyPreview replyTo = reply == null ? null
-                    : new ReplyPreview(reply.id(), reply.seq(), reply.senderId(), preview(reply.body()),
-                            reply.attachment() == null ? null : reply.attachment().kind(), reply.deleted());
+                    : new ReplyPreview(reply.id(), reply.conversationId(), reply.seq(), reply.senderId(),
+                            preview(reply.body()), reply.attachment() == null ? null : reply.attachment().kind(),
+                            reply.deleted());
             MediaView attachment = m.attachment() == null ? null : files.get(m.attachment().id());
-            return new MessageView(m.id(), m.conversationId(), m.seq(), m.changeSeq(), m.senderId(),
+            return new MessageView(m.id(), m.conversationId(), m.seq(), m.changeSeq(), m.kind(), m.senderId(),
                     m.clientMessageId(), m.body(), m.createdAt(), replyTo, m.forwardCount(),
                     m.forwardCount() >= FORWARDED_MANY, m.pinnedAt(),
                     reactionsByMessage.getOrDefault(m.id(), List.of()), starred.contains(m.id()),
@@ -515,7 +547,8 @@ public class MessageService {
      * @param editedAt quando foi editada pela última vez (selo "editada", MS-05)
      * @param deleted apagada para todos: sem texto nem anexo, mostra "Esta mensagem foi apagada" (MS-06)
      */
-    public record MessageView(UUID id, UUID conversationId, long seq, long changeSeq, @Nullable UUID senderId,
+    public record MessageView(UUID id, UUID conversationId, long seq, long changeSeq, MessageKind kind,
+            @Nullable UUID senderId,
             UUID clientMessageId, String body, Instant createdAt, @Nullable ReplyPreview replyTo, int forwardCount,
             boolean forwardedMany, @Nullable Instant pinnedAt, List<ReactionView> reactions, boolean starred,
             @Nullable AttachmentView attachment, @Nullable Instant editedAt, boolean deleted) {
@@ -532,7 +565,7 @@ public class MessageService {
     }
 
     /** Trecho da mensagem respondida, para o salto até a original. */
-    public record ReplyPreview(UUID id, long seq, @Nullable UUID senderId, String body,
+    public record ReplyPreview(UUID id, UUID conversationId, long seq, @Nullable UUID senderId, String body,
             @Nullable String attachmentKind, boolean deleted) {
     }
 

@@ -56,4 +56,34 @@ final class MessagingExceptions {
             super(HttpStatus.CONFLICT, "message-window-expired", "The time window for this change has expired");
         }
     }
+
+    /** Grupo com "só admins enviam" (ou ação reservada a admins) e quem pediu não é admin (GR-01). */
+    static class OnlyAdminsException extends ApiException {
+        OnlyAdminsException() {
+            super(HttpStatus.FORBIDDEN, "group-only-admins", "Only group admins can do this");
+        }
+    }
+
+    /**
+     * Não dá para adicionar esta pessoa ao grupo (bloqueio, privacidade ou não é contato); a mesma resposta para
+     * todos os motivos, sem revelar qual.
+     */
+    static class CannotAddException extends ApiException {
+        CannotAddException() {
+            super(HttpStatus.FORBIDDEN, "group-cannot-add", "This person cannot be added to the group");
+        }
+    }
+
+    static class InvalidGroupException extends ApiException {
+        InvalidGroupException(String reason) {
+            super(HttpStatus.BAD_REQUEST, "group-invalid", "Invalid group: " + reason);
+        }
+    }
+
+    /** Link de convite do grupo inexistente ou revogado (GR-02). */
+    static class InviteNotFoundException extends ApiException {
+        InviteNotFoundException() {
+            super(HttpStatus.NOT_FOUND, "group-invite-not-found", "Group invite not found");
+        }
+    }
 }

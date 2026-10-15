@@ -24,6 +24,10 @@ class ConversationMember {
     @Column(nullable = false)
     private MemberState state;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private MemberRole role;
+
     @Column(nullable = false)
     private long deliveredSeq;
 
@@ -39,12 +43,18 @@ class ConversationMember {
     protected ConversationMember() {
         this.key = new Key(new UUID(0, 0), new UUID(0, 0));
         this.state = MemberState.ACTIVE;
+        this.role = MemberRole.MEMBER;
         this.joinedAt = Instant.EPOCH;
     }
 
     ConversationMember(UUID conversationId, UUID userId, MemberState state, Instant now) {
+        this(conversationId, userId, state, MemberRole.MEMBER, now);
+    }
+
+    ConversationMember(UUID conversationId, UUID userId, MemberState state, MemberRole role, Instant now) {
         this.key = new Key(conversationId, userId);
         this.state = state;
+        this.role = role;
         this.joinedAt = now;
     }
 
@@ -58,6 +68,35 @@ class ConversationMember {
 
     MemberState state() {
         return state;
+    }
+
+    MemberRole role() {
+        return role;
+    }
+
+    boolean admin() {
+        return role == MemberRole.ADMIN;
+    }
+
+    Instant joinedAt() {
+        return joinedAt;
+    }
+
+    void changeRole(MemberRole role) {
+        this.role = role;
+    }
+
+    /**
+     * Volta (ou entra) no grupo: os ponteiros começam no seq atual, para o histórico de antes não contar como não
+     * lido.
+     */
+    void rejoin(long currentSeq, Instant now) {
+        this.state = MemberState.ACTIVE;
+        this.role = MemberRole.MEMBER;
+        this.joinedAt = now;
+        this.deliveredSeq = Math.max(deliveredSeq, currentSeq);
+        this.readSeq = Math.max(readSeq, currentSeq);
+        this.markedUnread = false;
     }
 
     long deliveredSeq() {

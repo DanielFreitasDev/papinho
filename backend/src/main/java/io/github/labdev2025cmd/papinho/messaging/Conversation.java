@@ -60,6 +60,19 @@ class Conversation {
         return new Conversation(ConversationKind.DIRECT, directKey(creator, other), creator, now);
     }
 
+    static Conversation group(UUID creator, Instant now) {
+        return new Conversation(ConversationKind.GROUP, null, creator, now);
+    }
+
+    /** "Mensagens salvas" (MS-12): uma por pessoa, pela chave única {@code self:<id>}. */
+    static Conversation self(UUID owner, Instant now) {
+        return new Conversation(ConversationKind.SELF, selfKey(owner), owner, now);
+    }
+
+    static String selfKey(UUID owner) {
+        return "self:" + owner;
+    }
+
     /** Chave única do par, independente de quem abriu a conversa. */
     static String directKey(UUID a, UUID b) {
         return a.compareTo(b) < 0 ? a + ":" + b : b + ":" + a;

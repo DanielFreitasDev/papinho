@@ -2,6 +2,7 @@ package io.github.labdev2025cmd.papinho.messaging;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
@@ -24,8 +25,8 @@ import io.github.labdev2025cmd.papinho.profile.ProfileService;
 import io.github.labdev2025cmd.papinho.profile.ProfileView;
 
 /**
- * Conversas individuais: abrir, listar, solicitações de mensagem (CT-02) e ponteiros de entrega, leitura e
- * "marcar como não lida" (MS-02, MS-14).
+ * Conversas: abrir a individual e as "Mensagens salvas" (MS-12), listar (com grupos, GR-01), solicitações de
+ * mensagem (CT-02) e ponteiros de entrega, leitura e "marcar como não lida" (MS-02, MS-14).
  */
 @Service
 public class ConversationService {
@@ -34,6 +35,7 @@ public class ConversationService {
 
     private final ConversationRepository conversations;
     private final ConversationMemberRepository members;
+    private final GroupDetailsRepository groups;
     private final ConversationQueries queries;
     private final SequenceAllocator sequences;
     private final ReceiptLog receipts;
@@ -44,10 +46,12 @@ public class ConversationService {
     private final Clock clock;
 
     ConversationService(ConversationRepository conversations, ConversationMemberRepository members,
-            ConversationQueries queries, SequenceAllocator sequences, ReceiptLog receipts, UserDirectory users,
-            ProfileService profiles, ContactQueries contacts, ApplicationEventPublisher events, Clock clock) {
+            GroupDetailsRepository groups, ConversationQueries queries, SequenceAllocator sequences,
+            ReceiptLog receipts, UserDirectory users, ProfileService profiles, ContactQueries contacts,
+            ApplicationEventPublisher events, Clock clock) {
         this.conversations = conversations;
         this.members = members;
+        this.groups = groups;
         this.queries = queries;
         this.sequences = sequences;
         this.receipts = receipts;
@@ -86,6 +90,19 @@ public class ConversationService {
             mine.changeState(MemberState.ACTIVE);
             members.flush();
         }
+        return view(me, conversation.id());
+    }
+
+    /** "Mensagens salvas" (MS-12): a conversa consigo mesmo, criada na primeira vez. */
+    @Transactional
+    public ConversationView openSelf(UUID me) {
+        String key = Conversation.selfKey(me);
+        sequences.lockKey(key);
+        Conversation conversation = conversations.findByDirectKey(key).orElseGet(() -> {
+            Conversation created = conversations.saveAndFlush(Conversation.self(me, clock.instant()));
+            members.saveAndFlush(new ConversationMember(created.id(), me, MemberState.ACTIVE, clock.instant()));
+            return created;
+        });
         return view(me, conversation.id());
     }
 
@@ -159,6 +176,30 @@ public class ConversationService {
                 .filter(member -> VISIBLE.contains(member.state())).orElseThrow(NotFoundException::new);
     }
 
+    /** Conversa de que {@code me} participa (ativa ou solicitação); senão 404. */
+    Conversation requireConversation(UUID me, UUID conversationId) {
+        requireMember(me, conversationId);
+        return conversations.findById(conversationId).orElseThrow(NotFoundException::new);
+    }
+
+    /**
+     * Participação de quem vai escrever: sem bloqueio na conversa individual (CT-03) e, num grupo com "só admins
+     * enviam", só admins (GR-01).
+     */
+    ConversationMember requireSendable(UUID me, UUID conversationId) {
+        ConversationMember member = requireMember(me, conversationId);
+        Conversation conversation = conversations.findById(conversationId).orElseThrow(NotFoundException::new);
+        if (conversation.kind() == ConversationKind.GROUP) {
+            GroupDetails group = groups.findById(conversationId).orElseThrow(NotFoundException::new);
+            if (group.onlyAdminsSend() && !member.admin()) {
+                throw new MessagingExceptions.OnlyAdminsException();
+            }
+        } else if (blockedWithSomeone(me, conversationId)) {
+            throw new MessagingExceptions.BlockedException();
+        }
+        return member;
+    }
+
     /** Quem deve ser avisado de mudanças nas mensagens: todos menos quem recusou. */
     Set<UUID> audience(UUID conversationId) {
         return members.findByConversation(conversationId).stream().filter(m -> VISIBLE.contains(m.state()))
@@ -169,9 +210,14 @@ public class ConversationService {
         return members.findByConversation(conversationId);
     }
 
-    /** Há bloqueio entre {@code me} e algum outro participante? */
+    /**
+     * Há bloqueio entre {@code me} e o outro participante de uma conversa individual? Em grupo o bloqueio não
+     * impede de escrever para o grupo (como no WhatsApp).
+     */
     boolean blockedWithSomeone(UUID me, UUID conversationId) {
-        return members.findByConversation(conversationId).stream().map(ConversationMember::userId)
+        boolean direct = conversations.findById(conversationId).map(c -> c.kind() == ConversationKind.DIRECT)
+                .orElse(false);
+        return direct && members.findByConversation(conversationId).stream().map(ConversationMember::userId)
                 .filter(id -> !id.equals(me)).anyMatch(id -> contacts.isBlockedEitherWay(me, id));
     }
 
@@ -223,15 +269,43 @@ public class ConversationService {
     }
 
     private List<ConversationView> toViews(UUID me, List<ConversationQueries.Row> rows) {
-        Set<UUID> peerIds = rows.stream().map(ConversationQueries.Row::peerId).filter(id -> id != null)
-                .collect(Collectors.toSet());
+        Set<UUID> peerIds = new HashSet<>();
+        Set<UUID> groupIds = new HashSet<>();
+        rows.forEach(row -> {
+            if (row.kind() == ConversationKind.GROUP) {
+                groupIds.add(row.id());
+            } else if (row.kind() == ConversationKind.SELF) {
+                peerIds.add(me);
+            } else if (row.peerId() != null) {
+                peerIds.add(row.peerId());
+            }
+        });
         Map<UUID, UserSummary> summaries = users.findAllById(peerIds).stream()
                 .collect(Collectors.toMap(UserSummary::id, Function.identity()));
         Map<UUID, ProfileView> views = profiles.viewAll(me, peerIds);
         Map<UUID, @Nullable String> nicknames = contacts.contactNicknames(me, peerIds);
-        return rows.stream().filter(row -> row.peerId() != null && summaries.containsKey(row.peerId()))
-                .map(row -> toView(me, row, summaries.get(row.peerId()), views.get(row.peerId()), nicknames))
-                .toList();
+        Map<UUID, GroupDetails> details = groups.findAllById(groupIds).stream()
+                .collect(Collectors.toMap(GroupDetails::conversationId, Function.identity()));
+        // Num grupo a prévia mostra quem mandou a última mensagem ("Ana: oi").
+        Set<UUID> lastSenders = rows.stream().filter(row -> row.kind() == ConversationKind.GROUP)
+                .map(ConversationQueries.Row::last).filter(last -> last != null && last.senderId() != null)
+                .map(last -> last.senderId()).filter(id -> !id.equals(me)).collect(Collectors.toSet());
+        Map<UUID, String> senderLabels = labels(me, lastSenders);
+        List<ConversationView> result = new ArrayList<>();
+        for (ConversationQueries.Row row : rows) {
+            if (row.kind() == ConversationKind.GROUP) {
+                GroupDetails group = details.get(row.id());
+                if (group != null) {
+                    result.add(toGroupView(row, group, senderLabels));
+                }
+                continue;
+            }
+            UUID peerId = row.kind() == ConversationKind.SELF ? me : row.peerId();
+            if (peerId != null && summaries.containsKey(peerId)) {
+                result.add(toView(me, row, summaries.get(peerId), views.get(peerId), nicknames));
+            }
+        }
+        return result;
     }
 
     private ConversationView toView(UUID me, ConversationQueries.Row row, UserSummary peer,
@@ -242,30 +316,89 @@ public class ConversationService {
         PeerView peerView = new PeerView(peer.id(), peer.username(), displayName,
                 nickname != null ? nickname : displayName, profile != null && profile.hasPhoto(),
                 profile == null ? Instant.EPOCH : profile.updatedAt(), peer.active(), contact);
-        boolean blockedByMe = contacts.hasBlocked(me, peer.id());
+        boolean self = row.kind() == ConversationKind.SELF;
+        boolean blockedByMe = !self && contacts.hasBlocked(me, peer.id());
         // CT-02: antes de a outra pessoa aceitar, quem enviou não vê a confirmação de leitura.
-        @Nullable Long peerReadSeq = row.peerState() == MemberState.ACTIVE ? row.peerReadSeq() : null;
+        @Nullable Long peerReadSeq = null;
+        if (self) {
+            peerReadSeq = row.lastSeq();
+        } else if (row.peerState() == MemberState.ACTIVE) {
+            peerReadSeq = row.peerReadSeq();
+        }
+        long peerDeliveredSeq = self ? row.lastSeq() : row.peerDeliveredSeq();
+        return new ConversationView(row.id(), row.kind().name(), row.state(), peerView, null, row.lastSeq(),
+                preview(row, Map.of()), row.unreadCount(), row.firstUnreadSeq(), row.markedUnread(), row.readSeq(),
+                peerDeliveredSeq, peerReadSeq, row.updatedAt(), !blockedByMe && peer.active(), blockedByMe);
+    }
+
+    /** Nome como {@code me} vê cada pessoa: apelido do contato, nome de exibição ou {@code @usuario}. */
+    Map<UUID, String> labels(UUID me, Set<UUID> ids) {
+        if (ids.isEmpty()) {
+            return Map.of();
+        }
+        Map<UUID, ProfileView> views = profiles.viewAll(me, ids);
+        Map<UUID, @Nullable String> nicknames = contacts.contactNicknames(me, ids);
+        Map<UUID, String> result = new java.util.HashMap<>();
+        users.findAllById(ids).forEach(user -> {
+            String nickname = nicknames.get(user.id());
+            ProfileView view = views.get(user.id());
+            result.put(user.id(), nickname != null ? nickname : view != null ? view.displayName() : user.username());
+        });
+        return result;
+    }
+
+    private ConversationView toGroupView(ConversationQueries.Row row, GroupDetails group,
+            Map<UUID, String> senderLabels) {
+        boolean admin = row.role() == MemberRole.ADMIN;
+        GroupView groupView = new GroupView(group.name(), group.description(), group.photoMediaId(),
+                group.updatedAt(), row.memberCount(), row.role(), group.onlyAdminsSend(), group.onlyAdminsEditInfo(),
+                group.onlyAdminsAddMembers(), group.joinApproval(), !group.onlyAdminsEditInfo() || admin,
+                !group.onlyAdminsAddMembers() || admin);
+        boolean canSend = row.state() == MemberState.ACTIVE && (!group.onlyAdminsSend() || admin);
+        return new ConversationView(row.id(), row.kind().name(), row.state(), null, groupView, row.lastSeq(),
+                preview(row, senderLabels), row.unreadCount(), row.firstUnreadSeq(), row.markedUnread(), row.readSeq(),
+                row.peerDeliveredSeq(), row.peerReadSeq(), row.updatedAt(), canSend, false);
+    }
+
+    private static @Nullable MessagePreview preview(ConversationQueries.Row row, Map<UUID, String> senderLabels) {
         ConversationQueries.LastMessage last = row.last();
-        MessagePreview preview = last == null ? null
-                : new MessagePreview(last.id(), last.seq(), last.senderId(), last.body(), last.createdAt(),
-                        last.attachmentKind(), last.deleted());
-        return new ConversationView(row.id(), row.kind().name(), row.state(), peerView, row.lastSeq(), preview,
-                row.unreadCount(), row.firstUnreadSeq(), row.markedUnread(), row.readSeq(), row.peerDeliveredSeq(),
-                peerReadSeq, row.updatedAt(), !blockedByMe && peer.active(), blockedByMe);
+        return last == null ? null
+                : new MessagePreview(last.id(), last.seq(), last.senderId(),
+                        last.senderId() == null ? null : senderLabels.get(last.senderId()), last.body(),
+                        last.createdAt(), last.attachmentKind(), last.deleted(), last.kind());
     }
 
     /**
      * Conversa vista por um participante.
      *
+     * @param kind DIRECT, GROUP ou SELF ("Mensagens salvas")
      * @param state ACTIVE ou REQUEST (solicitação de mensagem para mim)
+     * @param peer a outra pessoa (conversa individual) ou eu mesmo (mensagens salvas); nulo em grupo
+     * @param group dados do grupo; nulo nas outras
      * @param readSeq até onde eu li
-     * @param peerReadSeq até onde a outra pessoa leu; nulo enquanto ela não aceitou a conversa (CT-02)
-     * @param canSend posso escrever (não bloqueei e a conta dela está ativa)
+     * @param peerDeliveredSeq até onde a outra pessoa recebeu; num grupo, até onde todos receberam
+     * @param peerReadSeq até onde a outra pessoa leu (num grupo, todos); nulo enquanto ela não aceitou a conversa
+     *     (CT-02)
+     * @param canSend posso escrever (não bloqueei, a conta dela está ativa; no grupo, as permissões)
      */
-    public record ConversationView(UUID id, String kind, MemberState state, PeerView peer, long lastSeq,
-            @Nullable MessagePreview lastMessage, long unreadCount, @Nullable Long firstUnreadSeq,
-            boolean markedUnread, long readSeq, long peerDeliveredSeq, @Nullable Long peerReadSeq,
-            Instant updatedAt, boolean canSend, boolean blockedByMe) {
+    public record ConversationView(UUID id, String kind, MemberState state, @Nullable PeerView peer,
+            @Nullable GroupView group, long lastSeq, @Nullable MessagePreview lastMessage, long unreadCount,
+            @Nullable Long firstUnreadSeq, boolean markedUnread, long readSeq, long peerDeliveredSeq,
+            @Nullable Long peerReadSeq, Instant updatedAt, boolean canSend, boolean blockedByMe) {
+    }
+
+    /**
+     * Grupo visto por um membro (GR-01).
+     *
+     * @param photoId arquivo da foto do grupo (miniatura em {@code /api/v1/media/{id}/thumbnail})
+     * @param photoVersion versão para cache
+     * @param myRole meu papel
+     * @param canEditInfo posso mudar nome, descrição e foto
+     * @param canAddMembers posso adicionar membros
+     */
+    public record GroupView(String name, String description, @Nullable UUID photoId, Instant photoVersion,
+            long memberCount, MemberRole myRole, boolean onlyAdminsSend, boolean onlyAdminsEditInfo,
+            boolean onlyAdminsAddMembers, boolean joinApproval, boolean canEditInfo, boolean canAddMembers) {
     }
 
     /** A outra pessoa da conversa individual, com o apelido local como {@code label}. */
@@ -278,8 +411,11 @@ public class ConversationService {
      *
      * @param attachmentKind tipo do anexo (IMAGE, VIDEO, AUDIO, DOCUMENT), para "📷 Foto" e afins
      * @param deleted apagada para todos (MS-06)
+     * @param senderLabel nome de quem mandou, só em grupo e quando não fui eu
+     * @param kind USER ou SYSTEM (aviso do grupo, corpo em JSON)
      */
-    public record MessagePreview(UUID id, long seq, @Nullable UUID senderId, String body, Instant createdAt,
-            @Nullable String attachmentKind, boolean deleted) {
+    public record MessagePreview(UUID id, long seq, @Nullable UUID senderId, @Nullable String senderLabel,
+            String body, Instant createdAt,
+            @Nullable String attachmentKind, boolean deleted, MessageKind kind) {
     }
 }

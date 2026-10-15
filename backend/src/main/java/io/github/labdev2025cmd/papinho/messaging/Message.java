@@ -8,6 +8,8 @@ import org.jspecify.annotations.Nullable;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
@@ -34,6 +36,10 @@ class Message {
 
     @Column(nullable = false)
     private long changeSeq;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private MessageKind kind;
 
     private @Nullable UUID senderId;
 
@@ -63,6 +69,7 @@ class Message {
 
     protected Message() {
         this.conversationId = new UUID(0, 0);
+        this.kind = MessageKind.USER;
         this.clientMessageId = new UUID(0, 0);
         this.body = "";
         this.createdAt = Instant.EPOCH;
@@ -70,8 +77,15 @@ class Message {
 
     Message(UUID conversationId, long seq, UUID senderId, UUID clientMessageId, String body,
             @Nullable UUID replyToId, int forwardCount, @Nullable Attachment attachment, Instant now) {
+        this(conversationId, seq, MessageKind.USER, senderId, clientMessageId, body, replyToId, forwardCount,
+                attachment, now);
+    }
+
+    Message(UUID conversationId, long seq, MessageKind kind, UUID senderId, UUID clientMessageId, String body,
+            @Nullable UUID replyToId, int forwardCount, @Nullable Attachment attachment, Instant now) {
         this.conversationId = conversationId;
         this.seq = seq;
+        this.kind = kind;
         this.changeSeq = seq;
         this.senderId = senderId;
         this.clientMessageId = clientMessageId;
@@ -102,6 +116,14 @@ class Message {
 
     long changeSeq() {
         return changeSeq;
+    }
+
+    MessageKind kind() {
+        return kind;
+    }
+
+    boolean system() {
+        return kind == MessageKind.SYSTEM;
     }
 
     @Nullable UUID senderId() {

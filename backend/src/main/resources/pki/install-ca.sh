@@ -16,7 +16,9 @@ set -eu
 CA_URL='@@CA_URL@@'
 EXPECTED_FINGERPRINT='@@FINGERPRINT@@'
 CA_NAME='Papinho LAN CA (@@HOSTNAME@@)'
-FILE_NAME='papinho-@@HOSTNAME@@-ca'
+FILE_NAME='papinho-ca-@@HOSTNAME@@'
+# Cópia de referência usada pelo trust anchor (Arch) para conseguir remover a mesma âncora depois.
+P11KIT_COPY="/usr/local/share/papinho/$FILE_NAME.pem"
 
 ACTION=install
 ASSUME_YES=0
@@ -93,7 +95,7 @@ system_remove() {
     debian)
       if [ -f "/usr/local/share/ca-certificates/$FILE_NAME.crt" ]; then
         $SUDO rm -f "/usr/local/share/ca-certificates/$FILE_NAME.crt"
-        $SUDO update-ca-certificates --fresh >/dev/null
+        $SUDO update-ca-certificates --fresh >/dev/null 2>&1
       fi ;;
     fedora)
       if [ -f "/etc/pki/ca-trust/source/anchors/$FILE_NAME.pem" ]; then
@@ -101,9 +103,9 @@ system_remove() {
         $SUDO update-ca-trust extract
       fi ;;
     p11kit)
-      if [ -f "/etc/ca-certificates/trust-source/anchors/$FILE_NAME.pem" ]; then
-        $SUDO rm -f "/etc/ca-certificates/trust-source/anchors/$FILE_NAME.pem"
-        $SUDO trust extract-compat
+      if [ -f "$P11KIT_COPY" ]; then
+        $SUDO trust anchor --remove "$P11KIT_COPY" 2>/dev/null || true
+        $SUDO rm -f "$P11KIT_COPY"
       fi ;;
   esac
 }
@@ -112,16 +114,16 @@ system_add() {
   case "$STORE" in
     debian)
       $SUDO install -m 0644 "$1" "/usr/local/share/ca-certificates/$FILE_NAME.crt"
-      $SUDO update-ca-certificates >/dev/null
+      $SUDO update-ca-certificates >/dev/null 2>&1
       say "  Sistema: /usr/local/share/ca-certificates/$FILE_NAME.crt" ;;
     fedora)
       $SUDO install -m 0644 "$1" "/etc/pki/ca-trust/source/anchors/$FILE_NAME.pem"
       $SUDO update-ca-trust extract
       say "  Sistema: /etc/pki/ca-trust/source/anchors/$FILE_NAME.pem" ;;
     p11kit)
-      $SUDO install -D -m 0644 "$1" "/etc/ca-certificates/trust-source/anchors/$FILE_NAME.pem"
-      $SUDO trust extract-compat
-      say "  Sistema: /etc/ca-certificates/trust-source/anchors/$FILE_NAME.pem" ;;
+      $SUDO install -D -m 0644 "$1" "$P11KIT_COPY"
+      $SUDO trust anchor --store "$P11KIT_COPY"
+      say "  Sistema: trust anchor --store $P11KIT_COPY" ;;
     none)
       say "Nenhum repositório de certificados conhecido (update-ca-certificates, update-ca-trust, trust)." ;;
   esac
@@ -166,7 +168,9 @@ if [ "$ACTUAL_FINGERPRINT" != "$EXPECTED_FINGERPRINT" ]; then
 fi
 say "Impressão digital SHA-256 conferida: $ACTUAL_FINGERPRINT"
 
-if [ "$ASSUME_YES" -ne 1 ] && [ -r /dev/tty ] && { : < /dev/tty; } 2>/dev/null; then
+# A pergunta vai para o terminal mesmo com "curl | sh". Sem terminal (CI, contêiner), segue sem perguntar.
+# O teste roda num subshell: erro de redirecionamento num builtin especial encerraria o próprio script.
+if [ "$ASSUME_YES" -ne 1 ] && (exec < /dev/tty) 2>/dev/null; then
   say "Compare com a impressão digital mostrada pelo dono do servidor."
   printf 'Instalar a CA? [s/N] '
   read -r answer < /dev/tty || answer=''

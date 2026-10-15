@@ -30,7 +30,7 @@ test("editar, apagar para todos e apagar para mim", async ({
   pageErrors,
 }) => {
   test.slow()
-  const tag = `${RUN}${test.info().project.name.startsWith("mobile") ? "m" : "d"}`
+  const tag = `${RUN}${test.info().project.name.startsWith("mobile") ? "m" : "d"}e`
   const { gil, hana } = await twoFriends(browser, pageErrors, tag, "Edita")
 
   // Editar pelo menu: o selo "editada" e o texto novo chegam para a outra pessoa.

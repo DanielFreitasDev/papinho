@@ -110,7 +110,7 @@ export async function createInvite(page: Page) {
   return url
 }
 
-/** Duas pessoas que se adicionaram e estão com a conversa aberta. */
+/** Duas pessoas que se adicionaram e estão com a conversa aberta; `tag` é única por spec (gil.<tag>). */
 export async function twoFriends(
   browser: Browser,
   errors: string[],

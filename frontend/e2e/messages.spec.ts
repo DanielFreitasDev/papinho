@@ -25,7 +25,7 @@ async function send(page: Page, text: string) {
 }
 
 /** Fase 4: editar (MS-05), apagar para todos e para mim (MS-06) e timer de temporárias (MS-07), entre dois navegadores. */
-test("editar, apagar para todos, apagar para mim e mensagens temporárias", async ({
+test("editar, apagar, temporárias, rascunho, silenciosa e agendada", async ({
   browser,
   pageErrors,
 }) => {
@@ -103,6 +103,48 @@ test("editar, apagar para todos, apagar para mim e mensagens temporárias", asyn
       .getByRole("main")
       .getByText("Você ativou as mensagens temporárias: 24 horas")
   ).toBeVisible()
+
+  // Esc fecha o painel de dados do contato (coluna ou gaveta, MS-13).
+  await gil.page.keyboard.press("Escape")
+  await expect(
+    gil.page.getByRole("combobox", { name: "Mensagens temporárias" })
+  ).toBeHidden()
+
+  // Rascunho sincronizado (MS-11): sobrevive a recarregar a página.
+  const hanaField = hana.page.getByRole("textbox", { name: "Mensagem" })
+  await hanaField.fill("rascunho que fica")
+  await hana.page.waitForResponse((r) => r.url().endsWith("/draft"))
+  await hana.page.reload()
+  await expect(
+    hana.page.getByRole("textbox", { name: "Mensagem" })
+  ).toHaveValue("rascunho que fica")
+
+  // Envio silencioso e agendado (MS-11).
+  await field.fill("psiu")
+  await gil.page.getByRole("button", { name: "Mais opções de envio" }).click()
+  await gil.page
+    .getByRole("menuitem", { name: "Enviar sem notificação" })
+    .click()
+  await expect(
+    row(hana.page, "psiu").getByRole("img", { name: "Enviada sem notificação" })
+  ).toBeVisible()
+  await field.fill("Mensagem para depois")
+  await gil.page.getByRole("button", { name: "Mais opções de envio" }).click()
+  await gil.page.getByRole("menuitem", { name: "Agendar envio" }).click()
+  const schedule = gil.page.getByRole("dialog", { name: "Agendar mensagem" })
+  await expect(schedule.getByLabel("Enviar em")).not.toHaveValue("")
+  await expectNoSeriousA11yViolations(gil.page)
+  await schedule.getByRole("button", { name: "Agendar envio" }).click()
+  await expect(schedule).toBeHidden()
+  await gil.page.getByRole("button", { name: "1 mensagem agendada" }).click()
+  const list = gil.page.getByRole("dialog", { name: "Mensagens agendadas" })
+  await expect(list.getByText("Mensagem para depois")).toBeVisible()
+  await list.getByRole("button", { name: "Cancelar" }).click()
+  await expect(list.getByText("Mensagem para depois")).toBeHidden()
+  await gil.page.keyboard.press("Escape")
+  await expect(
+    gil.page.getByRole("button", { name: "1 mensagem agendada" })
+  ).toBeHidden()
 
   expect(pageErrors).toEqual([])
   await gil.context.close()

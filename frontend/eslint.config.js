@@ -6,7 +6,7 @@ import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  globalIgnores(['dist', 'playwright-report', 'test-results']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
@@ -20,6 +20,13 @@ export default defineConfig([
     },
     rules: {
       'react-refresh/only-export-components': 'off',
+    },
+  },
+  {
+    // Fixtures do Playwright recebem um parâmetro chamado `use`, que não é o hook do React.
+    files: ['e2e/**/*.ts'],
+    rules: {
+      'react-hooks/rules-of-hooks': 'off',
     },
   },
 ])

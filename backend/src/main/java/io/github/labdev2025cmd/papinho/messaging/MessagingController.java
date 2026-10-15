@@ -133,6 +133,22 @@ class MessagingController {
         return ResponseEntity.status(result.created() ? HttpStatus.CREATED : HttpStatus.OK).body(result.message());
     }
 
+    /** Cria uma enquete (MS-09); 201 quando criou, 200 quando o {@code clientMessageId} já existia. */
+    @PostMapping("/conversations/{conversationId}/polls")
+    ResponseEntity<MessageService.MessageView> createPoll(@PathVariable UUID conversationId,
+            @Valid @RequestBody CreatePollRequest body) {
+        MessageService.SendResult result = messages.createPoll(CurrentUser.id(), conversationId,
+                body.clientMessageId(), body.question(), body.options(), body.multiple(), body.anonymous(),
+                body.closesAt());
+        return ResponseEntity.status(result.created() ? HttpStatus.CREATED : HttpStatus.OK).body(result.message());
+    }
+
+    /** Vota numa enquete; lista vazia tira o voto (MS-09). */
+    @PutMapping("/messages/{messageId}/vote")
+    MessageService.MessageView vote(@PathVariable UUID messageId, @Valid @RequestBody VoteRequest body) {
+        return messages.vote(CurrentUser.id(), messageId, body.optionIds());
+    }
+
     /** Galeria (MD-03): mídia, links, documentos ou áudios da conversa, do mais novo para o mais antigo. */
     @GetMapping("/conversations/{conversationId}/gallery")
     MessageService.HistoryResponse gallery(@PathVariable UUID conversationId,
@@ -213,6 +229,16 @@ class MessagingController {
     }
 
     record OpenDirectRequest(@NotBlank @Size(max = 64) String username) {
+    }
+
+    record CreatePollRequest(@NotNull UUID clientMessageId,
+            @NotBlank @Size(max = MessageService.MAX_POLL_QUESTION) String question,
+            @NotNull @Size(min = 2, max = MessageService.MAX_POLL_OPTIONS) List<@NotBlank @Size(
+                    max = MessageService.MAX_POLL_OPTION) String> options,
+            boolean multiple, boolean anonymous, java.time.@Nullable Instant closesAt) {
+    }
+
+    record VoteRequest(@NotNull @Size(max = MessageService.MAX_POLL_OPTIONS) List<@NotNull UUID> optionIds) {
     }
 
     record DisappearingRequest(@Nullable Integer seconds) {

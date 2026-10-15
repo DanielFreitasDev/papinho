@@ -42,6 +42,10 @@ public class MessageService {
 
     /** Máximo de alterações devolvidas por chamada de sincronização. */
     public static final int MAX_SYNC = 500;
+    /** Limites da enquete (MS-09), como os do WhatsApp. */
+    static final int MAX_POLL_QUESTION = 300;
+    static final int MAX_POLL_OPTION = 100;
+    static final int MAX_POLL_OPTIONS = 12;
     /** Máximo de mensagens por página de histórico. */
     public static final int MAX_PAGE = 100;
     /** A partir de quantos encaminhamentos aparece "encaminhada várias vezes" (MS-04). */
@@ -64,6 +68,7 @@ public class MessageService {
     private final MediaService media;
     private final HiddenMessages hidden;
     private final MessagingPreferences preferences;
+    private final Polls polls;
     private final InstanceSettingsService settings;
     private final JsonMapper json;
     private final ApplicationEventPublisher events;
@@ -72,7 +77,7 @@ public class MessageService {
     MessageService(MessageRepository messages, MessageReactionRepository reactions, MessageStarRepository stars,
             ConversationService conversations, SequenceAllocator sequences, ReceiptLog receipts,
             UserDirectory users, ProfileService profiles, MediaService media, HiddenMessages hidden,
-            MessagingPreferences preferences,
+            MessagingPreferences preferences, Polls polls,
             InstanceSettingsService settings, JsonMapper json, ApplicationEventPublisher events, Clock clock) {
         this.messages = messages;
         this.reactions = reactions;
@@ -85,6 +90,7 @@ public class MessageService {
         this.media = media;
         this.hidden = hidden;
         this.preferences = preferences;
+        this.polls = polls;
         this.settings = settings;
         this.json = json;
         this.events = events;
@@ -164,8 +170,8 @@ public class MessageService {
         for (UUID id : new LinkedHashSet<>(messageIds)) {
             Message message = messages.findById(id).orElseThrow(NotFoundException::new);
             conversations.requireMember(me, message.conversationId());
-            if (message.deleted() || message.system()) {
-                throw new InvalidMessageException("deleted message");
+            if (message.deleted() || message.kind() != MessageKind.USER) {
+                throw new InvalidMessageException("cannot forward");
             }
             sources.add(message);
         }
@@ -349,6 +355,9 @@ public class MessageService {
     public MessageView edit(UUID me, UUID messageId, String body) {
         Message message = requireVisible(me, messageId);
         requireAuthorWithin(me, message, settings.current().messageEditWindow());
+        if (message.kind() == MessageKind.POLL) {
+            throw new InvalidMessageException("poll cannot be edited");
+        }
         validateBody(body, message.attachment() != null);
         if (!body.equals(message.body())) {
             sequences.lock(message.conversationId());
@@ -375,6 +384,7 @@ public class MessageService {
                 sequences.nextChange(message.conversationId()));
         reactions.deleteByMessage(messageId);
         stars.deleteByMessage(messageId);
+        polls.delete(messageId);
         messages.flush();
         if (removed != null && !messages.existsByAttachmentId(removed.id())) {
             media.delete(removed.id());
@@ -395,6 +405,65 @@ public class MessageService {
         }
         byConversation.forEach((conversationId, ids) -> events
                 .publishEvent(new MessagingEvents.MessagesHidden(conversationId, List.copyOf(ids), me)));
+    }
+
+    /**
+     * Cria uma enquete (MS-09): pergunta, de 2 a 12 opções, escolha única ou múltipla, anônima ou não e data de
+     * encerramento opcional. O mesmo {@code clientMessageId} devolve a já criada (RT-02).
+     */
+    @Transactional
+    public SendResult createPoll(UUID me, UUID conversationId, UUID clientMessageId, String question,
+            List<String> options, boolean multiple, boolean anonymous, @Nullable Instant closesAt) {
+        conversations.requireMember(me, conversationId);
+        sequences.lock(conversationId);
+        var existing = messages.findBySenderIdAndClientMessageId(me, clientMessageId);
+        if (existing.isPresent()) {
+            if (!existing.get().conversationId().equals(conversationId)) {
+                throw new MessagingExceptions.ClientMessageIdConflictException();
+            }
+            return new SendResult(toViews(me, List.of(existing.get())).getFirst(), false);
+        }
+        String cleanQuestion = question.strip();
+        List<String> cleanOptions = options.stream().map(String::strip).toList();
+        if (cleanQuestion.isEmpty() || cleanQuestion.length() > MAX_POLL_QUESTION || cleanOptions.size() < 2
+                || cleanOptions.size() > MAX_POLL_OPTIONS
+                || cleanOptions.stream().anyMatch(o -> o.isEmpty() || o.length() > MAX_POLL_OPTION)
+                || new HashSet<>(cleanOptions).size() != cleanOptions.size()) {
+            throw new InvalidMessageException("poll");
+        }
+        if (closesAt != null && !closesAt.isAfter(clock.instant())) {
+            throw new InvalidMessageException("poll closes in the past");
+        }
+        ConversationMember member = conversations.requireSendable(me, conversationId);
+        if (member.state() == MemberState.REQUEST) {
+            member.changeState(MemberState.ACTIVE);
+        }
+        Message saved = append(me, conversationId, MessageKind.POLL, clientMessageId, cleanQuestion, null, 0, null);
+        polls.create(saved.id(), multiple, anonymous, closesAt, cleanOptions);
+        return new SendResult(toViews(me, List.of(saved)).getFirst(), true);
+    }
+
+    /** Vota (ou troca o voto); lista vazia tira o voto. Enquete encerrada não aceita votos (MS-09). */
+    @Transactional
+    public MessageView vote(UUID me, UUID messageId, List<UUID> optionIds) {
+        Message message = requireVisible(me, messageId);
+        Polls.Poll poll = message.kind() == MessageKind.POLL && !message.deleted()
+                ? polls.find(List.of(messageId)).get(messageId) : null;
+        if (poll == null) {
+            throw new InvalidMessageException("not a poll");
+        }
+        if (poll.closesAt() != null && !poll.closesAt().isAfter(clock.instant())) {
+            throw new MessagingExceptions.PollClosedException();
+        }
+        Set<UUID> chosen = new LinkedHashSet<>(optionIds);
+        Set<UUID> valid = poll.options().stream().map(Polls.Option::id).collect(Collectors.toSet());
+        if (!valid.containsAll(chosen) || (!poll.multiple() && chosen.size() > 1)) {
+            throw new InvalidMessageException("poll options");
+        }
+        sequences.lock(message.conversationId());
+        polls.vote(messageId, me, chosen, clock.instant());
+        touch(message);
+        return toViews(me, List.of(message)).getFirst();
     }
 
     /**
@@ -518,9 +587,15 @@ public class MessageService {
 
     private Message append(UUID me, UUID conversationId, UUID clientMessageId, String body,
             @Nullable UUID replyToId, int forwardCount, Message.@Nullable Attachment attachment) {
+        return append(me, conversationId, MessageKind.USER, clientMessageId, body, replyToId, forwardCount,
+                attachment);
+    }
+
+    private Message append(UUID me, UUID conversationId, MessageKind kind, UUID clientMessageId, String body,
+            @Nullable UUID replyToId, int forwardCount, Message.@Nullable Attachment attachment) {
         Instant now = clock.instant();
         long seq = sequences.next(conversationId, now);
-        Message message = new Message(conversationId, seq, me, clientMessageId, body, replyToId, forwardCount,
+        Message message = new Message(conversationId, seq, kind, me, clientMessageId, body, replyToId, forwardCount,
                 attachment, now);
         Integer timer = conversations.find(conversationId).disappearingSeconds();
         if (timer != null) {
@@ -599,6 +674,9 @@ public class MessageService {
             }
         });
         Map<UUID, MediaView> files = media.describe(attachmentIds);
+        Map<UUID, Polls.Poll> pollsById = polls.find(page.stream().filter(m -> m.kind() == MessageKind.POLL)
+                .map(Message::id).toList());
+        Instant now = clock.instant();
         return page.stream().map(m -> {
             Message reply = m.replyToId() == null ? null : replies.get(m.replyToId());
             ReplyPreview replyTo = reply == null ? null
@@ -611,7 +689,7 @@ public class MessageService {
                     m.forwardCount() >= FORWARDED_MANY, m.pinnedAt(),
                     reactionsByMessage.getOrDefault(m.id(), List.of()), starred.contains(m.id()),
                     attachment == null ? null : AttachmentView.of(attachment), m.editedAt(), m.deleted(),
-                    m.expiresAt());
+                    m.expiresAt(), PollView.of(pollsById.get(m.id()), me, now));
         }).toList();
     }
 
@@ -632,13 +710,47 @@ public class MessageService {
      * @param editedAt quando foi editada pela última vez (selo "editada", MS-05)
      * @param deleted apagada para todos: sem texto nem anexo, mostra "Esta mensagem foi apagada" (MS-06)
      * @param expiresAt quando a mensagem temporária some (MS-07); o cliente esconde as vencidas antes do job
+     * @param poll enquete (kind POLL, MS-09); a pergunta é o {@code body}
      */
     public record MessageView(UUID id, UUID conversationId, long seq, long changeSeq, MessageKind kind,
             @Nullable UUID senderId,
             UUID clientMessageId, String body, Instant createdAt, @Nullable ReplyPreview replyTo, int forwardCount,
             boolean forwardedMany, @Nullable Instant pinnedAt, List<ReactionView> reactions, boolean starred,
             @Nullable AttachmentView attachment, @Nullable Instant editedAt, boolean deleted,
-            @Nullable Instant expiresAt) {
+            @Nullable Instant expiresAt, @Nullable PollView poll) {
+    }
+
+    /**
+     * Enquete como o cliente a vê (MS-09).
+     *
+     * @param voters quem votou em cada opção; vazio quando a enquete é anônima
+     * @param totalVoters quantas pessoas votaram
+     * @param myVotes opções em que eu votei
+     */
+    public record PollView(boolean multiple, boolean anonymous, @Nullable Instant closesAt, boolean closed,
+            List<PollOptionView> options, long totalVoters, List<UUID> myVotes) {
+
+        static @Nullable PollView of(Polls.@Nullable Poll poll, UUID me, Instant now) {
+            if (poll == null) {
+                return null;
+            }
+            Set<UUID> everyone = new HashSet<>();
+            List<UUID> mine = new ArrayList<>();
+            List<PollOptionView> options = poll.options().stream().map(option -> {
+                everyone.addAll(option.voters());
+                if (option.voters().contains(me)) {
+                    mine.add(option.id());
+                }
+                return new PollOptionView(option.id(), option.text(), option.voters().size(),
+                        poll.anonymous() ? List.of() : List.copyOf(option.voters()));
+            }).toList();
+            boolean closed = poll.closesAt() != null && !poll.closesAt().isAfter(now);
+            return new PollView(poll.multiple(), poll.anonymous(), poll.closesAt(), closed, options, everyone.size(),
+                    mine);
+        }
+    }
+
+    public record PollOptionView(UUID id, String text, long votes, List<UUID> voters) {
     }
 
     /** Anexo como o cliente o vê; o conteúdo vem de {@code /api/v1/media/{id}/content}. */

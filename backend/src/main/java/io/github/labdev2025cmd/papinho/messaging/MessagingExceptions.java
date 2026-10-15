@@ -86,4 +86,11 @@ final class MessagingExceptions {
             super(HttpStatus.NOT_FOUND, "group-invite-not-found", "Group invite not found");
         }
     }
+
+    /** Enquete encerrada: não aceita mais votos (MS-09). */
+    static class PollClosedException extends ApiException {
+        PollClosedException() {
+            super(HttpStatus.CONFLICT, "poll-closed", "This poll is closed");
+        }
+    }
 }

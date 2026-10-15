@@ -29,9 +29,9 @@ class ConversationQueries {
                    case when c.kind = 'GROUP' then grp.read else peer.read_seq end as peer_read_seq,
                    coalesce(grp.members, 0) + 1 as member_count,
                    (select count(*) from messages m where m.conversation_id = c.id and m.seq > me.read_seq
-                       and m.kind = 'USER' and m.sender_id is distinct from me.user_id) as unread_count,
+                       and m.kind <> 'SYSTEM' and m.sender_id is distinct from me.user_id) as unread_count,
                    (select min(m.seq) from messages m where m.conversation_id = c.id and m.seq > me.read_seq
-                       and m.kind = 'USER' and m.sender_id is distinct from me.user_id) as first_unread_seq,
+                       and m.kind <> 'SYSTEM' and m.sender_id is distinct from me.user_id) as first_unread_seq,
                    last.id as last_id, last.seq as last_seq_of_message, last.sender_id as last_sender_id,
                    left(last.body, 200) as last_body, last.created_at as last_created_at,
                    last.attachment_kind as last_attachment_kind, last.deleted_at is not null as last_deleted,

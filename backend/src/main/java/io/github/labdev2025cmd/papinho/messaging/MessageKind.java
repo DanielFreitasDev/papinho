@@ -4,5 +4,7 @@ package io.github.labdev2025cmd.papinho.messaging;
 public enum MessageKind {
     USER,
     /** Aviso do sistema: o corpo é um JSON pequeno ({@link SystemNotice}) que o cliente traduz. */
-    SYSTEM
+    SYSTEM,
+    /** Enquete (MS-09): o corpo é a pergunta; opções e votos em {@code polls}. */
+    POLL
 }

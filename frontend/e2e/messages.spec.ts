@@ -110,6 +110,26 @@ test("editar, apagar, temporárias, rascunho, silenciosa e agendada", async ({
     gil.page.getByRole("combobox", { name: "Mensagens temporárias" })
   ).toBeHidden()
 
+  // Emojis (MS-10): busca no seletor do campo e reação com qualquer emoji.
+  await gil.page.getByRole("button", { name: "Emojis" }).click()
+  await gil.page.getByRole("searchbox", { name: "Buscar emoji" }).fill("pizza")
+  await gil.page.getByRole("button", { name: "pizza", exact: true }).click()
+  await expect(field).toHaveValue("🍕")
+  await field.press("End")
+  await field.pressSequentially(" hoje?")
+  await gil.page.getByRole("button", { name: "Enviar" }).click()
+  const pizza = row(hana.page, "🍕 hoje?")
+  await pizza.hover()
+  await pizza.getByRole("button", { name: "Ações da mensagem" }).click()
+  await hana.page.getByRole("menuitem", { name: "Mais reações" }).click()
+  const picker = hana.page.getByRole("dialog", { name: "Mais reações" })
+  await expectNoSeriousA11yViolations(hana.page)
+  await picker.getByRole("searchbox", { name: "Buscar emoji" }).fill("pizza")
+  await picker.getByRole("button", { name: "pizza", exact: true }).click()
+  await expect(
+    row(gil.page, "🍕 hoje?").getByLabel("Reações").getByText("🍕")
+  ).toBeVisible()
+
   // Rascunho sincronizado (MS-11): sobrevive a recarregar a página.
   const hanaField = hana.page.getByRole("textbox", { name: "Mensagem" })
   await hanaField.fill("rascunho que fica")

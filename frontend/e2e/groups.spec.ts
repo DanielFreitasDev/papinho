@@ -60,7 +60,13 @@ test("grupo com avisos, permissões, convite e responder em privado", async ({
   await expect(
     hana.page.getByRole("main").getByText("Gil Grupo adicionou você")
   ).toBeVisible()
-  await send(hana.page, "Obrigada!")
+  await send(hana.page, "Obrigada! @todos")
+  await expect(
+    row(gil.page, "Obrigada!").locator("strong", { hasText: "@todos" })
+  ).toBeVisible()
+  await expect(
+    row(gil.page, "Obrigada!").getByRole("link", { name: "@todos" })
+  ).toHaveCount(0)
   await expect(row(gil.page, "Obrigada!")).toBeVisible()
 
   // Enquete (MS-09): o voto da Hana aparece para o Gil em tempo real, com o nome de quem votou.

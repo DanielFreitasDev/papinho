@@ -19,7 +19,15 @@ export default defineConfig({
     locale: "pt-BR",
     timezoneId: "America/Fortaleza",
     trace: "retain-on-failure",
-    launchOptions: executablePath ? { executablePath } : {},
+    // Microfone falso para a gravação de voz (AU-01): tom sintético e permissão sem diálogo.
+    launchOptions: {
+      ...(executablePath ? { executablePath } : {}),
+      args: [
+        "--use-fake-ui-for-media-stream",
+        "--use-fake-device-for-media-stream",
+      ],
+    },
+    permissions: ["microphone"],
   },
   projects: [
     // Cria o primeiro admin pela UI uma vez só; os outros projetos rodam em paralelo depois dele.

@@ -1,12 +1,7 @@
-import type { Browser, Page } from "@playwright/test"
+import type { Page } from "@playwright/test"
 
-import {
-  expect,
-  expectNoSeriousA11yViolations,
-  test,
-  watchErrors,
-} from "./fixtures"
-import { createInvite, ensureAdmin, registerThroughUi, RUN } from "./support"
+import { expect, expectNoSeriousA11yViolations, test } from "./fixtures"
+import { RUN, twoFriends } from "./support"
 
 /** PNG desenhado num canvas do próprio navegador. */
 async function pngFile(page: Page, color: string, name: string) {
@@ -24,53 +19,6 @@ async function pngFile(page: Page, color: string, name: string) {
     mimeType: "image/png",
     buffer: Buffer.from(dataUrl.split(",")[1], "base64"),
   }
-}
-
-/** Duas pessoas que se adicionaram e estão com a conversa aberta. */
-async function twoFriends(browser: Browser, errors: string[], tag: string) {
-  const owner = await ensureAdmin(browser, errors)
-  const invite = await createInvite(owner.page)
-  await owner.context.close()
-  const people = []
-  for (const [username, name] of [
-    [`gil.${tag}`, "Gil Midia"],
-    [`hana.${tag}`, "Hana Midia"],
-  ]) {
-    const context = await browser.newContext()
-    const page = await context.newPage()
-    await watchErrors(page, errors)
-    await page.goto(invite)
-    await registerThroughUi(page, username, name)
-    people.push({ context, page, username, name })
-  }
-  const [gil, hana] = people
-  // Primeiro os dois se adicionam; só depois abrem a conversa (assim ela não nasce como solicitação).
-  for (const [me, other] of [
-    [gil, hana],
-    [hana, gil],
-  ]) {
-    await me.page.getByRole("button", { name: "Adicionar contato" }).click()
-    const add = me.page.getByRole("dialog", { name: "Adicionar contato" })
-    await add.getByLabel("@usuario").fill(other.username)
-    await add.getByRole("button", { name: "Adicionar", exact: true }).click()
-    await expect(add).toBeHidden()
-  }
-  for (const [me, other] of [
-    [gil, hana],
-    [hana, gil],
-  ]) {
-    await me.page
-      .getByRole("complementary")
-      .getByRole("tab", { name: "Contatos" })
-      .click()
-    await me.page
-      .getByRole("button", { name: `Conversar com ${other.name}` })
-      .click()
-    await expect(
-      me.page.getByRole("heading", { name: other.name })
-    ).toBeVisible()
-  }
-  return { gil, hana }
 }
 
 async function attach(
@@ -146,7 +94,7 @@ test("fotos, documento e cancelamento de envio entre dois navegadores", async ({
   ).toHaveAttribute("aria-pressed", "true")
   await expectNoSeriousA11yViolations(hana.page)
   await hana.page.keyboard.press("Escape")
-  await expect(hana.page.getByRole("dialog")).toBeHidden()
+  await expect(hana.page.getByRole("dialog", { name: /\.png/ })).toBeHidden()
 
   // Documento: cartão com nome e tamanho; o download preserva o nome.
   const chooser = gil.page.waitForEvent("filechooser")

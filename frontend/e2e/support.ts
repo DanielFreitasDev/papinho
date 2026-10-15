@@ -109,3 +109,55 @@ export async function createInvite(page: Page) {
   await page.keyboard.press("Escape")
   return url
 }
+
+/** Duas pessoas que se adicionaram e estão com a conversa aberta. */
+export async function twoFriends(
+  browser: Browser,
+  errors: string[],
+  tag: string,
+  label = "Midia"
+) {
+  const owner = await ensureAdmin(browser, errors)
+  const invite = await createInvite(owner.page)
+  await owner.context.close()
+  const people = []
+  for (const [username, name] of [
+    [`gil.${tag}`, `Gil ${label}`],
+    [`hana.${tag}`, `Hana ${label}`],
+  ]) {
+    const context = await browser.newContext()
+    const page = await context.newPage()
+    await watchErrors(page, errors)
+    await page.goto(invite)
+    await registerThroughUi(page, username, name)
+    people.push({ context, page, username, name })
+  }
+  const [gil, hana] = people
+  // Primeiro os dois se adicionam; só depois abrem a conversa (assim ela não nasce como solicitação).
+  for (const [me, other] of [
+    [gil, hana],
+    [hana, gil],
+  ]) {
+    await me.page.getByRole("button", { name: "Adicionar contato" }).click()
+    const add = me.page.getByRole("dialog", { name: "Adicionar contato" })
+    await add.getByLabel("@usuario").fill(other.username)
+    await add.getByRole("button", { name: "Adicionar", exact: true }).click()
+    await expect(add).toBeHidden()
+  }
+  for (const [me, other] of [
+    [gil, hana],
+    [hana, gil],
+  ]) {
+    await me.page
+      .getByRole("complementary")
+      .getByRole("tab", { name: "Contatos" })
+      .click()
+    await me.page
+      .getByRole("button", { name: `Conversar com ${other.name}` })
+      .click()
+    await expect(
+      me.page.getByRole("heading", { name: other.name })
+    ).toBeVisible()
+  }
+  return { gil, hana }
+}

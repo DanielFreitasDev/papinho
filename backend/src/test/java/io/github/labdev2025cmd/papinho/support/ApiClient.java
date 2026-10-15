@@ -52,6 +52,10 @@ public final class ApiClient {
         return send(MockMvcRequestBuilders.put(uri), body);
     }
 
+    public MvcTestResult patch(String uri, @Nullable Object body) {
+        return send(MockMvcRequestBuilders.patch(uri), body);
+    }
+
     public MvcTestResult delete(String uri, @Nullable Object body) {
         return send(MockMvcRequestBuilders.delete(uri), body);
     }

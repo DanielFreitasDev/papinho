@@ -1,5 +1,6 @@
 package io.github.labdev2025cmd.papinho.shared.security;
 
+import java.util.List;
 import java.util.Set;
 
 import org.springframework.boot.security.autoconfigure.actuate.web.servlet.EndpointRequest;
@@ -75,9 +76,13 @@ public class SecurityConfig {
     @Bean
     @Order(1)
     SecurityFilterChain apiSecurityFilterChain(HttpSecurity http, CsrfTokenRepository csrfTokenRepository,
-            SecurityContextRepository securityContextRepository) throws Exception {
-        http.securityMatcher("/api/**")
+            SecurityContextRepository securityContextRepository, List<ApiSecurityCustomizer> customizers)
+            throws Exception {
+        // /webauthn/** e /login/webauthn são os endpoints de passkey do Spring Security (ID-04).
+        http.securityMatcher("/api/**", "/webauthn/**", "/login/webauthn")
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(HttpMethod.POST, "/webauthn/authenticate/options", "/login/webauthn")
+                        .permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/instance", "/api/v1/invites/status",
                                 "/api/v1/usernames/availability").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/login", "/api/v1/auth/register",
@@ -95,6 +100,9 @@ public class SecurityConfig {
                 .exceptionHandling(errors -> errors
                         .authenticationEntryPoint(problemHandler)
                         .accessDeniedHandler(problemHandler));
+        for (ApiSecurityCustomizer customizer : customizers) {
+            customizer.customize(http);
+        }
         applyHeaders(http);
         return http.build();
     }

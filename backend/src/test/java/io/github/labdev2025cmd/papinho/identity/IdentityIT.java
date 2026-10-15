@@ -310,6 +310,28 @@ class IdentityIT {
         assertThat(admin.json(admin.get("/api/v1/admin/users?query=bru")).get("items")).hasSize(1);
     }
 
+    @Test
+    @DisplayName("passkeys: opções de registro exigem sessão; opções de login são públicas; lista começa vazia")
+    void shouldExposePasskeyCeremonies() {
+        ApiClient anonymous = clients.create().bootstrap();
+        // O filtro de opções do Spring roda antes da autorização e recusa o anônimo com 400.
+        assertThat(anonymous.post("/webauthn/register/options", null).getResponse().getStatus()).isIn(400, 401);
+        var loginOptions = anonymous.post("/webauthn/authenticate/options", null);
+        assertThat(loginOptions).hasStatusOk();
+        assertThat(anonymous.json(loginOptions).get("rpId").asString()).isEqualTo("localhost");
+        assertThat(anonymous.json(loginOptions).get("challenge").asString()).isNotBlank();
+
+        ApiClient ana = clients.create();
+        String anaId = Accounts.userId(Accounts.register(ana, "ana", null));
+        var options = ana.post("/webauthn/register/options", null);
+        assertThat(options).hasStatusOk();
+        JsonNode body = ana.json(options);
+        assertThat(body.get("rp").get("id").asString()).isEqualTo("localhost");
+        assertThat(body.get("rp").get("name").asString()).isEqualTo("Papinho");
+        assertThat(body.get("user").get("name").asString()).isEqualTo(anaId);
+        assertThat(ana.json(ana.get("/api/v1/account/passkeys"))).isEmpty();
+    }
+
     private static Map<String, Object> settings(String mode, int cooldownDays) {
         return Map.of("registrationMode", mode, "usernameChangeCooldownDays", cooldownDays,
                 "messageEditWindowMinutes", 15, "messageDeleteWindowHours", 48, "userQuotaMegabytes", 5120,

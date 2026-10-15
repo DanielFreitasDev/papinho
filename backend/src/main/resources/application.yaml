@@ -100,4 +100,6 @@ app:
   storage:
     dir: ${PAPINHO_STORAGE_DIR:${PAPINHO_DATA_DIR:${user.home}/.papinho}/files}
   identity:
-    rp-name: Papinho
+    webauthn:
+      rp-id: ${PAPINHO_RP_ID:localhost}
+      allowed-origins: ${PAPINHO_ALLOWED_ORIGINS:http://localhost:8080,http://localhost:5173}

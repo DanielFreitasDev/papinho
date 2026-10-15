@@ -21,3 +21,8 @@ app:
     enabled: true
     public-http-port: ${PAPINHO_PUBLIC_HTTP_PORT:${PAPINHO_HTTP_PORT:8080}}
     public-https-port: ${PAPINHO_PUBLIC_HTTPS_PORT:${PAPINHO_HTTPS_PORT:8443}}
+  identity:
+    webauthn:
+      # Passkeys exigem o hostname (PK-05); a origem inclui a porta anunciada quando não é 443.
+      rp-id: ${PAPINHO_RP_ID:${PAPINHO_HOSTNAME:papinho.lan}}
+      allowed-origins: ${PAPINHO_ALLOWED_ORIGINS:https://${PAPINHO_HOSTNAME:papinho.lan}:${PAPINHO_PUBLIC_HTTPS_PORT:${PAPINHO_HTTPS_PORT:8443}},https://${PAPINHO_HOSTNAME:papinho.lan}}

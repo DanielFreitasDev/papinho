@@ -340,7 +340,21 @@
     "blockConfirmTitle": "Block {{name}}?",
     "blockConfirmDescription": "They won't be able to message you or see your photo, about or online status. They are not notified.",
     "blockedToast": "Person blocked",
-    "unblockedToast": "Person unblocked"
+    "unblockedToast": "Person unblocked",
+    "deleted": "This message was deleted",
+    "deletedByMe": "You deleted this message",
+    "edited": "edited",
+    "edit": "Edit",
+    "editing": "Editing message",
+    "cancelEdit": "Cancel editing",
+    "saveEdit": "Save edit",
+    "delete": "Delete",
+    "deleteTitle_one": "Delete message?",
+    "deleteTitle_other": "Delete {{count}} messages?",
+    "deleteDescription": "\"Delete for everyone\" removes the content and files from the server for everybody; a deleted-message notice remains.",
+    "deleteForMeDescription": "The message disappears only for you, on all your devices.",
+    "deleteForMe": "Delete for me",
+    "deleteForEveryone": "Delete for everyone"
   },
   "moderation": {
     "report": "Report",

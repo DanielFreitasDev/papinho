@@ -6,6 +6,7 @@ import {
   confirmSent,
   fromHistory,
   prependOlder,
+  removeMessages,
 } from "./cache"
 import type { Message } from "./types"
 
@@ -26,6 +27,8 @@ function message(seq: number, changeSeq = seq, body = `m${seq}`): Message {
     reactions: [],
     starred: false,
     attachment: null,
+    editedAt: null,
+    deleted: false,
   }
 }
 
@@ -122,5 +125,31 @@ describe("cache da conversa (RT-01, RT-02)", () => {
     })
     expect(next.messages.map((m) => m.seq)).toEqual([1, 2, 3, 4])
     expect(next.hasOlder).toBe(false)
+  })
+
+  it("apagar para mim tira a mensagem sem mexer no cursor (MS-06)", () => {
+    const cache = fromHistory({
+      messages: [message(1), message(2), message(3)],
+      lastSeq: 3,
+      hasMore: false,
+    })
+    const next = removeMessages(cache, ["id-2"])
+    expect(next.messages.map((m) => m.seq)).toEqual([1, 3])
+    expect(next.cursor).toBe(3)
+  })
+
+  it("apagada para todos substitui a original pelo aviso (MS-06)", () => {
+    const cache = fromHistory({
+      messages: [message(1), message(2)],
+      lastSeq: 2,
+      hasMore: false,
+    })
+    const next = applyChanges(cache, {
+      messages: [{ ...message(1, 3, ""), deleted: true }],
+      lastSeq: 3,
+      hasMore: false,
+    })
+    expect(next.messages[0]).toMatchObject({ body: "", deleted: true })
+    expect(next.cursor).toBe(3)
   })
 })

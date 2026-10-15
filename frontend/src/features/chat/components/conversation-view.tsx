@@ -8,6 +8,7 @@ import {
   MessageCircleIcon,
   PinIcon,
   StarIcon,
+  Trash2Icon,
   XIcon,
 } from "lucide-react"
 
@@ -34,6 +35,7 @@ import {
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
 import { Skeleton } from "@/components/ui/skeleton"
 import { toast } from "@/components/ui/toast"
+import { authQueries } from "@/features/auth"
 import { useBlock } from "@/features/contact"
 import { useMediaQuery } from "@/hooks/use-media-query"
 import { MAX_FILE_SIZE, type Track } from "@/features/media"
@@ -44,6 +46,7 @@ import {
   loadOlder,
   markRead,
   useConversationAction,
+  useEditMessage,
   useMessageAction,
   useSendMessage,
 } from "../api"
@@ -60,6 +63,7 @@ import type {
 import { cancelFile, retryFile, sendFile } from "../attachments"
 import { AttachDialog } from "./attach-dialog"
 import { Composer } from "./composer"
+import { DeleteMessagesDialog } from "./delete-messages-dialog"
 import { ImageViewer } from "./image-viewer"
 import { ContactDetails } from "./contact-details"
 import { ForwardDialog } from "./forward-dialog"
@@ -153,7 +157,13 @@ function LoadedConversation({
   const messageAction = useMessageAction()
   const conversationAction = useConversationAction()
   const block = useBlock()
+  const editMessage = useEditMessage()
+  const instance = useQuery(authQueries.instance())
   const pinned = useQuery(chatQueries.pinned(conversation.id))
+  const [editing, setEditing] = useState<{ id: string; body: string } | null>(
+    null
+  )
+  const [deleteIds, setDeleteIds] = useState<string[]>([])
   const [replyTo, setReplyTo] = useState<ReplyPreview | null>(null)
   const [selection, setSelection] = useState<string[] | null>(null)
   const [forwardIds, setForwardIds] = useState<string[]>([])
@@ -315,6 +325,52 @@ function LoadedConversation({
     setReplyTo(null)
   }
 
+  // Janelas do admin (MS-05, MS-06); o servidor confere de novo, o menu só esconde o que já expirou.
+  const now = useNow()
+  const withinMinutes = (createdAt: string, minutes: number | undefined) =>
+    minutes !== undefined && now - Date.parse(createdAt) <= minutes * 60_000
+  const canEdit = (message: DisplayMessage) =>
+    message.id !== null &&
+    message.senderId === meId &&
+    !message.deleted &&
+    (message.body !== "" || message.attachment !== null) &&
+    withinMinutes(message.createdAt, instance.data?.messageEditWindowMinutes)
+  const canDeleteForEveryone = (ids: string[]) =>
+    ids.length > 0 &&
+    ids.every((id) => {
+      const message = display.find((item) => item.id === id)
+      return (
+        message !== undefined &&
+        message.senderId === meId &&
+        !message.deleted &&
+        withinMinutes(
+          message.createdAt,
+          instance.data?.messageDeleteWindowMinutes
+        )
+      )
+    })
+
+  function startEdit(message: DisplayMessage) {
+    if (message.id !== null) {
+      setReplyTo(null)
+      setEditing({ id: message.id, body: message.body })
+    }
+  }
+
+  function saveEdit(id: string, body: string) {
+    setEditing(null)
+    editMessage.mutate(
+      { messageId: id, body },
+      {
+        onError: (error) =>
+          toast.add({
+            title: errorMessage(error, t("common.genericError")),
+            type: "error",
+          }),
+      }
+    )
+  }
+
   function onAction(message: DisplayMessage, action: MessageAction) {
     if (action === "retry") {
       const pending = cache.pending.find(
@@ -358,6 +414,12 @@ function LoadedConversation({
         return
       case "info":
         setInfoId(id)
+        return
+      case "edit":
+        startEdit(message)
+        return
+      case "delete":
+        setDeleteIds([id])
         return
       case "select":
         setSelection((current) => {
@@ -591,6 +653,7 @@ function LoadedConversation({
                         onAction={(action) => onAction(message, action)}
                         onJump={(id) => void jumpTo(id)}
                         audioQueue={audioQueue}
+                        canEdit={canEdit(message)}
                       />
                     </MessageScrollerItem>
                   </Fragment>
@@ -641,8 +704,22 @@ function LoadedConversation({
               {t("chat.star")}
             </Button>
             <Button
-              size="sm"
+              variant="outline"
+              size="icon-sm"
+              aria-label={t("chat.delete")}
               disabled={selection.length === 0}
+              onClick={() => setDeleteIds(selection)}
+            >
+              <Trash2Icon />
+            </Button>
+            <Button
+              size="sm"
+              disabled={
+                selection.length === 0 ||
+                selection.some(
+                  (id) => display.find((item) => item.id === id)?.deleted
+                )
+              }
               onClick={() => setForwardIds(selection)}
             >
               <ForwardIcon data-icon="inline-start" />
@@ -667,6 +744,15 @@ function LoadedConversation({
             onFiles={chooseFiles}
             onVoice={(file) => sendFiles([file], "")}
             disabled={!canWrite}
+            editing={editing}
+            onEdit={saveEdit}
+            onCancelEdit={() => setEditing(null)}
+            onEditLast={() => {
+              const last = [...display].reverse().find(canEdit)
+              if (last) {
+                startEdit(last)
+              }
+            }}
           />
         )}
         <ForwardDialog
@@ -679,6 +765,17 @@ function LoadedConversation({
           }}
         />
         <MessageInfoDialog messageId={infoId} onClose={() => setInfoId(null)} />
+        <DeleteMessagesDialog
+          conversationId={conversation.id}
+          messageIds={deleteIds}
+          canDeleteForEveryone={canDeleteForEveryone(deleteIds)}
+          onClose={(deleted) => {
+            setDeleteIds([])
+            if (deleted) {
+              setSelection(null)
+            }
+          }}
+        />
         <AttachDialog
           files={files}
           onClose={() => setFiles([])}
@@ -726,6 +823,16 @@ function LoadedConversation({
   )
 }
 
+/** Hora atual, renovada a cada minuto (as janelas de edição e exclusão são em minutos). */
+function useNow() {
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 60_000)
+    return () => window.clearInterval(timer)
+  }, [])
+  return now
+}
+
 function statusOf(message: Message, conversation: Conversation): MessageStatus {
   if (
     conversation.peerReadSeq !== null &&
@@ -760,6 +867,8 @@ function toDisplay(
     status: message.senderId === meId ? statusOf(message, conversation) : null,
     attachment: message.attachment,
     localAttachment: null,
+    editedAt: message.editedAt,
+    deleted: message.deleted,
   }))
   const pending: DisplayMessage[] = cache.pending.map((message) => ({
     key: message.clientMessageId,
@@ -777,6 +886,8 @@ function toDisplay(
     status: message.status,
     attachment: null,
     localAttachment: message.attachment,
+    editedAt: null,
+    deleted: false,
   }))
   return [...confirmed, ...pending]
 }

@@ -4,7 +4,7 @@ import { useQueryClient } from "@tanstack/react-query"
 
 import { authQueries } from "@/features/auth"
 import { realtime } from "@/lib/realtime"
-import { chatKeys, markDelivered, syncConversation } from "./api"
+import { chatKeys, hideLocally, markDelivered, syncConversation } from "./api"
 import { clearActivity, setActivity } from "./activity"
 import type { Presence } from "./types"
 
@@ -51,6 +51,9 @@ export function useRealtimeSync(meId: string) {
           })
           // Aceitar uma solicitação libera a presença dos dois lados (CT-02).
           void queryClient.invalidateQueries({ queryKey: ["presence"] })
+          break
+        case "hidden":
+          hideLocally(queryClient, event.conversationId, event.messageIds)
           break
         case "activity":
           if (event.userId !== meId) {

@@ -1,6 +1,12 @@
 import { useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
-import { PaperclipIcon, SendHorizontalIcon, XIcon } from "lucide-react"
+import {
+  CheckIcon,
+  PaperclipIcon,
+  PencilIcon,
+  SendHorizontalIcon,
+  XIcon,
+} from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -31,6 +37,10 @@ export function Composer({
   onFiles,
   onVoice,
   disabled,
+  editing = null,
+  onEdit,
+  onCancelEdit,
+  onEditLast,
 }: {
   conversationId: string
   replyTo: ReplyPreview | null
@@ -42,6 +52,12 @@ export function Composer({
   /** Mensagem de voz gravada (AU-01). */
   onVoice: (file: File) => void
   disabled: boolean
+  /** Mensagem em edição (MS-05): o campo mostra o texto dela e o envio salva a edição. */
+  editing?: { id: string; body: string } | null
+  onEdit?: (id: string, body: string) => void
+  onCancelEdit?: () => void
+  /** ↑ com o campo vazio edita a minha última mensagem (MS-13). */
+  onEditLast?: () => void
 }) {
   const { t } = useTranslation()
   const [value, setValue] = useState("")
@@ -55,6 +71,25 @@ export function Composer({
       textarea.current?.focus()
     }
   }, [replyTo])
+
+  // Ao começar uma edição o campo recebe o texto dela (ajuste de estado durante a renderização).
+  const editingId = editing?.id ?? null
+  const [loadedEdit, setLoadedEdit] = useState<string | null>(null)
+  if (editingId !== loadedEdit) {
+    setLoadedEdit(editingId)
+    if (editing) {
+      setValue(editing.body)
+    }
+  }
+  useEffect(() => {
+    if (editingId !== null) {
+      const field = textarea.current
+      field?.focus()
+      window.requestAnimationFrame(() =>
+        field?.setSelectionRange(field.value.length, field.value.length)
+      )
+    }
+  }, [editingId])
 
   useEffect(() => {
     return () => {
@@ -78,8 +113,20 @@ export function Composer({
     }
   }
 
+  function cancelEdit() {
+    setValue("")
+    onCancelEdit?.()
+  }
+
   function submit() {
     const body = value.trim()
+    if (editing) {
+      if (body !== "" && !disabled) {
+        onEdit?.(editing.id, body)
+        setValue("")
+      }
+      return
+    }
     if (body === "" || disabled) {
       return
     }
@@ -97,7 +144,27 @@ export function Composer({
         submit()
       }}
     >
-      {replyTo ? (
+      {editing ? (
+        <div className="flex items-start gap-2 rounded-md border-l-4 border-primary bg-muted px-2 py-1 text-xs">
+          <PencilIcon aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
+          <div className="min-w-0 flex-1">
+            <p className="font-medium">{t("chat.editing")}</p>
+            <p className="line-clamp-2 text-muted-foreground">
+              {plainText(editing.body)}
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            aria-label={t("chat.cancelEdit")}
+            onClick={cancelEdit}
+          >
+            <XIcon />
+          </Button>
+        </div>
+      ) : null}
+      {replyTo && !editing ? (
         <div className="flex items-start gap-2 rounded-md border-l-4 border-primary bg-muted px-2 py-1 text-xs">
           <div className="min-w-0 flex-1">
             <p className="font-medium">
@@ -176,27 +243,39 @@ export function Composer({
                   event.preventDefault()
                   submit()
                 }
-                if (event.key === "Escape" && replyTo) {
+                if (event.key === "Escape" && editing) {
+                  event.preventDefault()
+                  cancelEdit()
+                } else if (event.key === "Escape" && replyTo) {
                   onCancelReply()
+                }
+                if (
+                  event.key === "ArrowUp" &&
+                  value === "" &&
+                  !editing &&
+                  onEditLast
+                ) {
+                  event.preventDefault()
+                  onEditLast()
                 }
               }}
             />
-            {value.trim() !== "" ? (
+            {value.trim() !== "" || editing ? (
               <InputGroupAddon align="inline-end">
                 <InputGroupButton
                   type="submit"
                   size="icon-sm"
                   variant="default"
-                  aria-label={t("chat.send")}
+                  aria-label={editing ? t("chat.saveEdit") : t("chat.send")}
                   disabled={disabled || value.trim() === ""}
                 >
-                  <SendHorizontalIcon />
+                  {editing ? <CheckIcon /> : <SendHorizontalIcon />}
                 </InputGroupButton>
               </InputGroupAddon>
             ) : null}
           </InputGroup>
         )}
-        {value.trim() === "" || recording ? (
+        {(value.trim() === "" && !editing) || recording ? (
           <div className={recording ? "flex min-w-0 flex-1" : "flex"}>
             <VoiceRecorder
               conversationId={conversationId}

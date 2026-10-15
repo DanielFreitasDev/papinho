@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next"
 import {
+  BanIcon,
   CheckCheckIcon,
   CheckIcon,
   ClockIcon,
@@ -9,11 +10,13 @@ import {
   ForwardIcon,
   InfoIcon,
   ListChecksIcon,
+  PencilIcon,
   PinIcon,
   PinOffIcon,
   RotateCwIcon,
   StarIcon,
   StarOffIcon,
+  Trash2Icon,
   TriangleAlertIcon,
 } from "lucide-react"
 import { cn } from "cn"
@@ -69,6 +72,9 @@ export type DisplayMessage = {
   status: MessageStatus | null
   attachment: Attachment | null
   localAttachment: LocalAttachment | null
+  editedAt: string | null
+  /** Apagada para todos (MS-06). */
+  deleted: boolean
 }
 
 export type MessageAction =
@@ -82,6 +88,8 @@ export type MessageAction =
   | "select"
   | "retry"
   | "cancelUpload"
+  | "edit"
+  | "delete"
   | { react: string }
   | { openImage: string }
   | "unreact"
@@ -97,6 +105,7 @@ export function MessageRow({
   onAction,
   onJump,
   audioQueue = [],
+  canEdit = false,
 }: {
   message: DisplayMessage
   mine: boolean
@@ -109,9 +118,23 @@ export function MessageRow({
   onJump: (messageId: string) => void
   /** Áudios da conversa em ordem, para tocar em sequência (AU-02). */
   audioQueue?: Track[]
+  /** Ainda dentro da janela de edição (MS-05). */
+  canEdit?: boolean
 }) {
   const { t } = useTranslation()
   const confirmed = message.id !== null
+  if (message.deleted) {
+    return (
+      <DeletedRow
+        message={message}
+        mine={mine}
+        senderName={senderName}
+        selecting={selecting}
+        selected={selected}
+        onAction={onAction}
+      />
+    )
+  }
   const myReaction = message.reactions.find((r) => r.userId === meId)
   const grouped = groupReactions(message.reactions)
 
@@ -194,7 +217,9 @@ export function MessageRow({
                   {nameOf(message.replyTo.senderId)}
                 </span>
                 <span className="line-clamp-2 opacity-80">
-                  {message.replyTo.body ? (
+                  {message.replyTo.deleted ? (
+                    <span className="italic">{t("chat.deleted")}</span>
+                  ) : message.replyTo.body ? (
                     plainText(message.replyTo.body)
                   ) : message.replyTo.attachmentKind ? (
                     <AttachmentLabel kind={message.replyTo.attachmentKind} />
@@ -221,6 +246,7 @@ export function MessageRow({
                   role="img"
                 />
               ) : null}
+              {message.editedAt ? <span>{t("chat.edited")}</span> : null}
               <time dateTime={message.createdAt}>
                 {formatTime(message.createdAt)}
               </time>
@@ -327,16 +353,118 @@ export function MessageRow({
                 <ListChecksIcon />
                 {t("chat.select")}
               </DropdownMenuItem>
+              {mine && canEdit ? (
+                <DropdownMenuItem onClick={() => onAction("edit")}>
+                  <PencilIcon />
+                  {t("chat.edit")}
+                </DropdownMenuItem>
+              ) : null}
               {mine ? (
                 <DropdownMenuItem onClick={() => onAction("info")}>
                   <InfoIcon />
                   {t("chat.info")}
                 </DropdownMenuItem>
               ) : null}
+              <DropdownMenuItem
+                variant="destructive"
+                onClick={() => onAction("delete")}
+              >
+                <Trash2Icon />
+                {t("chat.delete")}
+              </DropdownMenuItem>
             </DropdownMenuGroup>
           </DropdownMenuContent>
         </DropdownMenu>
       ) : null}
+    </Message>
+  )
+}
+
+/** Aviso "Esta mensagem foi apagada" (MS-06); ainda pode ser apagado para mim ou selecionado. */
+function DeletedRow({
+  message,
+  mine,
+  senderName,
+  selecting,
+  selected,
+  onAction,
+}: {
+  message: DisplayMessage
+  mine: boolean
+  senderName: string
+  selecting: boolean
+  selected: boolean
+  onAction: (action: MessageAction) => void
+}) {
+  const { t } = useTranslation()
+  return (
+    <Message
+      align={mine ? "end" : "start"}
+      className={cn(
+        "group/row items-center rounded-lg px-1",
+        selecting && "cursor-pointer",
+        selected && "bg-primary/10"
+      )}
+      onClick={selecting ? () => onAction("select") : undefined}
+    >
+      {selecting ? (
+        <input
+          type="checkbox"
+          className="size-5 shrink-0 accent-primary"
+          checked={selected}
+          aria-label={t("chat.selectMessage")}
+          onChange={() => onAction("select")}
+          onClick={(event) => event.stopPropagation()}
+        />
+      ) : null}
+      <MessageContent className="min-w-0">
+        <Bubble
+          variant={mine ? "tinted" : "muted"}
+          align={mine ? "end" : "start"}
+          className="max-w-[min(80%,36rem)]"
+        >
+          <BubbleContent className="flex items-center gap-2 text-sm italic opacity-80">
+            <span className="sr-only">{senderName}: </span>
+            <BanIcon aria-hidden="true" className="size-4 shrink-0" />
+            <span>{mine ? t("chat.deletedByMe") : t("chat.deleted")}</span>
+            <time
+              dateTime={message.createdAt}
+              className="ml-2 self-end text-[0.7rem] leading-none not-italic"
+            >
+              {formatTime(message.createdAt)}
+            </time>
+          </BubbleContent>
+        </Bubble>
+      </MessageContent>
+      {selecting ? null : (
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label={t("chat.messageActions")}
+                className="shrink-0 opacity-0 group-hover/row:opacity-100 focus-visible:opacity-100 data-popup-open:opacity-100 pointer-coarse:opacity-100"
+              />
+            }
+          >
+            <EllipsisVerticalIcon />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align={mine ? "end" : "start"}>
+            <DropdownMenuItem onClick={() => onAction("select")}>
+              <ListChecksIcon />
+              {t("chat.select")}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              variant="destructive"
+              onClick={() => onAction("delete")}
+            >
+              <Trash2Icon />
+              {t("chat.delete")}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
     </Message>
   )
 }

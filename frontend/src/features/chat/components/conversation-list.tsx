@@ -146,13 +146,17 @@ function ConversationItem({
   const last = conversation.lastMessage
   const preview = activity
     ? t(activity.activity === "recording" ? "chat.recording" : "chat.typing")
-    : last
-      ? `${last.senderId === meId ? `${t("chat.you")}: ` : ""}${
-          last.attachmentKind
-            ? `${t(`media.kind.${last.attachmentKind}`)}${last.body ? ` · ${plainText(last.body)}` : ""}`
-            : plainText(last.body)
-        }`
-      : ""
+    : last?.deleted
+      ? last.senderId === meId
+        ? t("chat.deletedByMe")
+        : t("chat.deleted")
+      : last
+        ? `${last.senderId === meId ? `${t("chat.you")}: ` : ""}${
+            last.attachmentKind
+              ? `${t(`media.kind.${last.attachmentKind}`)}${last.body ? ` · ${plainText(last.body)}` : ""}`
+              : plainText(last.body)
+          }`
+        : ""
 
   return (
     <Item

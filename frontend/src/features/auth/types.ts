@@ -6,6 +6,10 @@ export type Instance = {
   name: string
   registrationMode: RegistrationMode
   setupRequired: boolean
+  /** Janela para editar mensagens (MS-05). */
+  messageEditWindowMinutes: number
+  /** Janela para apagar para todos (MS-06). */
+  messageDeleteWindowMinutes: number
 }
 
 export type Account = {

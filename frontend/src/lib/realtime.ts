@@ -16,6 +16,7 @@ export type RealtimeEvent =
       readSeq: number
     }
   | { type: "conversation"; conversationId: string }
+  | { type: "hidden"; conversationId: string; messageIds: string[] }
   | {
       type: "activity"
       conversationId: string

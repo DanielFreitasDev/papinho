@@ -20,6 +20,8 @@ export type MessagePreview = {
   body: string
   createdAt: string
   attachmentKind: AttachmentKind | null
+  /** Apagada para todos (MS-06). */
+  deleted: boolean
 }
 
 /** Arquivo anexado (MD-01); conteúdo em /api/v1/media/{id}/content. */
@@ -72,6 +74,7 @@ export type ReplyPreview = {
   senderId: string | null
   body: string
   attachmentKind?: AttachmentKind | null
+  deleted?: boolean
 }
 
 export type Message = {
@@ -90,6 +93,10 @@ export type Message = {
   reactions: Reaction[]
   starred: boolean
   attachment: Attachment | null
+  /** Quando foi editada pela última vez (MS-05). */
+  editedAt: string | null
+  /** Apagada para todos: sem texto nem anexo (MS-06). */
+  deleted: boolean
 }
 
 export type MessagePage = {

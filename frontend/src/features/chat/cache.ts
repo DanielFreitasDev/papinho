@@ -79,6 +79,18 @@ export function confirmSent(
   )
 }
 
+/** Tira mensagens apagadas só para mim (MS-06), vindas deste ou de outro dispositivo. */
+export function removeMessages(
+  cache: ConversationCache,
+  ids: string[]
+): ConversationCache {
+  const gone = new Set(ids)
+  return {
+    ...cache,
+    messages: cache.messages.filter((message) => !gone.has(message.id)),
+  }
+}
+
 export function addPending(
   cache: ConversationCache,
   pending: PendingMessage

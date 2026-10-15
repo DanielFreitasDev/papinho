@@ -340,7 +340,21 @@
     "blockConfirmTitle": "Bloquear {{name}}?",
     "blockConfirmDescription": "A pessoa não poderá mandar mensagens nem ver sua foto, seu recado ou se você está online. Ela não é avisada.",
     "blockedToast": "Pessoa bloqueada",
-    "unblockedToast": "Pessoa desbloqueada"
+    "unblockedToast": "Pessoa desbloqueada",
+    "deleted": "Esta mensagem foi apagada",
+    "deletedByMe": "Você apagou esta mensagem",
+    "edited": "editada",
+    "edit": "Editar",
+    "editing": "Editando mensagem",
+    "cancelEdit": "Cancelar edição",
+    "saveEdit": "Salvar edição",
+    "delete": "Apagar",
+    "deleteTitle_one": "Apagar mensagem?",
+    "deleteTitle_other": "Apagar {{count}} mensagens?",
+    "deleteDescription": "\"Apagar para todos\" remove o conteúdo e os arquivos do servidor para todo mundo; fica o aviso de mensagem apagada.",
+    "deleteForMeDescription": "A mensagem some só para você, em todos os seus dispositivos.",
+    "deleteForMe": "Apagar para mim",
+    "deleteForEveryone": "Apagar para todos"
   },
   "moderation": {
     "report": "Denunciar",

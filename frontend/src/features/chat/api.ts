@@ -14,6 +14,7 @@ import {
   fromHistory,
   markPendingFailed,
   prependOlder,
+  removeMessages,
   type ConversationCache,
 } from "./cache"
 import type {
@@ -305,6 +306,70 @@ export function useMessageAction() {
       })
       void queryClient.invalidateQueries({ queryKey: chatKeys.starred })
     },
+  })
+}
+
+/** Edita o texto de uma mensagem própria (MS-05). */
+export function useEditMessage() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: { messageId: string; body: string }) =>
+      apiFetch<Message>(`/api/v1/messages/${input.messageId}`, {
+        method: "PATCH",
+        json: { body: input.body },
+      }),
+    onSuccess: (message) => {
+      updateMessage(queryClient, message)
+      void queryClient.invalidateQueries({ queryKey: chatKeys.conversations })
+    },
+  })
+}
+
+/** Apaga para todos (MS-06). */
+export function useDeleteForEveryone() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (messageId: string) =>
+      apiFetch<Message>(`/api/v1/messages/${messageId}`, { method: "DELETE" }),
+    onSuccess: (message) => {
+      updateMessage(queryClient, message)
+      void queryClient.invalidateQueries({ queryKey: chatKeys.conversations })
+      void queryClient.invalidateQueries({
+        queryKey: chatKeys.pinned(message.conversationId),
+      })
+      void queryClient.invalidateQueries({ queryKey: chatKeys.starred })
+    },
+  })
+}
+
+/** Tira as mensagens do cache local de uma conversa (apagar para mim, MS-06). */
+export function hideLocally(
+  queryClient: QueryClient,
+  conversationId: string,
+  messageIds: string[]
+) {
+  queryClient.setQueryData<ConversationCache>(
+    chatKeys.messages(conversationId),
+    (current) => (current ? removeMessages(current, messageIds) : current)
+  )
+  void queryClient.invalidateQueries({ queryKey: chatKeys.conversations })
+  void queryClient.invalidateQueries({
+    queryKey: chatKeys.pinned(conversationId),
+  })
+  void queryClient.invalidateQueries({ queryKey: chatKeys.starred })
+}
+
+/** Apaga para mim (MS-06): some em todos os meus dispositivos. */
+export function useHideMessages(conversationId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (messageIds: string[]) =>
+      apiFetch<void>("/api/v1/messages/hide", {
+        method: "POST",
+        json: { messageIds },
+      }),
+    onSuccess: (_result, messageIds) =>
+      hideLocally(queryClient, conversationId, messageIds),
   })
 }
 

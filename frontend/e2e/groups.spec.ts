@@ -131,6 +131,26 @@ test("grupo com avisos, permissões, convite e responder em privado", async ({
   const privateReply = row(gil.page, "Respondendo só para você")
   await expect(privateReply.getByText("Bem-vinda ao grupo!")).toBeVisible()
 
+  // Lista de transmissão (GR-03): chega para a Hana na conversa individual com o Gil.
+  await openMenuItem(gil.page, "Nova lista de transmissão")
+  const broadcast = gil.page.getByRole("dialog", {
+    name: "Nova lista de transmissão",
+  })
+  await broadcast.getByLabel("Nome da lista").fill(`Avisos ${tag}`)
+  await broadcast.getByRole("checkbox", { name: /Hana Grupo/ }).check()
+  await expectNoSeriousA11yViolations(gil.page)
+  await broadcast.getByRole("button", { name: "Criar lista" }).click()
+  await expect(
+    gil.page.getByRole("heading", { name: `Avisos ${tag}` })
+  ).toBeVisible()
+  await expect(
+    gil.page.getByRole("main").getByText("1 destinatário")
+  ).toBeVisible()
+  await send(gil.page, "Aviso geral para todos")
+  await hana.page.goto("/")
+  await hana.page.getByRole("link", { name: /^Gil Grupo/ }).click()
+  await expect(row(hana.page, "Aviso geral para todos")).toBeVisible()
+
   // Mensagens salvas (MS-12).
   await openMenuItem(gil.page, "Mensagens salvas")
   await expect(

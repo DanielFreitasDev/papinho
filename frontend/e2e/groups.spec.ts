@@ -63,6 +63,26 @@ test("grupo com avisos, permissões, convite e responder em privado", async ({
   await send(hana.page, "Obrigada!")
   await expect(row(gil.page, "Obrigada!")).toBeVisible()
 
+  // Enquete (MS-09): o voto da Hana aparece para o Gil em tempo real, com o nome de quem votou.
+  await gil.page.getByRole("button", { name: "Nova enquete" }).click()
+  const pollDialog = gil.page.getByRole("dialog", { name: "Nova enquete" })
+  await pollDialog.getByLabel("Pergunta").fill("Onde vamos?")
+  await pollDialog.getByLabel("Opção 1").fill("Praia")
+  await pollDialog.getByLabel("Opção 2").fill("Serra")
+  await expectNoSeriousA11yViolations(gil.page)
+  await pollDialog.getByRole("button", { name: "Enviar enquete" }).click()
+  await expect(pollDialog).toBeHidden()
+  const pollForHana = hana.page.getByRole("group", { name: "Onde vamos?" })
+  await pollForHana.getByRole("radio", { name: /Praia/ }).click()
+  await expect(
+    pollForHana.getByRole("radio", { name: /Praia/ })
+  ).toHaveAttribute("aria-checked", "true")
+  const pollForGil = gil.page.getByRole("group", { name: "Onde vamos?" })
+  await expect(pollForGil.getByText("1 pessoa votou")).toBeVisible()
+  await expect(
+    pollForGil.getByRole("radio", { name: /Praia/ }).getByText("Hana Grupo")
+  ).toBeVisible()
+
   // Dados do grupo: membros, link de convite com QR Code e "só admins enviam".
   await gil.page.getByRole("button", { name: /Dados do grupo/ }).click()
   const details = gil.page

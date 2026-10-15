@@ -32,7 +32,7 @@ e celular, 4 de `/setup` só no CI) em duas rodadas seguidas contra instância n
 | F0-ADR | ADRs 0001–0010 | feito | `docs/adr/` | |
 | F0-COMPOSE | `compose.yaml` com PostgreSQL 18 | feito | `spring-boot:run` no perfil local subiu `papinho-postgres-1` e o health respondeu UP | |
 | F0-SEC | Segurança base (cadeias, denyAll, CSRF spa, CSP, Problem Details, Argon2) | feito | `SecurityIT` (12 testes) e `LanSetupIT.shouldIssueStrictCsrfCookieOverTls`; e2e sem violação de CSP | `__Host-SESSION` provado em `IdentityIT` |
-| QA-04 | CI no GitHub Actions: backend, frontend e e2e em jobs separados | feito | `.github/workflows/ci.yml`; runs 38757286112 e 38769083331 verdes nos três jobs | e2e sobe instância padrão e perfil lan |
+| QA-04 | CI no GitHub Actions: backend, frontend e e2e em jobs separados | feito | `.github/workflows/ci.yml`; runs 38757286112, 38769083331 e 38815227435 (passada 3, com os 41 e2e) verdes nos três jobs | e2e sobe instância padrão e perfil lan |
 | QA-05 | README pt-BR (dev, LAN, CA, backup, produção) | em andamento | `README.md` | backup depende de BK-03 (Fase 7) |
 | PK-01 | `pki init` com BouncyCastle: CA P-256 10 anos com Name Constraints; servidor ≤398 dias; chave 0600 | feito | `CertificateAuthorityTest` (7) e `PkiCommandTest` (5); `openssl verify` e `certutil -V` recusam domínio/IP de fora | PKIX do JDK ignora NC da âncora (LEARNING) |
 | PK-02 | TLS por SSL bundle com HTTP/2; porta HTTP só com `/setup/**` e redirecionamento | feito | `LanSetupIT` (HTTP/2 validado pela CA; 301 para HTTPS; POST recusado); `curl --http2` manual no perfil lan | |
@@ -158,7 +158,7 @@ e celular, 4 de `/setup` só no CI) em duas rodadas seguidas contra instância n
 | UI-04 | Lista de mensagens performática | em andamento | `message-scroller` do shadcn com `content-visibility`, páginas de 50 e paginação para trás (`beforeSeq`) | sem medição com milhares de mensagens |
 | IN-01 | Textos externalizados; pt-BR completo, pronto para en | em andamento | `i18n.test.ts` garante as mesmas chaves em pt-BR e en; backend com `messages*.properties` | |
 | QA-01 | Backend: unitários, slice, integração, ArchUnit, Modulith, `./mvnw verify` | em andamento | `./mvnw -B -pl backend verify`: 74 unitários + 86 de integração verdes na passada 3 (com `GroupIT`, `BroadcastIT`, `DisappearingIT`, `ViewOnceIT`, `PollIT`, `ScheduledIT`, `StickerIT`, `GifIT`, `ModularityTests`); depois, `MessagingIT` com o limite de envio (9) verde | cresce a cada fase |
-| QA-02 | Frontend: lint, typecheck, Vitest | feito | `pnpm lint`, `pnpm typecheck`, `pnpm format:check`, `pnpm test` (33), `pnpm build` locais | CI do GitHub não conferido nesta passada |
+| QA-02 | Frontend: lint, typecheck, Vitest | feito | `pnpm lint`, `pnpm typecheck`, `pnpm format:check`, `pnpm test` (33), `pnpm build` locais e no job frontend do CI (run 38815227435) | |
 
 ## Dúvidas registradas para o dono
 

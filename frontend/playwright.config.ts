@@ -22,7 +22,21 @@ export default defineConfig({
     launchOptions: executablePath ? { executablePath } : {},
   },
   projects: [
-    { name: "desktop-chromium", use: { ...devices["Desktop Chrome"] } },
-    { name: "mobile-chromium", use: { ...devices["Pixel 7"] } },
+    // Cria o primeiro admin pela UI uma vez só; os outros projetos rodam em paralelo depois dele.
+    {
+      name: "primeiro-admin",
+      testMatch: /first-admin\.setup\.ts/,
+      use: { ...devices["Desktop Chrome"] },
+    },
+    {
+      name: "desktop-chromium",
+      use: { ...devices["Desktop Chrome"] },
+      dependencies: ["primeiro-admin"],
+    },
+    {
+      name: "mobile-chromium",
+      use: { ...devices["Pixel 7"] },
+      dependencies: ["primeiro-admin"],
+    },
   ],
 })

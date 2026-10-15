@@ -77,24 +77,17 @@ export async function openMenuItem(page: Page, name: string) {
   await page.getByRole("menuitem", { name }).click()
 }
 
-/** Garante a conta admin: cria pela UI se a instância está vazia, senão entra com ela. */
+/** Entra com a conta admin, criada pelo projeto "primeiro-admin" (first-admin.setup.ts). */
 export async function ensureAdmin(browser: Browser, errors?: string[]) {
   const context = await browser.newContext()
   const page = await context.newPage()
   if (errors) {
     await watchErrors(page, errors)
   }
-  await page.goto("/")
-  const heading = page.getByRole("heading", { level: 1 })
-  await expect(heading).toHaveText(/Criar conta|Entrar no Papinho/)
-  if ((await heading.textContent()) === "Criar conta") {
-    await registerThroughUi(page, ADMIN, "Anfitrião")
-  } else {
-    await loginThroughUi(page, ADMIN)
-    await expect(
-      page.getByRole("complementary", { name: "Contatos" })
-    ).toBeVisible()
-  }
+  await loginThroughUi(page, ADMIN)
+  await expect(
+    page.getByRole("complementary", { name: "Contatos" })
+  ).toBeVisible()
   return { context, page }
 }
 

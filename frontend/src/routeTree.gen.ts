@@ -20,6 +20,7 @@ import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppStarredRouteImport } from './routes/_app/starred'
 import { Route as AppAddUsernameRouteImport } from './routes/_app/add.$username'
 import { Route as AppCConversationIdRouteImport } from './routes/_app/c.$conversationId'
+import { Route as AppGCodeRouteImport } from './routes/_app/g.$code'
 import { Route as AppSettingsIndexRouteImport } from './routes/_app/settings/index'
 import { Route as AppSettingsAccountRouteImport } from './routes/_app/settings/account'
 import { Route as AppSettingsAppearanceRouteImport } from './routes/_app/settings/appearance'
@@ -83,6 +84,11 @@ const AppCConversationIdRoute = AppCConversationIdRouteImport.update({
   path: '/c/$conversationId',
   getParentRoute: () => AppRoute,
 } as any)
+const AppGCodeRoute = AppGCodeRouteImport.update({
+  id: '/g/$code',
+  path: '/g/$code',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppSettingsIndexRoute = AppSettingsIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -136,6 +142,7 @@ export interface FileRoutesByFullPath {
   '/starred': typeof AppStarredRoute
   '/add/$username': typeof AppAddUsernameRoute
   '/c/$conversationId': typeof AppCConversationIdRoute
+  '/g/$code': typeof AppGCodeRoute
   '/settings/account': typeof AppSettingsAccountRoute
   '/settings/appearance': typeof AppSettingsAppearanceRoute
   '/settings/blocked': typeof AppSettingsBlockedRoute
@@ -155,6 +162,7 @@ export interface FileRoutesByTo {
   '/': typeof AppIndexRoute
   '/add/$username': typeof AppAddUsernameRoute
   '/c/$conversationId': typeof AppCConversationIdRoute
+  '/g/$code': typeof AppGCodeRoute
   '/settings/account': typeof AppSettingsAccountRoute
   '/settings/appearance': typeof AppSettingsAppearanceRoute
   '/settings/blocked': typeof AppSettingsBlockedRoute
@@ -177,6 +185,7 @@ export interface FileRoutesById {
   '/_app/': typeof AppIndexRoute
   '/_app/add/$username': typeof AppAddUsernameRoute
   '/_app/c/$conversationId': typeof AppCConversationIdRoute
+  '/_app/g/$code': typeof AppGCodeRoute
   '/_app/settings/account': typeof AppSettingsAccountRoute
   '/_app/settings/appearance': typeof AppSettingsAppearanceRoute
   '/_app/settings/blocked': typeof AppSettingsBlockedRoute
@@ -199,6 +208,7 @@ export interface FileRouteTypes {
     | '/starred'
     | '/add/$username'
     | '/c/$conversationId'
+    | '/g/$code'
     | '/settings/account'
     | '/settings/appearance'
     | '/settings/blocked'
@@ -218,6 +228,7 @@ export interface FileRouteTypes {
     | '/'
     | '/add/$username'
     | '/c/$conversationId'
+    | '/g/$code'
     | '/settings/account'
     | '/settings/appearance'
     | '/settings/blocked'
@@ -239,6 +250,7 @@ export interface FileRouteTypes {
     | '/_app/'
     | '/_app/add/$username'
     | '/_app/c/$conversationId'
+    | '/_app/g/$code'
     | '/_app/settings/account'
     | '/_app/settings/appearance'
     | '/_app/settings/blocked'
@@ -335,6 +347,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppCConversationIdRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/g/$code': {
+      id: '/_app/g/$code'
+      path: '/g/$code'
+      fullPath: '/g/$code'
+      preLoaderRoute: typeof AppGCodeRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/settings/': {
       id: '/_app/settings/'
       path: '/'
@@ -428,6 +447,7 @@ interface AppRouteChildren {
   AppIndexRoute: typeof AppIndexRoute
   AppAddUsernameRoute: typeof AppAddUsernameRoute
   AppCConversationIdRoute: typeof AppCConversationIdRoute
+  AppGCodeRoute: typeof AppGCodeRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -438,6 +458,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppIndexRoute: AppIndexRoute,
   AppAddUsernameRoute: AppAddUsernameRoute,
   AppCConversationIdRoute: AppCConversationIdRoute,
+  AppGCodeRoute: AppGCodeRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

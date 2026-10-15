@@ -12,7 +12,6 @@ import {
   XIcon,
 } from "lucide-react"
 
-import { UserAvatar } from "@/components/user-avatar"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button, buttonVariants } from "@/components/ui/button"
 import {
@@ -47,10 +46,14 @@ import {
   markRead,
   useConversationAction,
   useEditMessage,
+  useOpenDirect,
   useMessageAction,
   useSendMessage,
 } from "../api"
 import type { ConversationCache } from "../cache"
+import { groupQueries } from "../groups"
+import { describeNotice } from "../system-notice"
+import { clearReplyDraft, peekReplyDraft, setReplyDraft } from "../reply-drafts"
 import { plainText } from "../format/parse"
 import type {
   Attachment,
@@ -66,6 +69,8 @@ import { Composer } from "./composer"
 import { DeleteMessagesDialog } from "./delete-messages-dialog"
 import { ImageViewer } from "./image-viewer"
 import { ContactDetails } from "./contact-details"
+import { ConversationAvatar, useConversationLabel } from "./conversation-avatar"
+import { GroupDetails } from "./group-details"
 import { ForwardDialog } from "./forward-dialog"
 import { MessageInfoDialog } from "./message-info-dialog"
 import {
@@ -164,7 +169,17 @@ function LoadedConversation({
     null
   )
   const [deleteIds, setDeleteIds] = useState<string[]>([])
-  const [replyTo, setReplyTo] = useState<ReplyPreview | null>(null)
+  // "Responder em privado" chega aqui vindo do grupo, com a citação pronta.
+  const [replyTo, setReplyTo] = useState<ReplyPreview | null>(() =>
+    peekReplyDraft(conversation.id)
+  )
+  useEffect(() => clearReplyDraft(conversation.id), [conversation.id])
+  const openDirect = useOpenDirect()
+  const group = conversation.group
+  const members = useQuery({
+    ...groupQueries.members(conversation.id),
+    enabled: group !== null,
+  })
   const [selection, setSelection] = useState<string[] | null>(null)
   const [forwardIds, setForwardIds] = useState<string[]>([])
   const [infoId, setInfoId] = useState<string | null>(null)
@@ -181,9 +196,21 @@ function LoadedConversation({
       ? { seq: conversation.firstUnreadSeq, count: conversation.unreadCount }
       : null
   )
-  const peerName = conversation.peer.label
+  const labelOf = useConversationLabel()
+  const peerName = labelOf(conversation)
+  const memberLabels = useMemo(
+    () =>
+      new Map(
+        (members.data ?? []).map((member) => [member.userId, member.label])
+      ),
+    [members.data]
+  )
   const nameOf = (userId: string | null) =>
-    userId === meId ? t("chat.you") : peerName
+    userId === meId
+      ? t("chat.you")
+      : group
+        ? ((userId && memberLabels.get(userId)) ?? t("chat.formerMember"))
+        : peerName
 
   const lastSeq = cache.messages.at(-1)?.seq ?? 0
   const readRequested = useRef(0)
@@ -227,9 +254,11 @@ function LoadedConversation({
           mediaId: message.attachment!.id,
           conversationId: conversation.id,
           messageId: message.id,
-          title: `${message.senderId === meId ? t("chat.you") : peerName} · ${t("media.kind.AUDIO")}`,
+          title: `${nameOf(message.senderId)} · ${t("media.kind.AUDIO")}`,
         })),
-    [cache.messages, conversation.id, meId, peerName, t]
+    // nameOf depende de peerName e dos membros.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [cache.messages, conversation.id, meId, peerName, memberLabels, t]
   )
   const images = useMemo(
     () =>
@@ -412,6 +441,28 @@ function LoadedConversation({
       case "forward":
         setForwardIds([id])
         return
+      case "replyPrivately": {
+        const author = members.data?.find(
+          (member) => member.userId === message.senderId
+        )
+        if (author) {
+          void openDirect.mutateAsync(author.username).then((direct) => {
+            setReplyDraft(direct.id, {
+              id,
+              conversationId: conversation.id,
+              seq: message.seq!,
+              senderId: message.senderId,
+              body: message.body,
+              attachmentKind: message.attachment?.kind ?? null,
+            })
+            return navigate({
+              to: "/c/$conversationId",
+              params: { conversationId: direct.id },
+            })
+          })
+        }
+        return
+      }
       case "info":
         setInfoId(id)
         return
@@ -444,6 +495,27 @@ function LoadedConversation({
         })
     }
   }
+
+  const detailsTitle = group ? t("groups.info") : t("chat.contactInfo")
+  const openImage = (list: Attachment[], id: string) => {
+    setViewerImages(list)
+    setViewerId(id)
+  }
+  const detailsPanel = group ? (
+    <GroupDetails
+      conversation={conversation}
+      group={group}
+      onClose={() => setDetailsOpen(false)}
+      onOpenImage={openImage}
+    />
+  ) : conversation.peer ? (
+    <ContactDetails
+      conversation={conversation}
+      peer={conversation.peer}
+      onClose={() => setDetailsOpen(false)}
+      onOpenImage={openImage}
+    />
+  ) : null
 
   const latestPinned = pinned.data?.at(-1)
   const firstUnreadId =
@@ -493,19 +565,19 @@ function LoadedConversation({
               aria-expanded={detailsOpen}
               onClick={() => setDetailsOpen((open) => !open)}
             >
-              <span className="sr-only">{t("chat.contactInfo")}: </span>
-              <UserAvatar
-                userId={conversation.peer.userId}
-                name={peerName}
-                hasPhoto={conversation.peer.hasPhoto}
-                version={conversation.peer.photoVersion}
+              <span className="sr-only">{detailsTitle}: </span>
+              <ConversationAvatar
+                conversation={conversation}
                 className="size-9"
               />
               <span className="flex min-w-0 flex-1 flex-col">
                 <span className="truncate text-base font-semibold">
                   {peerName}
                 </span>
-                <PresenceLine conversation={conversation} />
+                <PresenceLine
+                  conversation={conversation}
+                  members={members.data}
+                />
               </span>
             </button>
           </h1>
@@ -561,7 +633,7 @@ function LoadedConversation({
                   variant="outline"
                   onClick={async () => {
                     await block.mutateAsync({
-                      userId: conversation.peer.userId,
+                      userId: conversation.peer!.userId,
                       blocked: true,
                     })
                     await conversationAction.mutateAsync({
@@ -611,6 +683,30 @@ function LoadedConversation({
                   !previous ||
                   dayKey(previous.createdAt) !== dayKey(message.createdAt)
                 const unreadHere = unread !== null && message.seq === unread.seq
+                if (message.kind === "SYSTEM") {
+                  return (
+                    <Fragment key={message.key}>
+                      {newDay ? (
+                        <Marker
+                          variant="separator"
+                          className="py-2 text-xs"
+                          role="separator"
+                        >
+                          <MarkerContent>
+                            {formatDay(message.createdAt)}
+                          </MarkerContent>
+                        </Marker>
+                      ) : null}
+                      <MessageScrollerItem messageId={message.key}>
+                        <Marker className="mx-auto my-1 max-w-[90%] justify-center rounded-md bg-muted px-3 py-1 text-center text-xs text-muted-foreground">
+                          <MarkerContent>
+                            {describeNotice(message.body, meId, t)}
+                          </MarkerContent>
+                        </Marker>
+                      </MessageScrollerItem>
+                    </Fragment>
+                  )
+                }
                 return (
                   <Fragment key={message.key}>
                     {newDay ? (
@@ -654,6 +750,13 @@ function LoadedConversation({
                         onJump={(id) => void jumpTo(id)}
                         audioQueue={audioQueue}
                         canEdit={canEdit(message)}
+                        conversationId={conversation.id}
+                        showSender={group !== null}
+                        canReplyPrivately={
+                          group !== null &&
+                          message.senderId !== meId &&
+                          memberLabels.has(message.senderId ?? "")
+                        }
                       />
                     </MessageScrollerItem>
                   </Fragment>
@@ -731,7 +834,9 @@ function LoadedConversation({
             <AlertDescription>
               {conversation.blockedByMe
                 ? t("chat.blockedNotice")
-                : t("chat.cannotSend")}
+                : group?.onlyAdminsSend
+                  ? t("groups.onlyAdminsNotice")
+                  : t("chat.cannotSend")}
             </AlertDescription>
           </Alert>
         ) : (
@@ -789,17 +894,10 @@ function LoadedConversation({
       </div>
       {wide && detailsOpen ? (
         <aside
-          aria-label={t("chat.contactInfo")}
+          aria-label={detailsTitle}
           className="w-80 shrink-0 border-l bg-background"
         >
-          <ContactDetails
-            conversation={conversation}
-            onClose={() => setDetailsOpen(false)}
-            onOpenImage={(list, id) => {
-              setViewerImages(list)
-              setViewerId(id)
-            }}
-          />
+          {detailsPanel}
         </aside>
       ) : null}
       <Sheet open={!wide && detailsOpen} onOpenChange={setDetailsOpen}>
@@ -808,15 +906,8 @@ function LoadedConversation({
           showCloseButton={false}
           className="w-full gap-0 p-0 pt-[env(safe-area-inset-top)] sm:max-w-sm"
         >
-          <SheetTitle className="sr-only">{t("chat.contactInfo")}</SheetTitle>
-          <ContactDetails
-            conversation={conversation}
-            onClose={() => setDetailsOpen(false)}
-            onOpenImage={(list, id) => {
-              setViewerImages(list)
-              setViewerId(id)
-            }}
-          />
+          <SheetTitle className="sr-only">{detailsTitle}</SheetTitle>
+          {detailsPanel}
         </SheetContent>
       </Sheet>
     </div>
@@ -869,6 +960,7 @@ function toDisplay(
     localAttachment: null,
     editedAt: message.editedAt,
     deleted: message.deleted,
+    kind: message.kind,
   }))
   const pending: DisplayMessage[] = cache.pending.map((message) => ({
     key: message.clientMessageId,
@@ -888,6 +980,7 @@ function toDisplay(
     localAttachment: message.attachment,
     editedAt: null,
     deleted: false,
+    kind: "USER" as const,
   }))
   return [...confirmed, ...pending]
 }

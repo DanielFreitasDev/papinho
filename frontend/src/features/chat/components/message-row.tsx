@@ -10,6 +10,7 @@ import {
   ForwardIcon,
   InfoIcon,
   ListChecksIcon,
+  MessageCircleReplyIcon,
   PencilIcon,
   PinIcon,
   PinOffIcon,
@@ -42,6 +43,7 @@ import type {
   Attachment,
   AttachmentKind,
   LocalAttachment,
+  MessageKind,
   MessageStatus,
   Reaction,
   ReplyPreview,
@@ -75,6 +77,7 @@ export type DisplayMessage = {
   editedAt: string | null
   /** Apagada para todos (MS-06). */
   deleted: boolean
+  kind: MessageKind
 }
 
 export type MessageAction =
@@ -90,6 +93,7 @@ export type MessageAction =
   | "cancelUpload"
   | "edit"
   | "delete"
+  | "replyPrivately"
   | { react: string }
   | { openImage: string }
   | "unreact"
@@ -105,7 +109,10 @@ export function MessageRow({
   onAction,
   onJump,
   audioQueue = [],
+  conversationId,
   canEdit = false,
+  showSender = false,
+  canReplyPrivately = false,
 }: {
   message: DisplayMessage
   mine: boolean
@@ -118,8 +125,14 @@ export function MessageRow({
   onJump: (messageId: string) => void
   /** Áudios da conversa em ordem, para tocar em sequência (AU-02). */
   audioQueue?: Track[]
+  /** Conversa aberta, para saber se a citação é desta conversa. */
+  conversationId?: string
   /** Ainda dentro da janela de edição (MS-05). */
   canEdit?: boolean
+  /** Em grupo, o nome de quem mandou aparece no balão (GR-01). */
+  showSender?: boolean
+  /** Mensagem de outra pessoa num grupo: "Responder em privado". */
+  canReplyPrivately?: boolean
 }) {
   const { t } = useTranslation()
   const confirmed = message.id !== null
@@ -165,7 +178,13 @@ export function MessageRow({
           className={cn("max-w-[min(80%,36rem)]", grouped.length > 0 && "mb-3")}
         >
           <BubbleContent className="flex flex-col gap-1">
-            <span className="sr-only">{senderName}: </span>
+            {showSender && !mine ? (
+              <span className="text-xs font-semibold text-primary">
+                {senderName}
+              </span>
+            ) : (
+              <span className="sr-only">{senderName}: </span>
+            )}
             {message.forwardCount > 0 ? (
               <span className="flex items-center gap-1 text-xs italic opacity-75">
                 <ForwardIcon aria-hidden="true" className="size-3.5" />
@@ -208,7 +227,11 @@ export function MessageRow({
                 type="button"
                 onClick={(event) => {
                   event.stopPropagation()
-                  onJump(message.replyTo!.id)
+                  // Citação de outra conversa ("responder em privado") não tem para onde saltar.
+                  const origin = message.replyTo!.conversationId
+                  if (!origin || origin === conversationId) {
+                    onJump(message.replyTo!.id)
+                  }
                 }}
                 className="flex flex-col rounded-md border-l-4 border-primary bg-black/5 px-2 py-1 text-left text-xs dark:bg-white/10"
               >
@@ -321,6 +344,12 @@ export function MessageRow({
                 <CornerUpLeftIcon />
                 {t("chat.reply")}
               </DropdownMenuItem>
+              {canReplyPrivately ? (
+                <DropdownMenuItem onClick={() => onAction("replyPrivately")}>
+                  <MessageCircleReplyIcon />
+                  {t("groups.replyPrivately")}
+                </DropdownMenuItem>
+              ) : null}
               <DropdownMenuItem onClick={() => onAction("forward")}>
                 <ForwardIcon />
                 {t("chat.forward")}

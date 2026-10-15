@@ -1,4 +1,47 @@
-export type MemberState = "ACTIVE" | "REQUEST" | "DECLINED"
+export type MemberState = "ACTIVE" | "REQUEST" | "DECLINED" | "LEFT" | "PENDING"
+
+export type MemberRole = "MEMBER" | "ADMIN"
+
+export type ConversationKind = "DIRECT" | "GROUP" | "SELF"
+
+/** Mensagem de uma pessoa ou aviso da conversa (corpo em JSON, ver SystemNotice). */
+export type MessageKind = "USER" | "SYSTEM"
+
+/** Aviso do sistema num grupo ("Ana adicionou Bruno"), com os nomes da época. */
+export type SystemNotice = {
+  type: string
+  actor: { id: string; name: string }
+  targets: { id: string; name: string }[]
+  value: string | null
+}
+
+/** Dados do grupo como eu o vejo (GR-01). */
+export type GroupInfo = {
+  name: string
+  description: string
+  photoId: string | null
+  photoVersion: string
+  memberCount: number
+  myRole: MemberRole
+  onlyAdminsSend: boolean
+  onlyAdminsEditInfo: boolean
+  onlyAdminsAddMembers: boolean
+  joinApproval: boolean
+  canEditInfo: boolean
+  canAddMembers: boolean
+}
+
+export type GroupMember = {
+  userId: string
+  username: string
+  displayName: string
+  label: string
+  hasPhoto: boolean
+  photoVersion: string
+  role: MemberRole
+  contact: boolean
+  me: boolean
+}
 
 export type Peer = {
   userId: string
@@ -17,11 +60,14 @@ export type MessagePreview = {
   id: string
   seq: number
   senderId: string | null
+  /** Nome de quem mandou, só em grupo e quando não fui eu. */
+  senderLabel: string | null
   body: string
   createdAt: string
   attachmentKind: AttachmentKind | null
   /** Apagada para todos (MS-06). */
   deleted: boolean
+  kind: MessageKind
 }
 
 /** Arquivo anexado (MD-01); conteúdo em /api/v1/media/{id}/content. */
@@ -49,9 +95,11 @@ export type LocalAttachment = {
 
 export type Conversation = {
   id: string
-  kind: "DIRECT"
+  kind: ConversationKind
   state: MemberState
-  peer: Peer
+  /** A outra pessoa (individual) ou eu mesmo (mensagens salvas); nulo em grupo. */
+  peer: Peer | null
+  group: GroupInfo | null
   lastSeq: number
   lastMessage: MessagePreview | null
   unreadCount: number
@@ -70,6 +118,8 @@ export type Reaction = { userId: string; emoji: string }
 
 export type ReplyPreview = {
   id: string
+  /** Outra conversa quando foi "responder em privado" a partir de um grupo. */
+  conversationId?: string
   seq: number
   senderId: string | null
   body: string
@@ -82,6 +132,7 @@ export type Message = {
   conversationId: string
   seq: number
   changeSeq: number
+  kind: MessageKind
   senderId: string | null
   clientMessageId: string
   body: string

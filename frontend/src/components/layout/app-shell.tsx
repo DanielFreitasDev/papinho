@@ -8,8 +8,10 @@ import {
 import { useQuery } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
 import {
+  BookmarkIcon,
   EllipsisVerticalIcon,
   LogOutIcon,
+  MessageSquarePlusIcon,
   QrCodeIcon,
   SettingsIcon,
   ShieldIcon,
@@ -40,7 +42,9 @@ import {
 import { authQueries, useLogout, type Me } from "@/features/auth"
 import {
   ConversationList,
+  NewGroupDialog,
   useOpenDirect,
+  useOpenSaved,
   useRealtimeSync,
 } from "@/features/chat"
 import { AddContactDialog, ContactList, MyLinkDialog } from "@/features/contact"
@@ -65,6 +69,7 @@ function SignedInShell({ me }: { me: Me }) {
   const navigate = useNavigate()
   const logout = useLogout()
   const openDirect = useOpenDirect()
+  const openSaved = useOpenSaved()
   useRealtimeSync(me.account.id)
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
@@ -73,6 +78,7 @@ function SignedInShell({ me }: { me: Me }) {
   const [addOpen, setAddOpen] = useState(false)
   const [linkOpen, setLinkOpen] = useState(false)
   const [inviteOpen, setInviteOpen] = useState(false)
+  const [groupOpen, setGroupOpen] = useState(false)
   const [tab, setTab] = useState("conversations")
   const { account, profile } = me
 
@@ -150,6 +156,22 @@ function SignedInShell({ me }: { me: Me }) {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuGroup>
+                <DropdownMenuItem onClick={() => setGroupOpen(true)}>
+                  <MessageSquarePlusIcon />
+                  {t("groups.newGroup")}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={async () => {
+                    const saved = await openSaved.mutateAsync()
+                    await navigate({
+                      to: "/c/$conversationId",
+                      params: { conversationId: saved.id },
+                    })
+                  }}
+                >
+                  <BookmarkIcon />
+                  {t("chat.savedMessages")}
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setInviteOpen(true)}>
                   <UsersIcon />
                   {t("shell.invite")}
@@ -247,6 +269,7 @@ function SignedInShell({ me }: { me: Me }) {
       <AddContactDialog open={addOpen} onOpenChange={setAddOpen} />
       <MyLinkDialog open={linkOpen} onOpenChange={setLinkOpen} />
       <InviteDialog open={inviteOpen} onOpenChange={setInviteOpen} />
+      <NewGroupDialog open={groupOpen} onOpenChange={setGroupOpen} />
     </div>
   )
 }

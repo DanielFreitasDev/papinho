@@ -20,11 +20,13 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import { formatDateTime } from "@/lib/format"
 import { chatQueries } from "../api"
+import { useConversationLabel } from "./conversation-avatar"
 import { plainText } from "../format/parse"
 
 /** Mensagens favoritas de todas as conversas (MS-04). */
 export function StarredMessages() {
   const { t } = useTranslation()
+  const labelOf = useConversationLabel()
   const starred = useQuery(chatQueries.starred())
   const conversations = useQuery(chatQueries.list(false))
   if (starred.isPending) {
@@ -54,7 +56,7 @@ export function StarredMessages() {
   const labels = new Map(
     conversations.data?.map((conversation) => [
       conversation.id,
-      conversation.peer.label,
+      labelOf(conversation),
     ])
   )
   return (

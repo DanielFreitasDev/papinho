@@ -2,7 +2,6 @@ import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
 
-import { UserAvatar } from "@/components/user-avatar"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -16,6 +15,7 @@ import { Spinner } from "@/components/ui/spinner"
 import { toast } from "@/components/ui/toast"
 import { errorMessage } from "@/lib/api-client"
 import { chatQueries, useForward } from "../api"
+import { ConversationAvatar, useConversationLabel } from "./conversation-avatar"
 
 const MAX_TARGETS = 5
 
@@ -30,6 +30,7 @@ export function ForwardDialog({
   const { t } = useTranslation()
   const conversations = useQuery(chatQueries.list(false))
   const forward = useForward()
+  const labelOf = useConversationLabel()
   const [targets, setTargets] = useState<string[]>([])
   const open = messageIds.length > 0
 
@@ -77,15 +78,12 @@ export function ForwardDialog({
                   }
                   onChange={() => toggle(conversation.id)}
                 />
-                <UserAvatar
-                  userId={conversation.peer.userId}
-                  name={conversation.peer.label}
-                  hasPhoto={conversation.peer.hasPhoto}
-                  version={conversation.peer.photoVersion}
+                <ConversationAvatar
+                  conversation={conversation}
                   className="size-8"
                 />
                 <span className="truncate text-sm">
-                  {conversation.peer.label}
+                  {labelOf(conversation)}
                 </span>
               </label>
             ))}

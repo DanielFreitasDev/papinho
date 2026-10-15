@@ -29,6 +29,7 @@ function message(seq: number, changeSeq = seq, body = `m${seq}`): Message {
     attachment: null,
     editedAt: null,
     deleted: false,
+    kind: "USER",
   }
 }
 

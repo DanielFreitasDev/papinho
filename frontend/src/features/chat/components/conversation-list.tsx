@@ -10,7 +10,6 @@ import {
 } from "lucide-react"
 import { cn } from "cn"
 
-import { UserAvatar } from "@/components/user-avatar"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -33,7 +32,9 @@ import { formatListTime } from "@/lib/format"
 import { chatQueries, markDelivered, useConversationAction } from "../api"
 import { plainText } from "../format/parse"
 import { useActivity } from "../activity"
+import { describeNotice } from "../system-notice"
 import type { Conversation } from "../types"
+import { ConversationAvatar, useConversationLabel } from "./conversation-avatar"
 
 /** Lista de conversas (ou de solicitações) com prévia, horário e não lidas (MS-14). */
 export function ConversationList({
@@ -141,22 +142,32 @@ function ConversationItem({
   const params = useParams({ strict: false })
   const activity = useActivity(conversation.id)
   const action = useConversationAction()
+  const labelOf = useConversationLabel()
+  const label = labelOf(conversation)
   const active = params.conversationId === conversation.id
   const unread = conversation.unreadCount > 0 || conversation.markedUnread
   const last = conversation.lastMessage
+  const sender =
+    last && last.senderId === meId
+      ? `${t("chat.you")}: `
+      : last?.senderLabel
+        ? `${last.senderLabel}: `
+        : ""
   const preview = activity
     ? t(activity.activity === "recording" ? "chat.recording" : "chat.typing")
-    : last?.deleted
-      ? last.senderId === meId
-        ? t("chat.deletedByMe")
-        : t("chat.deleted")
-      : last
-        ? `${last.senderId === meId ? `${t("chat.you")}: ` : ""}${
-            last.attachmentKind
-              ? `${t(`media.kind.${last.attachmentKind}`)}${last.body ? ` · ${plainText(last.body)}` : ""}`
-              : plainText(last.body)
-          }`
-        : ""
+    : last?.kind === "SYSTEM"
+      ? describeNotice(last.body, meId, t)
+      : last?.deleted
+        ? last.senderId === meId
+          ? t("chat.deletedByMe")
+          : t("chat.deleted")
+        : last
+          ? `${sender}${
+              last.attachmentKind
+                ? `${t(`media.kind.${last.attachmentKind}`)}${last.body ? ` · ${plainText(last.body)}` : ""}`
+                : plainText(last.body)
+            }`
+          : ""
 
   return (
     <Item
@@ -172,13 +183,7 @@ function ConversationItem({
         aria-current={active ? "page" : undefined}
         className="flex min-h-14 min-w-0 flex-1 items-center gap-3 rounded-md px-3 py-2 outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
       >
-        <UserAvatar
-          userId={conversation.peer.userId}
-          name={conversation.peer.label}
-          hasPhoto={conversation.peer.hasPhoto}
-          version={conversation.peer.photoVersion}
-          className="size-10"
-        />
+        <ConversationAvatar conversation={conversation} className="size-10" />
         <span className="flex min-w-0 flex-1 flex-col">
           <span className="flex items-baseline gap-2">
             <span
@@ -187,7 +192,7 @@ function ConversationItem({
                 unread ? "font-semibold" : "font-medium"
               )}
             >
-              {conversation.peer.label}
+              {label}
             </span>
             {last ? (
               <time
@@ -242,7 +247,7 @@ function ConversationItem({
                   variant="ghost"
                   size="icon"
                   aria-label={t("chat.conversationActions", {
-                    name: conversation.peer.label,
+                    name: label,
                   })}
                 />
               }

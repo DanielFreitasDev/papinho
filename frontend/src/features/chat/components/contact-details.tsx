@@ -20,7 +20,7 @@ import { contactQueries, useAddContact, useBlock } from "@/features/contact"
 import { ReportDialog } from "@/features/moderation"
 import { errorMessage } from "@/lib/api-client"
 import { chatKeys } from "../api"
-import type { Attachment, Conversation } from "../types"
+import type { Attachment, Conversation, Peer } from "../types"
 import { ConversationGallery } from "./conversation-gallery"
 
 /**
@@ -29,19 +29,22 @@ import { ConversationGallery } from "./conversation-gallery"
  */
 export function ContactDetails({
   conversation,
+  peer,
   onClose,
   onOpenImage,
 }: {
   conversation: Conversation
+  peer: Peer
   onClose: () => void
   onOpenImage: (images: Attachment[], id: string) => void
 }) {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
-  const peer = conversation.peer
+  // Nas mensagens salvas o "contato" sou eu: sem adicionar, bloquear nem denunciar (MS-12).
+  const self = conversation.kind === "SELF"
   const person = useQuery({
     ...contactQueries.person(peer.username),
-    enabled: peer.active,
+    enabled: peer.active && !self,
   })
   const add = useAddContact()
   const block = useBlock()
@@ -111,7 +114,7 @@ export function ContactDetails({
             </p>
           ) : null}
         </div>
-        {person.isPending && peer.active ? (
+        {person.isPending && peer.active && !self ? (
           <Skeleton className="h-10 w-full" />
         ) : person.data?.about ? (
           <section className="flex flex-col gap-1">
@@ -134,7 +137,7 @@ export function ContactDetails({
           <ChevronRightIcon data-icon="inline-end" />
         </Button>
         <Separator />
-        <div className="flex flex-col gap-1">
+        <div className={self ? "hidden" : "flex flex-col gap-1"}>
           {person.data && !person.data.contact ? (
             <Button
               variant="ghost"

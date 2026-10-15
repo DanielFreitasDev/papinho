@@ -21,10 +21,13 @@ import { KindIcon } from "./attachment-view"
  * primeira mensagem (MD-01, MD-02, MS-13).
  */
 export function AttachDialog({
+  allowViewOnce = true,
   files,
   onClose,
   onSend,
 }: {
+  /** Visualização única não vale para mensagens salvas nem listas de transmissão. */
+  allowViewOnce?: boolean
   files: File[]
   onClose: () => void
   onSend: (files: File[], caption: string, viewOnce: boolean) => void
@@ -34,7 +37,8 @@ export function AttachDialog({
   const [viewOnce, setViewOnce] = useState(false)
   const captionId = useId()
   // Visualização única (MS-08): um arquivo só, de foto, vídeo ou áudio.
-  const canViewOnce = files.length === 1 && guessKind(files[0]) !== "DOCUMENT"
+  const canViewOnce =
+    allowViewOnce && files.length === 1 && guessKind(files[0]) !== "DOCUMENT"
   const previews = useMemo(
     () =>
       files.map((file) =>

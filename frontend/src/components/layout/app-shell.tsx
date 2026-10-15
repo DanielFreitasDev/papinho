@@ -11,6 +11,7 @@ import {
   BookmarkIcon,
   EllipsisVerticalIcon,
   LogOutIcon,
+  MegaphoneIcon,
   MessageSquarePlusIcon,
   QrCodeIcon,
   SettingsIcon,
@@ -41,6 +42,7 @@ import {
 } from "@/components/ui/tooltip"
 import { authQueries, useLogout, type Me } from "@/features/auth"
 import {
+  BroadcastDialog,
   ConversationList,
   NewGroupDialog,
   useOpenDirect,
@@ -81,6 +83,7 @@ function SignedInShell({ me }: { me: Me }) {
   const [linkOpen, setLinkOpen] = useState(false)
   const [inviteOpen, setInviteOpen] = useState(false)
   const [groupOpen, setGroupOpen] = useState(false)
+  const [broadcastOpen, setBroadcastOpen] = useState(false)
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
 
@@ -193,6 +196,10 @@ function SignedInShell({ me }: { me: Me }) {
                   <MessageSquarePlusIcon />
                   {t("groups.newGroup")}
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setBroadcastOpen(true)}>
+                  <MegaphoneIcon />
+                  {t("broadcast.new")}
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => void openSavedMessages()}>
                   <BookmarkIcon />
                   {t("chat.savedMessages")}
@@ -295,6 +302,9 @@ function SignedInShell({ me }: { me: Me }) {
       <MyLinkDialog open={linkOpen} onOpenChange={setLinkOpen} />
       <InviteDialog open={inviteOpen} onOpenChange={setInviteOpen} />
       <NewGroupDialog open={groupOpen} onOpenChange={setGroupOpen} />
+      {broadcastOpen ? (
+        <BroadcastDialog open onOpenChange={setBroadcastOpen} />
+      ) : null}
       <CommandPalette
         open={paletteOpen}
         onOpenChange={setPaletteOpen}
@@ -308,6 +318,8 @@ function SignedInShell({ me }: { me: Me }) {
           switch (action) {
             case "newGroup":
               return setGroupOpen(true)
+            case "newBroadcast":
+              return setBroadcastOpen(true)
             case "saved":
               return void openSavedMessages()
             case "addContact":

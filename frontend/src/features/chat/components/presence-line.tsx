@@ -38,6 +38,12 @@ export function PresenceLine({
       : (members ?? [])
           .map((member) => (member.me ? t("chat.you") : member.label))
           .join(", ")
+  } else if (conversation.broadcast) {
+    text = conversation.broadcast.expired
+      ? t("broadcast.expiredShort")
+      : t("broadcast.recipientCount", {
+          count: conversation.broadcast.recipientCount,
+        })
   } else if (conversation.kind === "SELF") {
     text = t("chat.savedMessagesHint")
   } else if (peer && !peer.active) {

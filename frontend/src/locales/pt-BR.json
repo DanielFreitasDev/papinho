@@ -639,5 +639,23 @@
     "sent": "{{kind}} de visualização única",
     "openedBy_one": "{{kind}} aberta por {{count}} pessoa",
     "openedBy_other": "{{kind}} aberta por {{count}} pessoas"
+  },
+  "broadcast": {
+    "new": "Nova lista de transmissão",
+    "edit": "Editar lista",
+    "create": "Criar lista",
+    "description": "Cada pessoa recebe como conversa individual com você. Só recebe quem tem você nos contatos.",
+    "name": "Nome da lista",
+    "expiresAt": "Lista expira em (opcional)",
+    "messageTimer": "Mensagens enviadas pela lista",
+    "info": "Dados da lista",
+    "recipients": "Destinatários",
+    "recipientCount_one": "{{count}} destinatário",
+    "recipientCount_other": "{{count}} destinatários",
+    "onlyContacts": "Só recebe quem tem você nos contatos.",
+    "expired": "Esta lista expirou e não envia mais mensagens.",
+    "expiredShort": "Lista expirada",
+    "expiresOn": "Expira em {{when}}",
+    "timerOn": "Mensagens temporárias: {{timer}}"
   }
 }

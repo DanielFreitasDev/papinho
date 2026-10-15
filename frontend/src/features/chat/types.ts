@@ -2,7 +2,16 @@ export type MemberState = "ACTIVE" | "REQUEST" | "DECLINED" | "LEFT" | "PENDING"
 
 export type MemberRole = "MEMBER" | "ADMIN"
 
-export type ConversationKind = "DIRECT" | "GROUP" | "SELF"
+export type ConversationKind = "DIRECT" | "GROUP" | "SELF" | "BROADCAST"
+
+/** Lista de transmissão (GR-03, GR-04). */
+export type BroadcastInfo = {
+  name: string
+  recipientCount: number
+  expiresAt: string | null
+  messageTtlSeconds: number | null
+  expired: boolean
+}
 
 /** Mensagem de uma pessoa ou aviso da conversa (corpo em JSON, ver SystemNotice). */
 export type MessageKind = "USER" | "SYSTEM" | "POLL"
@@ -113,6 +122,7 @@ export type Conversation = {
   /** A outra pessoa (individual) ou eu mesmo (mensagens salvas); nulo em grupo. */
   peer: Peer | null
   group: GroupInfo | null
+  broadcast: BroadcastInfo | null
   lastSeq: number
   lastMessage: MessagePreview | null
   unreadCount: number

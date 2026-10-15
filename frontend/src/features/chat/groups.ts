@@ -15,6 +15,33 @@ export const groupKeys = {
   invite: (id: string) => ["groups", id, "invite"] as const,
   requests: (id: string) => ["groups", id, "requests"] as const,
   preview: (code: string) => ["group-invite", code] as const,
+  recipients: (id: string) => ["groups", id, "recipients"] as const,
+}
+
+export type BroadcastInput = {
+  name: string
+  recipientIds: string[]
+  expiresAt: string | null
+  messageTtlSeconds: number | null
+}
+
+/** Cria ou edita uma lista de transmissão (GR-03, GR-04). */
+export function useSaveBroadcast(id?: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: BroadcastInput) =>
+      apiFetch<Conversation>(
+        id ? `/api/v1/broadcasts/${id}` : "/api/v1/broadcasts",
+        {
+          method: id ? "PUT" : "POST",
+          json: input,
+        }
+      ),
+    onSuccess: (conversation) => {
+      queryClient.setQueryData(chatKeys.detail(conversation.id), conversation)
+      refreshGroup(queryClient, conversation.id)
+    },
+  })
 }
 
 export type GroupInvite = { code: string; url: string; qrSvg: string }
@@ -47,6 +74,14 @@ export const groupQueries = {
       queryKey: groupKeys.requests(id),
       queryFn: ({ signal }) =>
         apiFetch<GroupMember[]>(`/api/v1/groups/${id}/requests`, { signal }),
+    }),
+  recipients: (id: string) =>
+    queryOptions({
+      queryKey: groupKeys.recipients(id),
+      queryFn: ({ signal }) =>
+        apiFetch<GroupMember[]>(`/api/v1/broadcasts/${id}/recipients`, {
+          signal,
+        }),
     }),
   preview: (code: string) =>
     queryOptions({

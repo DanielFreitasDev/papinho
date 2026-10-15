@@ -69,6 +69,7 @@ import { AttachDialog } from "./attach-dialog"
 import { Composer } from "./composer"
 import { DeleteMessagesDialog } from "./delete-messages-dialog"
 import { ImageViewer } from "./image-viewer"
+import { BroadcastDetails } from "./broadcast-details"
 import { ContactDetails } from "./contact-details"
 import { ConversationAvatar, useConversationLabel } from "./conversation-avatar"
 import { GroupDetails } from "./group-details"
@@ -528,7 +529,11 @@ function LoadedConversation({
     }
   }
 
-  const detailsTitle = group ? t("groups.info") : t("chat.contactInfo")
+  const detailsTitle = group
+    ? t("groups.info")
+    : conversation.broadcast
+      ? t("broadcast.info")
+      : t("chat.contactInfo")
   const openImage = (list: Attachment[], id: string) => {
     setViewerImages(list)
     setViewerId(id)
@@ -539,6 +544,12 @@ function LoadedConversation({
       group={group}
       onClose={() => setDetailsOpen(false)}
       onOpenImage={openImage}
+    />
+  ) : conversation.broadcast ? (
+    <BroadcastDetails
+      conversation={conversation}
+      broadcast={conversation.broadcast}
+      onClose={() => setDetailsOpen(false)}
     />
   ) : conversation.peer ? (
     <ContactDetails
@@ -880,7 +891,9 @@ function LoadedConversation({
                 ? t("chat.blockedNotice")
                 : group?.onlyAdminsSend
                   ? t("groups.onlyAdminsNotice")
-                  : t("chat.cannotSend")}
+                  : conversation.broadcast?.expired
+                    ? t("broadcast.expired")
+                    : t("chat.cannotSend")}
             </AlertDescription>
           </Alert>
         ) : (
@@ -899,7 +912,9 @@ function LoadedConversation({
             disabled={!canWrite}
             editing={editing}
             onPoll={
-              conversation.kind === "SELF" ? undefined : () => setPollOpen(true)
+              conversation.kind === "SELF" || conversation.kind === "BROADCAST"
+                ? undefined
+                : () => setPollOpen(true)
             }
             onEdit={saveEdit}
             onCancelEdit={() => setEditing(null)}
@@ -953,6 +968,9 @@ function LoadedConversation({
           }}
         />
         <AttachDialog
+          allowViewOnce={
+            conversation.kind !== "SELF" && conversation.kind !== "BROADCAST"
+          }
           files={files}
           onClose={() => setFiles([])}
           onSend={sendFiles}

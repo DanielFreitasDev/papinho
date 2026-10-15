@@ -1,6 +1,6 @@
 import { useCallback } from "react"
 import { useTranslation } from "react-i18next"
-import { BookmarkIcon, UsersIcon } from "lucide-react"
+import { BookmarkIcon, MegaphoneIcon, UsersIcon } from "lucide-react"
 import { cn } from "cn"
 
 import { UserAvatar } from "@/components/user-avatar"
@@ -14,9 +14,11 @@ export function useConversationLabel() {
     (conversation: Conversation) =>
       conversation.group
         ? conversation.group.name
-        : conversation.kind === "SELF"
-          ? t("chat.savedMessages")
-          : (conversation.peer?.label ?? ""),
+        : conversation.broadcast
+          ? conversation.broadcast.name
+          : conversation.kind === "SELF"
+            ? t("chat.savedMessages")
+            : (conversation.peer?.label ?? ""),
     [t]
   )
 }
@@ -41,6 +43,15 @@ export function ConversationAvatar({
         ) : null}
         <AvatarFallback aria-hidden="true">
           <UsersIcon className="size-1/2" />
+        </AvatarFallback>
+      </Avatar>
+    )
+  }
+  if (conversation.broadcast) {
+    return (
+      <Avatar className={cn("size-10", className)}>
+        <AvatarFallback aria-hidden="true">
+          <MegaphoneIcon className="size-1/2" />
         </AvatarFallback>
       </Avatar>
     )

@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next"
 import {
   BookmarkIcon,
   KeyboardIcon,
+  MegaphoneIcon,
   MessageSquarePlusIcon,
   SettingsIcon,
   StarIcon,
@@ -28,6 +29,7 @@ import { chatQueries, useConversationLabel } from "@/features/chat"
 
 export type PaletteAction =
   | "newGroup"
+  | "newBroadcast"
   | "saved"
   | "addContact"
   | "starred"
@@ -60,6 +62,7 @@ export function CommandPalette({
       label: t("groups.newGroup"),
       icon: MessageSquarePlusIcon,
     },
+    { action: "newBroadcast", label: t("broadcast.new"), icon: MegaphoneIcon },
     { action: "saved", label: t("chat.savedMessages"), icon: BookmarkIcon },
     { action: "addContact", label: t("shell.addContact"), icon: UserPlusIcon },
     { action: "starred", label: t("chat.starredMessages"), icon: StarIcon },

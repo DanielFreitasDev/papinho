@@ -639,5 +639,23 @@
     "sent": "View-once {{kind}}",
     "openedBy_one": "{{kind}} opened by {{count}} person",
     "openedBy_other": "{{kind}} opened by {{count}} people"
+  },
+  "broadcast": {
+    "new": "New broadcast list",
+    "edit": "Edit list",
+    "create": "Create list",
+    "description": "Each person gets it as a one-on-one chat with you. Only people who have you as a contact receive it.",
+    "name": "List name",
+    "expiresAt": "List expires at (optional)",
+    "messageTimer": "Messages sent by the list",
+    "info": "List info",
+    "recipients": "Recipients",
+    "recipientCount_one": "{{count}} recipient",
+    "recipientCount_other": "{{count}} recipients",
+    "onlyContacts": "Only people who have you as a contact receive messages.",
+    "expired": "This list has expired and no longer sends messages.",
+    "expiredShort": "List expired",
+    "expiresOn": "Expires {{when}}",
+    "timerOn": "Disappearing messages: {{timer}}"
   }
 }

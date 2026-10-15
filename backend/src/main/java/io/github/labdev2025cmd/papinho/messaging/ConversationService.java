@@ -38,6 +38,7 @@ public class ConversationService {
     private final ConversationRepository conversations;
     private final ConversationMemberRepository members;
     private final GroupDetailsRepository groups;
+    private final Broadcasts broadcasts;
     private final ConversationQueries queries;
     private final SequenceAllocator sequences;
     private final ReceiptLog receipts;
@@ -50,13 +51,14 @@ public class ConversationService {
     private final Clock clock;
 
     ConversationService(ConversationRepository conversations, ConversationMemberRepository members,
-            GroupDetailsRepository groups, ConversationQueries queries, SequenceAllocator sequences,
+            GroupDetailsRepository groups, Broadcasts broadcasts, ConversationQueries queries, SequenceAllocator sequences,
             ReceiptLog receipts, UserDirectory users, ProfileService profiles, ContactQueries contacts,
             MessagingPreferences preferences, NamedParameterJdbcTemplate jdbc, ApplicationEventPublisher events,
             Clock clock) {
         this.conversations = conversations;
         this.members = members;
         this.groups = groups;
+        this.broadcasts = broadcasts;
         this.queries = queries;
         this.sequences = sequences;
         this.receipts = receipts;
@@ -79,17 +81,24 @@ public class ConversationService {
         if (other.id().equals(me)) {
             throw new MessagingExceptions.SelfConversationException();
         }
-        String key = Conversation.directKey(me, other.id());
+        return view(me, directWith(me, other.id()));
+    }
+
+    /**
+     * Conversa individual de {@code me} com {@code otherId}, criada se preciso (com o timer padrão de quem abriu,
+     * MS-07). Para a outra pessoa nasce como solicitação se {@code me} não estiver nos contatos dela (CT-02).
+     */
+    UUID directWith(UUID me, UUID otherId) {
+        String key = Conversation.directKey(me, otherId);
         sequences.lockKey(key);
         Conversation conversation = conversations.findByDirectKey(key).orElseGet(() -> {
             Instant now = clock.instant();
-            Conversation direct = Conversation.direct(me, other.id(), now);
-            // Conversa nova herda o timer padrão de quem a abriu (MS-07).
+            Conversation direct = Conversation.direct(me, otherId, now);
             direct.changeDisappearing(preferences.defaultDisappearing(me));
             Conversation created = conversations.saveAndFlush(direct);
             members.save(new ConversationMember(created.id(), me, MemberState.ACTIVE, now));
-            MemberState otherState = contacts.isContact(other.id(), me) ? MemberState.ACTIVE : MemberState.REQUEST;
-            members.save(new ConversationMember(created.id(), other.id(), otherState, now));
+            MemberState otherState = contacts.isContact(otherId, me) ? MemberState.ACTIVE : MemberState.REQUEST;
+            members.save(new ConversationMember(created.id(), otherId, otherState, now));
             members.flush();
             return created;
         });
@@ -100,7 +109,7 @@ public class ConversationService {
             mine.changeState(MemberState.ACTIVE);
             members.flush();
         }
-        return view(me, conversation.id());
+        return conversation.id();
     }
 
     /** "Mensagens salvas" (MS-12): a conversa consigo mesmo, criada na primeira vez. */
@@ -247,6 +256,11 @@ public class ConversationService {
             if (group.onlyAdminsSend() && !member.admin()) {
                 throw new MessagingExceptions.OnlyAdminsException();
             }
+        } else if (conversation.kind() == ConversationKind.BROADCAST) {
+            Broadcasts.Details details = broadcasts.details(List.of(conversationId)).get(conversationId);
+            if (details == null || details.expired(clock.instant())) {
+                throw new MessagingExceptions.BroadcastExpiredException();
+            }
         } else if (blockedWithSomeone(me, conversationId)) {
             throw new MessagingExceptions.BlockedException();
         }
@@ -324,8 +338,11 @@ public class ConversationService {
     private List<ConversationView> toViews(UUID me, List<ConversationQueries.Row> rows) {
         Set<UUID> peerIds = new HashSet<>();
         Set<UUID> groupIds = new HashSet<>();
+        Set<UUID> broadcastIds = new HashSet<>();
         rows.forEach(row -> {
-            if (row.kind() == ConversationKind.GROUP) {
+            if (row.kind() == ConversationKind.BROADCAST) {
+                broadcastIds.add(row.id());
+            } else if (row.kind() == ConversationKind.GROUP) {
                 groupIds.add(row.id());
             } else if (row.kind() == ConversationKind.SELF) {
                 peerIds.add(me);
@@ -344,8 +361,22 @@ public class ConversationService {
                 .map(ConversationQueries.Row::last).filter(last -> last != null && last.senderId() != null)
                 .map(last -> last.senderId()).filter(id -> !id.equals(me)).collect(Collectors.toSet());
         Map<UUID, String> senderLabels = labels(me, lastSenders);
+        Map<UUID, Broadcasts.Details> broadcastDetails = broadcasts.details(broadcastIds);
         List<ConversationView> result = new ArrayList<>();
+        Instant now = clock.instant();
         for (ConversationQueries.Row row : rows) {
+            if (row.kind() == ConversationKind.BROADCAST) {
+                Broadcasts.Details list = broadcastDetails.get(row.id());
+                if (list != null) {
+                    BroadcastView broadcast = new BroadcastView(list.name(), list.recipientCount(),
+                            list.expiresAt(), list.messageTtlSeconds(), list.expired(now));
+                    result.add(new ConversationView(row.id(), row.kind().name(), row.state(), null, null,
+                            broadcast, row.lastSeq(), preview(row, Map.of()), 0, null, false, row.readSeq(),
+                            row.lastSeq(), row.lastSeq(), row.updatedAt(), !broadcast.expired(), false, null,
+                            row.draft()));
+                }
+                continue;
+            }
             if (row.kind() == ConversationKind.GROUP) {
                 GroupDetails group = details.get(row.id());
                 if (group != null) {
@@ -379,7 +410,7 @@ public class ConversationService {
             peerReadSeq = row.peerReadSeq();
         }
         long peerDeliveredSeq = self ? row.lastSeq() : row.peerDeliveredSeq();
-        return new ConversationView(row.id(), row.kind().name(), row.state(), peerView, null, row.lastSeq(),
+        return new ConversationView(row.id(), row.kind().name(), row.state(), peerView, null, null, row.lastSeq(),
                 preview(row, Map.of()), row.unreadCount(), row.firstUnreadSeq(), row.markedUnread(), row.readSeq(),
                 peerDeliveredSeq, peerReadSeq, row.updatedAt(), !blockedByMe && peer.active(), blockedByMe,
                 row.disappearingSeconds(), row.draft());
@@ -409,7 +440,7 @@ public class ConversationService {
                 group.onlyAdminsAddMembers(), group.joinApproval(), !group.onlyAdminsEditInfo() || admin,
                 !group.onlyAdminsAddMembers() || admin);
         boolean canSend = row.state() == MemberState.ACTIVE && (!group.onlyAdminsSend() || admin);
-        return new ConversationView(row.id(), row.kind().name(), row.state(), null, groupView, row.lastSeq(),
+        return new ConversationView(row.id(), row.kind().name(), row.state(), null, groupView, null, row.lastSeq(),
                 preview(row, senderLabels), row.unreadCount(), row.firstUnreadSeq(), row.markedUnread(), row.readSeq(),
                 row.peerDeliveredSeq(), row.peerReadSeq(), row.updatedAt(), canSend, false,
                 row.disappearingSeconds(), row.draft());
@@ -430,6 +461,7 @@ public class ConversationService {
      * @param state ACTIVE ou REQUEST (solicitação de mensagem para mim)
      * @param peer a outra pessoa (conversa individual) ou eu mesmo (mensagens salvas); nulo em grupo
      * @param group dados do grupo; nulo nas outras
+     * @param broadcast dados da lista de transmissão (GR-03); nulo nas outras
      * @param readSeq até onde eu li
      * @param peerDeliveredSeq até onde a outra pessoa recebeu; num grupo, até onde todos receberam
      * @param peerReadSeq até onde a outra pessoa leu (num grupo, todos); nulo enquanto ela não aceitou a conversa
@@ -439,10 +471,21 @@ public class ConversationService {
      * @param draft meu rascunho nesta conversa, sincronizado entre os meus dispositivos (MS-11)
      */
     public record ConversationView(UUID id, String kind, MemberState state, @Nullable PeerView peer,
-            @Nullable GroupView group, long lastSeq, @Nullable MessagePreview lastMessage, long unreadCount,
+            @Nullable GroupView group, @Nullable BroadcastView broadcast, long lastSeq, @Nullable MessagePreview lastMessage, long unreadCount,
             @Nullable Long firstUnreadSeq, boolean markedUnread, long readSeq, long peerDeliveredSeq,
             @Nullable Long peerReadSeq, Instant updatedAt, boolean canSend, boolean blockedByMe,
             @Nullable Integer disappearingSeconds, @Nullable String draft) {
+    }
+
+    /**
+     * Lista de transmissão vista pelo dono (GR-03, GR-04).
+     *
+     * @param expiresAt quando a lista deixa de enviar (GR-04); nulo = não expira
+     * @param messageTtlSeconds mensagens enviadas por ela são temporárias com este timer (GR-04)
+     * @param expired já passou de {@code expiresAt}
+     */
+    public record BroadcastView(String name, long recipientCount, @Nullable Instant expiresAt,
+            @Nullable Integer messageTtlSeconds, boolean expired) {
     }
 
     /**

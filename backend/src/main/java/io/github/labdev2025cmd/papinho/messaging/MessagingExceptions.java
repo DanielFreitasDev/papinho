@@ -100,4 +100,11 @@ final class MessagingExceptions {
             super(HttpStatus.GONE, "view-once-gone", "This view once message was already opened");
         }
     }
+
+    /** Lista de transmissão que já passou da data de expiração (GR-04). */
+    static class BroadcastExpiredException extends ApiException {
+        BroadcastExpiredException() {
+            super(HttpStatus.FORBIDDEN, "broadcast-expired", "This broadcast list has expired");
+        }
+    }
 }

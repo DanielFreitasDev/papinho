@@ -74,6 +74,8 @@ public class MessageService {
     private final MessagingPreferences preferences;
     private final Polls polls;
     private final ViewOnceOpens viewOnceOpens;
+    private final Broadcasts broadcasts;
+    private final io.github.labdev2025cmd.papinho.contact.ContactQueries contactsOf;
     private final java.security.SecureRandom random = new java.security.SecureRandom();
     private final InstanceSettingsService settings;
     private final JsonMapper json;
@@ -83,7 +85,8 @@ public class MessageService {
     MessageService(MessageRepository messages, MessageReactionRepository reactions, MessageStarRepository stars,
             ConversationService conversations, SequenceAllocator sequences, ReceiptLog receipts,
             UserDirectory users, ProfileService profiles, MediaService media, HiddenMessages hidden,
-            MessagingPreferences preferences, Polls polls, ViewOnceOpens viewOnceOpens,
+            MessagingPreferences preferences, Polls polls, ViewOnceOpens viewOnceOpens, Broadcasts broadcasts,
+            io.github.labdev2025cmd.papinho.contact.ContactQueries contactsOf,
             InstanceSettingsService settings, JsonMapper json, ApplicationEventPublisher events, Clock clock) {
         this.messages = messages;
         this.reactions = reactions;
@@ -98,6 +101,8 @@ public class MessageService {
         this.preferences = preferences;
         this.polls = polls;
         this.viewOnceOpens = viewOnceOpens;
+        this.broadcasts = broadcasts;
+        this.contactsOf = contactsOf;
         this.settings = settings;
         this.json = json;
         this.events = events;
@@ -138,9 +143,10 @@ public class MessageService {
         }
         validateBody(body, attachment != null);
         conversations.requireSendable(me, conversationId);
+        ConversationKind kind = conversations.find(conversationId).kind();
         if (viewOnce && (attachment == null || !VIEW_ONCE_KINDS.contains(attachment.kind())
                 || messages.existsByAttachmentId(attachment.id())
-                || conversations.find(conversationId).kind() == ConversationKind.SELF)) {
+                || kind == ConversationKind.SELF || kind == ConversationKind.BROADCAST)) {
             throw new InvalidMessageException("view once needs a new photo, video or audio");
         }
         if (replyToId != null) {
@@ -162,6 +168,9 @@ public class MessageService {
         }
         messages.flush();
         conversations.clearDraft(me, conversationId);
+        if (kind == ConversationKind.BROADCAST) {
+            fanOut(me, saved, options.silent());
+        }
         return new SendResult(toViews(me, List.of(saved)).getFirst(), true);
     }
 
@@ -223,6 +232,38 @@ public class MessageService {
             notifyChanged(message.conversationId());
         }
         return ids.size();
+    }
+
+    /**
+     * Lista de transmissão (GR-03): copia a mensagem para a conversa individual de cada destinatário que tem o
+     * dono nos contatos (e sem bloqueio). Com timer na lista, a cópia e o original são temporários (GR-04).
+     */
+    private void fanOut(UUID me, Message original, boolean silent) {
+        Broadcasts.Details details = broadcasts.details(List.of(original.conversationId()))
+                .get(original.conversationId());
+        if (details == null) {
+            return;
+        }
+        Integer ttl = details.messageTtlSeconds();
+        if (ttl != null) {
+            original.expireAt(original.createdAt().plusSeconds(ttl));
+        }
+        for (UUID recipient : broadcasts.recipients(original.conversationId())) {
+            if (!contactsOf.isContact(recipient, me) || contactsOf.isBlockedEitherWay(me, recipient)) {
+                continue;
+            }
+            UUID direct = conversations.directWith(me, recipient);
+            sequences.lock(direct);
+            Message copy = append(me, direct, UUID.randomUUID(), original.body(), null, original.forwardCount(),
+                    original.attachment());
+            if (ttl != null) {
+                copy.expireAt(copy.createdAt().plusSeconds(ttl));
+            }
+            if (silent) {
+                copy.markSilent();
+            }
+        }
+        messages.flush();
     }
 
     /** Opções de envio: visualização única (MS-08) e silenciosa (MS-11). */
@@ -292,9 +333,14 @@ public class MessageService {
                 member.changeState(MemberState.ACTIVE);
             }
             sequences.lock(target);
+            boolean broadcast = conversations.find(target).kind() == ConversationKind.BROADCAST;
             for (Message source : sources) {
-                created.add(append(me, target, UUID.randomUUID(), source.body(), null, source.forwardCount() + 1,
-                        source.attachment()));
+                Message copy = append(me, target, UUID.randomUUID(), source.body(), null, source.forwardCount() + 1,
+                        source.attachment());
+                created.add(copy);
+                if (broadcast) {
+                    fanOut(me, copy, false);
+                }
             }
         }
         return toViews(me, created);
@@ -544,6 +590,9 @@ public class MessageService {
             throw new InvalidMessageException("poll closes in the past");
         }
         ConversationMember member = conversations.requireSendable(me, conversationId);
+        if (conversations.find(conversationId).kind() == ConversationKind.BROADCAST) {
+            throw new InvalidMessageException("polls are not sent to broadcast lists");
+        }
         if (member.state() == MemberState.REQUEST) {
             member.changeState(MemberState.ACTIVE);
         }

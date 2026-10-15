@@ -62,6 +62,10 @@ class Conversation {
         return new Conversation(ConversationKind.DIRECT, directKey(creator, other), creator, now);
     }
 
+    static Conversation broadcast(UUID owner, Instant now) {
+        return new Conversation(ConversationKind.BROADCAST, null, owner, now);
+    }
+
     static Conversation group(UUID creator, Instant now) {
         return new Conversation(ConversationKind.GROUP, null, creator, now);
     }

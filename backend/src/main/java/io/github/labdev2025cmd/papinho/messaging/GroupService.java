@@ -454,6 +454,13 @@ public class GroupService {
         return new SystemNotice(type, person.apply(actor), targets.stream().map(person).toList(), value);
     }
 
+    /** Pessoas como {@code me} as vê, sem papel de grupo (destinatários de lista de transmissão). */
+    List<MemberView> describe(UUID me, List<UUID> userIds) {
+        Instant now = clock.instant();
+        return toMemberViews(me, userIds.stream()
+                .map(id -> new ConversationMember(new UUID(0, 0), id, MemberState.ACTIVE, now)).toList());
+    }
+
     private List<MemberView> toMemberViews(UUID me, List<ConversationMember> list) {
         Set<UUID> ids = list.stream().map(ConversationMember::userId).collect(Collectors.toSet());
         Map<UUID, UserSummary> summaries = users.findAllById(ids).stream()

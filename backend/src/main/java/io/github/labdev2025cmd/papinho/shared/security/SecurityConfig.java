@@ -78,8 +78,9 @@ public class SecurityConfig {
     SecurityFilterChain apiSecurityFilterChain(HttpSecurity http, CsrfTokenRepository csrfTokenRepository,
             SecurityContextRepository securityContextRepository, List<ApiSecurityCustomizer> customizers)
             throws Exception {
-        // /webauthn/** e /login/webauthn são os endpoints de passkey do Spring Security (ID-04).
-        http.securityMatcher("/api/**", "/webauthn/**", "/login/webauthn")
+        // /webauthn/** e /login/webauthn são os endpoints de passkey do Spring Security (ID-04); /ws é o
+        // handshake do WebSocket (ADR 0004), que exige a mesma sessão da API.
+        http.securityMatcher("/api/**", "/webauthn/**", "/login/webauthn", "/ws")
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, "/webauthn/authenticate/options", "/login/webauthn")
                         .permitAll()

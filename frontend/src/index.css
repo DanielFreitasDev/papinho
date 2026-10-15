@@ -137,3 +137,30 @@
 .theme-switching *::after {
   transition: none !important;
 }
+
+/*
+ * Toque (AR-02): em telas de toque, todo controle frequente tem pelo menos 44×44 px. No mouse fica a
+ * densidade compacta do estilo nova.
+ */
+@media (pointer: coarse) {
+  [data-slot="button"],
+  [data-slot="input"],
+  [data-slot="input-group"],
+  [data-slot="select-trigger"],
+  [data-slot="tabs-trigger"],
+  [data-slot="dropdown-menu-item"],
+  [data-slot="select-item"] {
+    min-height: 2.75rem;
+  }
+  [data-slot="button"] {
+    min-width: 2.75rem;
+  }
+}
+
+/* Regra que o Base UI injetaria num <style> (desligado pelo CSPProvider por causa da CSP). */
+.base-ui-disable-scrollbar {
+  scrollbar-width: none;
+}
+.base-ui-disable-scrollbar::-webkit-scrollbar {
+  display: none;
+}

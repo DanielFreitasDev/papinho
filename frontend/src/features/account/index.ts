@@ -1,0 +1,6 @@
+export { ProfileSettings } from "./components/profile-settings"
+export { AccountSettings } from "./components/account-settings"
+export { SecuritySettings } from "./components/security-settings"
+export { SessionsSettings } from "./components/sessions-settings"
+export { BlockedSettings } from "./components/blocked-settings"
+export { AppearanceSettings } from "./components/appearance-settings"

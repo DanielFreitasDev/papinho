@@ -222,6 +222,34 @@ public class MessageService {
         return toViews(me, messages.findPinned(conversationId));
     }
 
+    /**
+     * Galeria da conversa (MD-03): mídia (fotos e vídeos), documentos, áudios ou links, da mais nova para a mais
+     * antiga, paginada por {@code beforeSeq}.
+     */
+    @Transactional(readOnly = true)
+    public HistoryResponse gallery(UUID me, UUID conversationId, GalleryTab tab, @Nullable Long beforeSeq,
+            int limit) {
+        conversations.requireMember(me, conversationId);
+        int size = Math.clamp(limit, 1, MAX_PAGE);
+        long before = beforeSeq == null ? Long.MAX_VALUE : beforeSeq;
+        List<Message> found = switch (tab) {
+            case MEDIA -> messages.findWithAttachments(conversationId, List.of("IMAGE", "VIDEO"), before,
+                    Limit.of(size + 1));
+            case DOCUMENTS -> messages.findWithAttachments(conversationId, List.of("DOCUMENT"), before,
+                    Limit.of(size + 1));
+            case AUDIO -> messages.findWithAttachments(conversationId, List.of("AUDIO"), before, Limit.of(size + 1));
+            case LINKS -> messages.findWithLinks(conversationId, before, Limit.of(size + 1));
+        };
+        boolean hasMore = found.size() > size;
+        return new HistoryResponse(toViews(me, hasMore ? found.subList(0, size) : found),
+                sequences.current(conversationId), hasMore);
+    }
+
+    /** Abas da galeria da conversa (MD-03). */
+    public enum GalleryTab {
+        MEDIA, LINKS, DOCUMENTS, AUDIO
+    }
+
     /** Favorita só para mim: não avança o seq da conversa nem avisa ninguém. */
     @Transactional
     public MessageView star(UUID me, UUID messageId, boolean starred) {

@@ -33,4 +33,17 @@ interface MessageRepository extends JpaRepository<Message, UUID> {
              where m.attachment_id = :mediaId and cm.user_id = :viewer and cm.state in ('ACTIVE', 'REQUEST'))
             """, nativeQuery = true)
     boolean attachmentVisibleTo(UUID viewer, UUID mediaId);
+
+    /** Galeria (MD-03): mensagens com anexo destes tipos, da mais nova para a mais antiga. */
+    @Query("select m from Message m where m.conversationId = :conversationId and m.attachmentKind in :kinds "
+            + "and m.seq < :beforeSeq order by m.seq desc")
+    List<Message> findWithAttachments(UUID conversationId, java.util.Collection<String> kinds, long beforeSeq,
+            Limit limit);
+
+    /** Galeria de links (MD-03): mensagens cujo texto tem um endereço http(s). */
+    @Query(value = """
+            select * from messages m where m.conversation_id = :conversationId and m.seq < :beforeSeq
+               and m.body ~* 'https?://[^[:space:]]+' order by m.seq desc
+            """, nativeQuery = true)
+    List<Message> findWithLinks(UUID conversationId, long beforeSeq, Limit limit);
 }

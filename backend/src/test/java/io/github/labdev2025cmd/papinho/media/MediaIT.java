@@ -161,6 +161,28 @@ class MediaIT {
     }
 
     @Test
+    @DisplayName("galeria separa mídia, documentos, áudios e links; só quem participa vê")
+    void shouldListGalleryByTab() {
+        String photo = upload(ana, Images.png(40, 40), "foto.png", "image/png");
+        String doc = upload(ana, "%PDF-1.4 doc".getBytes(StandardCharsets.US_ASCII), "doc.pdf", "application/pdf");
+        sendWith(ana, photo, "");
+        sendWith(ana, doc, "contrato");
+        sendWith(ana, null, "veja https://example.com/a e mais");
+        sendWith(ana, null, "sem link nenhum");
+
+        String gallery = "/api/v1/conversations/" + conversation + "/gallery?tab=";
+        JsonNode media = bruno.json(bruno.get(gallery + "MEDIA"));
+        assertThat(media.get("messages")).hasSize(1);
+        assertThat(media.get("messages").get(0).get("attachment").get("id").asString()).isEqualTo(photo);
+        JsonNode docs = bruno.json(bruno.get(gallery + "DOCUMENTS"));
+        assertThat(docs.get("messages").get(0).get("body").asString()).isEqualTo("contrato");
+        JsonNode links = bruno.json(bruno.get(gallery + "LINKS"));
+        assertThat(links.get("messages")).hasSize(1);
+        assertThat(bruno.json(bruno.get(gallery + "AUDIO")).get("messages")).isEmpty();
+        assertThat(carla.get(gallery + "MEDIA")).hasStatus(404);
+    }
+
+    @Test
     @DisplayName("limite de 1 GB, cota por usuário e cancelamento que devolve a cota")
     void shouldEnforceLimitsAndQuota() {
         assertThat(ana.perform(tusCreate(1_073_741_825L, "grande.bin", null))).hasStatus(413);
@@ -183,6 +205,14 @@ class MediaIT {
                     (int) current.messageEditWindow().toMinutes(), (int) current.messageDeleteWindow().toHours(),
                     (int) (current.userQuotaBytes() / (1024 * 1024)), current.breachedPasswordCheck()));
         }
+    }
+
+    private void sendWith(ApiClient client, String attachmentId, String body) {
+        Map<String, Object> message = new HashMap<>();
+        message.put("clientMessageId", UUID.randomUUID());
+        message.put("body", body);
+        message.put("attachmentId", attachmentId);
+        assertThat(client.post("/api/v1/conversations/" + conversation + "/messages", message)).hasStatus(201);
     }
 
     private String upload(ApiClient client, byte[] content, String filename, String type) {

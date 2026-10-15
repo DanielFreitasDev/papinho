@@ -109,6 +109,14 @@ class MessagingController {
         return ResponseEntity.status(result.created() ? HttpStatus.CREATED : HttpStatus.OK).body(result.message());
     }
 
+    /** Galeria (MD-03): mídia, links, documentos ou áudios da conversa, do mais novo para o mais antigo. */
+    @GetMapping("/conversations/{conversationId}/gallery")
+    MessageService.HistoryResponse gallery(@PathVariable UUID conversationId,
+            @RequestParam MessageService.GalleryTab tab, @RequestParam @Nullable @Min(1) Long beforeSeq,
+            @RequestParam(defaultValue = "30") @Min(1) @Max(MessageService.MAX_PAGE) int limit) {
+        return messages.gallery(CurrentUser.id(), conversationId, tab, beforeSeq, limit);
+    }
+
     @GetMapping("/conversations/{conversationId}/pinned")
     List<MessageService.MessageView> pinned(@PathVariable UUID conversationId) {
         return messages.pinned(CurrentUser.id(), conversationId);

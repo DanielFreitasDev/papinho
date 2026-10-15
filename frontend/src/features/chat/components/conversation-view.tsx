@@ -161,6 +161,8 @@ function LoadedConversation({
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [files, setFiles] = useState<File[]>([])
   const [viewerId, setViewerId] = useState<string | null>(null)
+  // Imagens da galeria (MD-03) podem não estar carregadas na conversa: o visualizador usa a lista dela.
+  const [viewerImages, setViewerImages] = useState<Attachment[] | null>(null)
   // Painel de detalhes como terceira coluna só em telas largas; nas outras, gaveta (UI-01).
   const wide = useMediaQuery("(min-width: 80rem)")
   // Não lidas no momento em que a conversa abriu: o marcador fica até sair da conversa (MS-14).
@@ -320,6 +322,7 @@ function LoadedConversation({
       return
     }
     if (typeof action === "object" && "openImage" in action) {
+      setViewerImages(null)
       setViewerId(action.openImage)
       return
     }
@@ -667,7 +670,7 @@ function LoadedConversation({
           onSend={sendFiles}
         />
         <ImageViewer
-          images={images}
+          images={viewerImages ?? images}
           openId={viewerId}
           onOpenChange={setViewerId}
         />
@@ -680,6 +683,10 @@ function LoadedConversation({
           <ContactDetails
             conversation={conversation}
             onClose={() => setDetailsOpen(false)}
+            onOpenImage={(list, id) => {
+              setViewerImages(list)
+              setViewerId(id)
+            }}
           />
         </aside>
       ) : null}
@@ -693,6 +700,10 @@ function LoadedConversation({
           <ContactDetails
             conversation={conversation}
             onClose={() => setDetailsOpen(false)}
+            onOpenImage={(list, id) => {
+              setViewerImages(list)
+              setViewerId(id)
+            }}
           />
         </SheetContent>
       </Sheet>

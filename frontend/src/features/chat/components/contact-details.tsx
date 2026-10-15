@@ -1,7 +1,14 @@
 import { useState } from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
-import { BanIcon, FlagIcon, UserPlusIcon, XIcon } from "lucide-react"
+import {
+  BanIcon,
+  ChevronRightIcon,
+  FlagIcon,
+  ImagesIcon,
+  UserPlusIcon,
+  XIcon,
+} from "lucide-react"
 
 import { ConfirmDialog } from "@/components/confirm-dialog"
 import { UserAvatar } from "@/components/user-avatar"
@@ -13,7 +20,8 @@ import { contactQueries, useAddContact, useBlock } from "@/features/contact"
 import { ReportDialog } from "@/features/moderation"
 import { errorMessage } from "@/lib/api-client"
 import { chatKeys } from "../api"
-import type { Conversation } from "../types"
+import type { Attachment, Conversation } from "../types"
+import { ConversationGallery } from "./conversation-gallery"
 
 /**
  * Painel "Dados do contato" (UI-01): foto, nome, @usuario e recado, com adicionar aos contatos, bloquear
@@ -22,9 +30,11 @@ import type { Conversation } from "../types"
 export function ContactDetails({
   conversation,
   onClose,
+  onOpenImage,
 }: {
   conversation: Conversation
   onClose: () => void
+  onOpenImage: (images: Attachment[], id: string) => void
 }) {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
@@ -37,6 +47,7 @@ export function ContactDetails({
   const block = useBlock()
   const [confirmBlock, setConfirmBlock] = useState(false)
   const [reporting, setReporting] = useState(false)
+  const [gallery, setGallery] = useState(false)
   const blocked = person.data?.blocked ?? conversation.blockedByMe
 
   function setBlocked(value: boolean) {
@@ -57,6 +68,16 @@ export function ContactDetails({
             type: "error",
           }),
       }
+    )
+  }
+
+  if (gallery) {
+    return (
+      <ConversationGallery
+        conversationId={conversation.id}
+        onBack={() => setGallery(false)}
+        onOpenImage={onOpenImage}
+      />
     )
   }
 
@@ -102,6 +123,16 @@ export function ContactDetails({
             </p>
           </section>
         ) : null}
+        <Separator />
+        <Button
+          variant="ghost"
+          className="justify-start"
+          onClick={() => setGallery(true)}
+        >
+          <ImagesIcon data-icon="inline-start" />
+          <span className="flex-1 text-left">{t("gallery.title")}</span>
+          <ChevronRightIcon data-icon="inline-end" />
+        </Button>
         <Separator />
         <div className="flex flex-col gap-1">
           {person.data && !person.data.contact ? (

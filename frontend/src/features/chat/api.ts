@@ -1,4 +1,5 @@
 import {
+  infiniteQueryOptions,
   queryOptions,
   useMutation,
   useQueryClient,
@@ -34,7 +35,11 @@ export const chatKeys = {
   starred: ["starred"] as const,
   info: (messageId: string) => ["message-info", messageId] as const,
   presence: (userId: string) => ["presence", userId] as const,
+  gallery: (id: string, tab: GalleryTab) =>
+    ["messages", id, "gallery", tab] as const,
 }
+
+export type GalleryTab = "MEDIA" | "LINKS" | "DOCUMENTS" | "AUDIO"
 
 const PAGE = 50
 
@@ -89,6 +94,19 @@ export const chatQueries = {
         apiFetch<MessageInfo>(`/api/v1/messages/${messageId}/info`, {
           signal,
         }),
+    }),
+  /** Galeria da conversa (MD-03), paginada para trás por seq. */
+  gallery: (id: string, tab: GalleryTab) =>
+    infiniteQueryOptions({
+      queryKey: chatKeys.gallery(id, tab),
+      queryFn: ({ signal, pageParam }) =>
+        apiFetch<MessagePage>(
+          `/api/v1/conversations/${id}/gallery?tab=${tab}&limit=30${pageParam ? `&beforeSeq=${pageParam}` : ""}`,
+          { signal }
+        ),
+      initialPageParam: 0,
+      getNextPageParam: (page) =>
+        page.hasMore ? (page.messages.at(-1)?.seq ?? undefined) : undefined,
     }),
   presence: (userId: string) =>
     queryOptions({

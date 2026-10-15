@@ -384,5 +384,20 @@
       "AUDIO": "Áudio",
       "DOCUMENT": "Documento"
     }
+  },
+  "gallery": {
+    "title": "Mídia, links e docs",
+    "tab": {
+      "MEDIA": "Mídia",
+      "LINKS": "Links",
+      "DOCUMENTS": "Docs",
+      "AUDIO": "Áudios"
+    },
+    "empty": {
+      "MEDIA": "Nenhuma foto ou vídeo",
+      "LINKS": "Nenhum link",
+      "DOCUMENTS": "Nenhum documento",
+      "AUDIO": "Nenhum áudio"
+    }
   }
 }

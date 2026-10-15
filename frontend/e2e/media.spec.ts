@@ -192,6 +192,30 @@ test("fotos, documento e cancelamento de envio entre dois navegadores", async ({
     hana.page.getByRole("button", { name: "Abrir imagem azul.png" })
   ).toHaveCount(0)
 
+  // Galeria da conversa (MD-03): abas de mídia e documentos, e a foto abre no visualizador.
+  await hana.page
+    .getByRole("button", { name: /^Dados do contato: Gil Midia/ })
+    .click()
+  await hana.page.getByRole("button", { name: "Mídia, links e docs" }).click()
+  const gallery = hana.page.getByRole("tabpanel", { name: "Mídia" })
+  await expect(
+    gallery.getByRole("button", { name: /Abrir imagem/ })
+  ).toHaveCount(2)
+  await expectNoSeriousA11yViolations(hana.page)
+  await hana.page.getByRole("tab", { name: "Docs" }).click()
+  await expect(
+    hana.page
+      .getByRole("tabpanel", { name: "Docs" })
+      .getByRole("link", { name: /ata da reunião\.pdf/ })
+  ).toBeVisible()
+  await hana.page.getByRole("tab", { name: "Mídia" }).click()
+  await gallery.getByRole("button", { name: "Abrir imagem verde.png" }).click()
+  await expect(
+    hana.page.getByRole("dialog", { name: /verde\.png/ })
+  ).toBeVisible()
+  await hana.page.keyboard.press("Escape")
+  await hana.page.keyboard.press("Escape")
+
   // A prévia da lista mostra o tipo do anexo (no celular, voltando para a lista).
   const back = hana.page.getByRole("link", { name: "Voltar" })
   if (await back.isVisible()) {

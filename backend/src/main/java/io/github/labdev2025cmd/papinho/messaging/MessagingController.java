@@ -35,10 +35,13 @@ class MessagingController {
 
     private final ConversationService conversations;
     private final MessageService messages;
+    private final ScheduledMessageService scheduled;
 
-    MessagingController(ConversationService conversations, MessageService messages) {
+    MessagingController(ConversationService conversations, MessageService messages,
+            ScheduledMessageService scheduled) {
         this.conversations = conversations;
         this.messages = messages;
+        this.scheduled = scheduled;
     }
 
     /** Conversas; com {@code requests=true}, as solicitações de mensagem pendentes. */
@@ -129,8 +132,36 @@ class MessagingController {
     ResponseEntity<MessageService.MessageView> send(@PathVariable UUID conversationId,
             @Valid @RequestBody SendMessageRequest body) {
         MessageService.SendResult result = messages.send(CurrentUser.id(), conversationId, body.clientMessageId(),
-                body.body(), body.replyToId(), body.attachmentId(), Boolean.TRUE.equals(body.viewOnce()));
+                body.body(), body.replyToId(), body.attachmentId(), new MessageService.SendOptions(
+                        Boolean.TRUE.equals(body.viewOnce()), Boolean.TRUE.equals(body.silent())));
         return ResponseEntity.status(result.created() ? HttpStatus.CREATED : HttpStatus.OK).body(result.message());
+    }
+
+    /** Rascunho sincronizado entre os meus dispositivos (MS-11); texto vazio apaga. */
+    @PutMapping("/conversations/{conversationId}/draft")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    void draft(@PathVariable UUID conversationId, @Valid @RequestBody DraftRequest body) {
+        conversations.saveDraft(CurrentUser.id(), conversationId, body.body());
+    }
+
+    /** Agenda uma mensagem de texto (MS-11). */
+    @PostMapping("/conversations/{conversationId}/scheduled")
+    @ResponseStatus(HttpStatus.CREATED)
+    ScheduledMessageService.ScheduledView schedule(@PathVariable UUID conversationId,
+            @Valid @RequestBody ScheduleRequest body) {
+        return scheduled.schedule(CurrentUser.id(), conversationId, body.body(), body.sendAt(),
+                Boolean.TRUE.equals(body.silent()));
+    }
+
+    @GetMapping("/conversations/{conversationId}/scheduled")
+    List<ScheduledMessageService.ScheduledView> scheduled(@PathVariable UUID conversationId) {
+        return scheduled.list(CurrentUser.id(), conversationId);
+    }
+
+    @DeleteMapping("/scheduled/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    void cancelScheduled(@PathVariable UUID id) {
+        scheduled.cancel(CurrentUser.id(), id);
     }
 
     /** Cria uma enquete (MS-09); 201 quando criou, 200 quando o {@code clientMessageId} já existia. */
@@ -261,6 +292,13 @@ class MessagingController {
     record VoteRequest(@NotNull @Size(max = MessageService.MAX_POLL_OPTIONS) List<@NotNull UUID> optionIds) {
     }
 
+    record DraftRequest(@NotNull @Size(max = Message.MAX_BODY_LENGTH) String body) {
+    }
+
+    record ScheduleRequest(@NotBlank @Size(max = Message.MAX_BODY_LENGTH) String body,
+            java.time.@NotNull Instant sendAt, @Nullable Boolean silent) {
+    }
+
     record DisappearingRequest(@Nullable Integer seconds) {
     }
 
@@ -268,7 +306,8 @@ class MessagingController {
     }
 
     record SendMessageRequest(@NotNull UUID clientMessageId, @NotNull @Size(max = Message.MAX_BODY_LENGTH) String body,
-            @Nullable UUID replyToId, @Nullable UUID attachmentId, @Nullable Boolean viewOnce) {
+            @Nullable UUID replyToId, @Nullable UUID attachmentId, @Nullable Boolean viewOnce,
+            @Nullable Boolean silent) {
     }
 
     record ForwardRequest(@NotEmpty @Size(max = 20) List<@NotNull UUID> messageIds,

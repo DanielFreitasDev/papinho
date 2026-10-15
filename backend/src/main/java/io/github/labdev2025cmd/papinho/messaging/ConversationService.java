@@ -14,6 +14,8 @@ import java.util.stream.Collectors;
 
 import org.jspecify.annotations.Nullable;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -43,13 +45,15 @@ public class ConversationService {
     private final ProfileService profiles;
     private final ContactQueries contacts;
     private final MessagingPreferences preferences;
+    private final NamedParameterJdbcTemplate jdbc;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
     ConversationService(ConversationRepository conversations, ConversationMemberRepository members,
             GroupDetailsRepository groups, ConversationQueries queries, SequenceAllocator sequences,
             ReceiptLog receipts, UserDirectory users, ProfileService profiles, ContactQueries contacts,
-            MessagingPreferences preferences, ApplicationEventPublisher events, Clock clock) {
+            MessagingPreferences preferences, NamedParameterJdbcTemplate jdbc, ApplicationEventPublisher events,
+            Clock clock) {
         this.conversations = conversations;
         this.members = members;
         this.groups = groups;
@@ -60,6 +64,7 @@ public class ConversationService {
         this.profiles = profiles;
         this.contacts = contacts;
         this.preferences = preferences;
+        this.jdbc = jdbc;
         this.events = events;
         this.clock = clock;
     }
@@ -186,6 +191,36 @@ public class ConversationService {
         GroupDetails group = groups.findById(member.conversationId()).orElseThrow(NotFoundException::new);
         if (group.onlyAdminsEditInfo() && !member.admin()) {
             throw new MessagingExceptions.OnlyAdminsException();
+        }
+    }
+
+    /**
+     * Guarda (ou apaga, com texto vazio) o meu rascunho na conversa e avisa os meus outros dispositivos (MS-11).
+     */
+    @Transactional
+    public void saveDraft(UUID me, UUID conversationId, String body) {
+        requireMember(me, conversationId);
+        MapSqlParameterSource params = new MapSqlParameterSource("userId", me)
+                .addValue("conversationId", conversationId).addValue("body", body)
+                .addValue("now", clock.instant().atOffset(java.time.ZoneOffset.UTC));
+        if (body.isBlank()) {
+            jdbc.update("delete from message_drafts where user_id = :userId and conversation_id = :conversationId",
+                    params);
+        } else {
+            jdbc.update("insert into message_drafts (user_id, conversation_id, body, updated_at) "
+                    + "values (:userId, :conversationId, :body, :now) on conflict (user_id, conversation_id) "
+                    + "do update set body = excluded.body, updated_at = excluded.updated_at", params);
+        }
+        events.publishEvent(new MessagingEvents.ConversationUpdated(conversationId, Set.of(me)));
+    }
+
+    /** Enviar apaga o rascunho daquela conversa. */
+    void clearDraft(UUID me, UUID conversationId) {
+        int removed = jdbc.update(
+                "delete from message_drafts where user_id = :userId and conversation_id = :conversationId",
+                new MapSqlParameterSource("userId", me).addValue("conversationId", conversationId));
+        if (removed > 0) {
+            events.publishEvent(new MessagingEvents.ConversationUpdated(conversationId, Set.of(me)));
         }
     }
 
@@ -347,7 +382,7 @@ public class ConversationService {
         return new ConversationView(row.id(), row.kind().name(), row.state(), peerView, null, row.lastSeq(),
                 preview(row, Map.of()), row.unreadCount(), row.firstUnreadSeq(), row.markedUnread(), row.readSeq(),
                 peerDeliveredSeq, peerReadSeq, row.updatedAt(), !blockedByMe && peer.active(), blockedByMe,
-                row.disappearingSeconds());
+                row.disappearingSeconds(), row.draft());
     }
 
     /** Nome como {@code me} vê cada pessoa: apelido do contato, nome de exibição ou {@code @usuario}. */
@@ -377,7 +412,7 @@ public class ConversationService {
         return new ConversationView(row.id(), row.kind().name(), row.state(), null, groupView, row.lastSeq(),
                 preview(row, senderLabels), row.unreadCount(), row.firstUnreadSeq(), row.markedUnread(), row.readSeq(),
                 row.peerDeliveredSeq(), row.peerReadSeq(), row.updatedAt(), canSend, false,
-                row.disappearingSeconds());
+                row.disappearingSeconds(), row.draft());
     }
 
     private static @Nullable MessagePreview preview(ConversationQueries.Row row, Map<UUID, String> senderLabels) {
@@ -401,12 +436,13 @@ public class ConversationService {
      *     (CT-02)
      * @param canSend posso escrever (não bloqueei, a conta dela está ativa; no grupo, as permissões)
      * @param disappearingSeconds timer das mensagens temporárias (MS-07); nulo = desligado
+     * @param draft meu rascunho nesta conversa, sincronizado entre os meus dispositivos (MS-11)
      */
     public record ConversationView(UUID id, String kind, MemberState state, @Nullable PeerView peer,
             @Nullable GroupView group, long lastSeq, @Nullable MessagePreview lastMessage, long unreadCount,
             @Nullable Long firstUnreadSeq, boolean markedUnread, long readSeq, long peerDeliveredSeq,
             @Nullable Long peerReadSeq, Instant updatedAt, boolean canSend, boolean blockedByMe,
-            @Nullable Integer disappearingSeconds) {
+            @Nullable Integer disappearingSeconds, @Nullable String draft) {
     }
 
     /**

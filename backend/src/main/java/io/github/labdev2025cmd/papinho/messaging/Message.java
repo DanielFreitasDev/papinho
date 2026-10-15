@@ -72,6 +72,9 @@ class Message {
     @Column(nullable = false)
     private boolean viewOnce;
 
+    @Column(nullable = false)
+    private boolean silent;
+
     protected Message() {
         this.conversationId = new UUID(0, 0);
         this.kind = MessageKind.USER;
@@ -188,6 +191,15 @@ class Message {
 
     void markViewOnce() {
         this.viewOnce = true;
+    }
+
+    /** Envio silencioso (MS-11): chega normalmente, mas sem notificação. */
+    boolean silent() {
+        return silent;
+    }
+
+    void markSilent() {
+        this.silent = true;
     }
 
     /** Tipo do anexo, que fica mesmo depois de o arquivo de visualização única sair do servidor. */

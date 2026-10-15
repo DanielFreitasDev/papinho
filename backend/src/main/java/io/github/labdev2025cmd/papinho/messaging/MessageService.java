@@ -111,16 +111,17 @@ public class MessageService {
     @Transactional
     public SendResult send(UUID me, UUID conversationId, UUID clientMessageId, String body,
             @Nullable UUID replyToId, @Nullable UUID attachmentId) {
-        return send(me, conversationId, clientMessageId, body, replyToId, attachmentId, false);
+        return send(me, conversationId, clientMessageId, body, replyToId, attachmentId, SendOptions.NONE);
     }
 
     /**
-     * Envia; com {@code viewOnce} o anexo (foto, vídeo ou áudio ainda não usado em outra mensagem) vira de
-     * visualização única (MS-08).
+     * Envia com opções: {@code viewOnce} torna o anexo (foto, vídeo ou áudio ainda não usado em outra mensagem) de
+     * visualização única (MS-08); {@code silent} chega sem notificação (MS-11). Enviar apaga o rascunho.
      */
     @Transactional
     public SendResult send(UUID me, UUID conversationId, UUID clientMessageId, String body,
-            @Nullable UUID replyToId, @Nullable UUID attachmentId, boolean viewOnce) {
+            @Nullable UUID replyToId, @Nullable UUID attachmentId, SendOptions options) {
+        boolean viewOnce = options.viewOnce();
         ConversationMember member = conversations.requireMember(me, conversationId);
         sequences.lock(conversationId);
         var existing = messages.findBySenderIdAndClientMessageId(me, clientMessageId);
@@ -155,8 +156,12 @@ public class MessageService {
         Message saved = append(me, conversationId, clientMessageId, body, replyToId, 0, attachment);
         if (viewOnce) {
             saved.markViewOnce();
-            messages.flush();
         }
+        if (options.silent()) {
+            saved.markSilent();
+        }
+        messages.flush();
+        conversations.clearDraft(me, conversationId);
         return new SendResult(toViews(me, List.of(saved)).getFirst(), true);
     }
 
@@ -218,6 +223,11 @@ public class MessageService {
             notifyChanged(message.conversationId());
         }
         return ids.size();
+    }
+
+    /** Opções de envio: visualização única (MS-08) e silenciosa (MS-11). */
+    public record SendOptions(boolean viewOnce, boolean silent) {
+        public static final SendOptions NONE = new SendOptions(false, false);
     }
 
     /** Token para abrir o conteúdo em {@code /api/v1/view-once/{token}}. */
@@ -795,7 +805,7 @@ public class MessageService {
                     m.forwardCount() >= FORWARDED_MANY, m.pinnedAt(),
                     reactionsByMessage.getOrDefault(m.id(), List.of()), starred.contains(m.id()),
                     attachment == null ? null : AttachmentView.of(attachment), m.editedAt(), m.deleted(),
-                    m.expiresAt(), PollView.of(pollsById.get(m.id()), me, now), viewOnce);
+                    m.expiresAt(), PollView.of(pollsById.get(m.id()), me, now), viewOnce, m.silent());
         }).toList();
     }
 
@@ -823,7 +833,8 @@ public class MessageService {
             UUID clientMessageId, String body, Instant createdAt, @Nullable ReplyPreview replyTo, int forwardCount,
             boolean forwardedMany, @Nullable Instant pinnedAt, List<ReactionView> reactions, boolean starred,
             @Nullable AttachmentView attachment, @Nullable Instant editedAt, boolean deleted,
-            @Nullable Instant expiresAt, @Nullable PollView poll, @Nullable ViewOnceView viewOnce) {
+            @Nullable Instant expiresAt, @Nullable PollView poll, @Nullable ViewOnceView viewOnce,
+            boolean silent) {
     }
 
     /**

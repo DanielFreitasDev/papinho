@@ -35,9 +35,10 @@ class ConversationQueries {
                    last.id as last_id, last.seq as last_seq_of_message, last.sender_id as last_sender_id,
                    left(last.body, 200) as last_body, last.created_at as last_created_at,
                    last.attachment_kind as last_attachment_kind, last.deleted_at is not null as last_deleted,
-                   last.kind as last_kind
+                   last.kind as last_kind, draft.body as draft
               from conversation_members me
               join conversations c on c.id = me.conversation_id
+              left join message_drafts draft on draft.user_id = me.user_id and draft.conversation_id = c.id
               left join conversation_members peer
                      on c.kind = 'DIRECT' and peer.conversation_id = c.id and peer.user_id <> me.user_id
               left join lateral (select count(*) as members, coalesce(min(o.delivered_seq), 0) as delivered,
@@ -53,7 +54,8 @@ class ConversationQueries {
                                                      where h.message_id = m.id and h.user_id = me.user_id)
                                   order by m.seq desc limit 1) last on true
              where me.user_id = :userId and me.state in (:states)
-               and (:conversationId::uuid is null and (c.last_seq > 0 or c.created_by = me.user_id)
+               and (:conversationId::uuid is null
+                    and (c.last_seq > 0 or c.created_by = me.user_id or draft.body is not null)
                     or c.id = :conversationId::uuid)
              order by c.updated_at desc
             """;
@@ -98,7 +100,7 @@ class ConversationQueries {
                 rs.getLong("read_seq"), rs.getBoolean("marked_unread"), rs.getObject("peer_id", UUID.class),
                 rs.getString("peer_state") == null ? null : MemberState.valueOf(rs.getString("peer_state")),
                 rs.getLong("peer_delivered_seq"), rs.getLong("peer_read_seq"), rs.getLong("unread_count"),
-                firstUnread == 0 ? null : firstUnread, last);
+                firstUnread == 0 ? null : firstUnread, last, rs.getString("draft"));
     }
 
     private static Instant instant(@Nullable OffsetDateTime timestamp) {
@@ -110,7 +112,7 @@ class ConversationQueries {
             @Nullable Integer disappearingSeconds, MemberState state, MemberRole role, long memberCount, long readSeq, boolean markedUnread,
             @Nullable UUID peerId,
             @Nullable MemberState peerState, long peerDeliveredSeq, long peerReadSeq, long unreadCount,
-            @Nullable Long firstUnreadSeq, @Nullable LastMessage last) {
+            @Nullable Long firstUnreadSeq, @Nullable LastMessage last, @Nullable String draft) {
     }
 
     record LastMessage(UUID id, long seq, @Nullable UUID senderId, String body, Instant createdAt,

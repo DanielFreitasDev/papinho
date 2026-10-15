@@ -74,6 +74,7 @@ import { GroupDetails } from "./group-details"
 import { ForwardDialog } from "./forward-dialog"
 import { MessageInfoDialog } from "./message-info-dialog"
 import { PollDialog } from "./poll-dialog"
+import { ViewOnceViewer } from "./view-once-viewer"
 import {
   MessageRow,
   type DisplayMessage,
@@ -171,6 +172,7 @@ function LoadedConversation({
   )
   const [deleteIds, setDeleteIds] = useState<string[]>([])
   const [pollOpen, setPollOpen] = useState(false)
+  const [viewOnceId, setViewOnceId] = useState<string | null>(null)
   // "Responder em privado" chega aqui vindo do grupo, com a citação pronta.
   const [replyTo, setReplyTo] = useState<ReplyPreview | null>(() =>
     peekReplyDraft(conversation.id)
@@ -338,7 +340,7 @@ function LoadedConversation({
     setFiles(chosen.filter((file) => file.size <= MAX_FILE_SIZE))
   }
 
-  function sendFiles(chosen: File[], caption: string) {
+  function sendFiles(chosen: File[], caption: string, viewOnce = false) {
     let previous: Promise<unknown> = Promise.resolve()
     chosen.forEach((file, index) => {
       previous = sendFile(
@@ -349,7 +351,8 @@ function LoadedConversation({
         index === 0 ? replyTo : null,
         sendWithAttachment,
         crypto.randomUUID(),
-        previous
+        previous,
+        viewOnce
       )
     })
     setFiles([])
@@ -460,6 +463,9 @@ function LoadedConversation({
         return
       case "forward":
         setForwardIds([id])
+        return
+      case "openViewOnce":
+        setViewOnceId(id)
         return
       case "replyPrivately": {
         const author = members.data?.find(
@@ -895,6 +901,10 @@ function LoadedConversation({
           }}
         />
         <MessageInfoDialog messageId={infoId} onClose={() => setInfoId(null)} />
+        <ViewOnceViewer
+          messageId={viewOnceId}
+          onClose={() => setViewOnceId(null)}
+        />
         <PollDialog
           conversationId={conversation.id}
           open={pollOpen}
@@ -997,6 +1007,7 @@ function toDisplay(
     deleted: message.deleted,
     kind: message.kind,
     poll: message.poll,
+    viewOnce: message.viewOnce,
   }))
   const pending: DisplayMessage[] = cache.pending.map((message) => ({
     key: message.clientMessageId,
@@ -1018,6 +1029,7 @@ function toDisplay(
     deleted: false,
     kind: "USER" as const,
     poll: null,
+    viewOnce: null,
   }))
   return [...confirmed, ...pending]
 }

@@ -7,6 +7,8 @@ import {
   CopyIcon,
   CornerUpLeftIcon,
   EllipsisVerticalIcon,
+  EyeIcon,
+  EyeOffIcon,
   ForwardIcon,
   InfoIcon,
   ListChecksIcon,
@@ -47,6 +49,7 @@ import type {
   MessageKind,
   MessageStatus,
   Poll,
+  ViewOnce,
   Reaction,
   ReplyPreview,
 } from "../types"
@@ -81,6 +84,7 @@ export type DisplayMessage = {
   deleted: boolean
   kind: MessageKind
   poll: Poll | null
+  viewOnce: ViewOnce | null
 }
 
 export type MessageAction =
@@ -99,6 +103,7 @@ export type MessageAction =
   | "replyPrivately"
   | { react: string }
   | { openImage: string }
+  | "openViewOnce"
   | "unreact"
 
 export function MessageRow({
@@ -196,7 +201,13 @@ export function MessageRow({
                   : t("chat.forwarded")}
               </span>
             ) : null}
-            {message.attachment ? (
+            {message.viewOnce ? (
+              <ViewOnceBubble
+                viewOnce={message.viewOnce}
+                mine={mine}
+                onOpen={() => onAction("openViewOnce")}
+              />
+            ) : message.attachment ? (
               <AttachmentView
                 attachment={message.attachment}
                 onOpenImage={(id) => onAction({ openImage: id })}
@@ -362,7 +373,7 @@ export function MessageRow({
                   {t("groups.replyPrivately")}
                 </DropdownMenuItem>
               ) : null}
-              {message.kind === "USER" ? (
+              {message.kind === "USER" && !message.viewOnce ? (
                 <DropdownMenuItem onClick={() => onAction("forward")}>
                   <ForwardIcon />
                   {t("chat.forward")}
@@ -509,6 +520,46 @@ function DeletedRow({
         </DropdownMenu>
       )}
     </Message>
+  )
+}
+
+/** Anexo de visualização única (MS-08): abrir uma vez, "aberta" ou, para quem enviou, quantos abriram. */
+function ViewOnceBubble({
+  viewOnce,
+  mine,
+  onOpen,
+}: {
+  viewOnce: ViewOnce
+  mine: boolean
+  onOpen: () => void
+}) {
+  const { t } = useTranslation()
+  const label = t(`viewOnce.kind.${viewOnce.kind}`)
+  if (!mine && !viewOnce.openedByMe && !viewOnce.expired) {
+    return (
+      <Button
+        variant="outline"
+        size="sm"
+        className="self-start"
+        onClick={(event) => {
+          event.stopPropagation()
+          onOpen()
+        }}
+      >
+        <EyeIcon data-icon="inline-start" />
+        {t("viewOnce.open", { kind: label })}
+      </Button>
+    )
+  }
+  return (
+    <span className="flex items-center gap-2 text-sm italic opacity-80">
+      <EyeOffIcon aria-hidden="true" className="size-4" />
+      {mine
+        ? viewOnce.openedCount > 0
+          ? t("viewOnce.openedBy", { kind: label, count: viewOnce.openedCount })
+          : t("viewOnce.sent", { kind: label })
+        : t("viewOnce.opened", { kind: label })}
+    </span>
   )
 }
 

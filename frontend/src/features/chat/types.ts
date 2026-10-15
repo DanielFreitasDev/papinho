@@ -102,6 +102,8 @@ export type LocalAttachment = {
   contentType: string
   /** URL blob: para a prévia de imagem e vídeo. */
   previewUrl: string | null
+  /** Enviar como visualização única (MS-08). */
+  viewOnce?: boolean
 }
 
 export type Conversation = {
@@ -164,6 +166,15 @@ export type Message = {
   /** Quando a mensagem temporária some (MS-07). */
   expiresAt: string | null
   poll: Poll | null
+  /** Visualização única (MS-08): o arquivo só abre por token, uma vez. */
+  viewOnce: ViewOnce | null
+}
+
+export type ViewOnce = {
+  kind: AttachmentKind
+  openedByMe: boolean
+  openedCount: number
+  expired: boolean
 }
 
 export type MessagePage = {

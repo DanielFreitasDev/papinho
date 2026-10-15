@@ -32,6 +32,7 @@ function message(seq: number, changeSeq = seq, body = `m${seq}`): Message {
     kind: "USER",
     expiresAt: null,
     poll: null,
+    viewOnce: null,
   }
 }
 

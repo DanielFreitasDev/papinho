@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Field, FieldLabel } from "@/components/ui/field"
+import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { formatBytes, guessKind } from "@/features/media"
 import { KindIcon } from "./attachment-view"
@@ -26,11 +27,14 @@ export function AttachDialog({
 }: {
   files: File[]
   onClose: () => void
-  onSend: (files: File[], caption: string) => void
+  onSend: (files: File[], caption: string, viewOnce: boolean) => void
 }) {
   const { t, i18n } = useTranslation()
   const [caption, setCaption] = useState("")
+  const [viewOnce, setViewOnce] = useState(false)
   const captionId = useId()
+  // Visualização única (MS-08): um arquivo só, de foto, vídeo ou áudio.
+  const canViewOnce = files.length === 1 && guessKind(files[0]) !== "DOCUMENT"
   const previews = useMemo(
     () =>
       files.map((file) =>
@@ -49,6 +53,7 @@ export function AttachDialog({
       onOpenChange={(open) => {
         if (!open) {
           setCaption("")
+          setViewOnce(false)
           onClose()
         }
       }}
@@ -58,8 +63,9 @@ export function AttachDialog({
           className="flex flex-col gap-4"
           onSubmit={(event) => {
             event.preventDefault()
-            onSend(files, caption.trim())
+            onSend(files, caption.trim(), canViewOnce && viewOnce)
             setCaption("")
+            setViewOnce(false)
           }}
         >
           <DialogHeader>
@@ -106,6 +112,23 @@ export function AttachDialog({
               onChange={(event) => setCaption(event.target.value)}
             />
           </Field>
+          {canViewOnce ? (
+            <Field orientation="horizontal">
+              <Switch
+                id={`${captionId}-once`}
+                checked={viewOnce}
+                onCheckedChange={setViewOnce}
+              />
+              <FieldLabel htmlFor={`${captionId}-once`}>
+                {t("viewOnce.toggle")}
+              </FieldLabel>
+            </Field>
+          ) : null}
+          {viewOnce ? (
+            <p className="text-xs text-muted-foreground">
+              {t("viewOnce.screenshotWarning")}
+            </p>
+          ) : null}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>
               {t("common.cancel")}

@@ -234,6 +234,7 @@ export function useSendMessage(conversationId: string) {
           body: input.body,
           replyToId: input.replyTo?.id ?? null,
           attachmentId: input.attachmentId ?? null,
+          viewOnce: input.attachment?.viewOnce ?? false,
         },
       }),
     onMutate: (input) => {

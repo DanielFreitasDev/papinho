@@ -608,5 +608,22 @@
     "voters_other": "{{count}} pessoas votaram",
     "closed": "encerrada",
     "closesOn": "encerra em {{when}}"
+  },
+  "viewOnce": {
+    "toggle": "Visualização única",
+    "title": "Visualização única",
+    "screenshotWarning": "Abre uma vez só, sem baixar nem encaminhar. Atenção: o navegador não consegue impedir capturas de tela.",
+    "photo": "Foto de visualização única",
+    "hidden": "Oculto enquanto o app está em segundo plano",
+    "kind": {
+      "IMAGE": "Foto",
+      "VIDEO": "Vídeo",
+      "AUDIO": "Áudio"
+    },
+    "open": "Abrir {{kind}} de visualização única",
+    "opened": "{{kind}} aberta",
+    "sent": "{{kind}} de visualização única",
+    "openedBy_one": "{{kind}} aberta por {{count}} pessoa",
+    "openedBy_other": "{{kind}} aberta por {{count}} pessoas"
   }
 }

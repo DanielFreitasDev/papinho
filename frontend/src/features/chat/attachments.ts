@@ -54,7 +54,8 @@ export function sendFile(
   replyTo: ReplyPreview | null,
   send: SendWithAttachment,
   clientMessageId: string = crypto.randomUUID(),
-  after: Promise<unknown> = Promise.resolve()
+  after: Promise<unknown> = Promise.resolve(),
+  viewOnce = false
 ): Promise<void> {
   const kind = guessKind(file)
   const attachment: LocalAttachment = {
@@ -64,6 +65,7 @@ export function sendFile(
     contentType: file.type,
     previewUrl:
       kind === "IMAGE" || kind === "VIDEO" ? URL.createObjectURL(file) : null,
+    viewOnce,
   }
   const pending: PendingMessage = {
     clientMessageId,

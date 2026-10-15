@@ -76,6 +76,14 @@ function renderInline(nodes: Inline[]): ReactNode[] {
           </code>
         )
       case "mention":
+        // @todos menciona todo o grupo (MS-04): destaque, sem link de perfil.
+        if (node.username === "todos") {
+          return (
+            <strong key={index} className="font-semibold text-primary">
+              @todos
+            </strong>
+          )
+        }
         return (
           <Link
             key={index}

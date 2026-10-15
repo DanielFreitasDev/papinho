@@ -108,6 +108,14 @@ class IdentityIT {
         assertThat(admin.delete("/api/v1/invites/" + inviteId, null)).hasStatus(204);
         assertThat(third.post("/api/v1/auth/register", Map.of("username", "carla", "displayName", "Carla",
                 "password", Accounts.PASSWORD, "inviteToken", second))).hasStatus(403);
+
+        String expired = Accounts.invite(admin);
+        jdbc.update("update invites set expires_at = now() - interval '1 minute' where revoked_at is null "
+                + "and uses = 0");
+        assertThat(third.json(third.get("/api/v1/invites/status?token=" + expired)).get("usable").asBoolean())
+                .isFalse();
+        assertThat(third.post("/api/v1/auth/register", Map.of("username", "carla", "displayName", "Carla",
+                "password", Accounts.PASSWORD, "inviteToken", expired))).hasStatus(403);
     }
 
     @Test

@@ -16,6 +16,8 @@
 		<zxing.version>3.5.4</zxing.version>
 		<archunit.version>1.5.1</archunit.version>
 		<bucket4j.version>8.21.0</bucket4j.version>
+		<tika.version>3.3.3</tika.version>
+		<jsoup.version>1.23.2</jsoup.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -94,6 +96,20 @@
 			<version>${zxing.version}</version>
 		</dependency>
 		<!-- SPA empacotado em META-INF/resources (ADR 0002) -->
+		<dependency>
+			<groupId>org.apache.tika</groupId>
+			<artifactId>tika-core</artifactId>
+			<version>${tika.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.jsoup</groupId>
+			<artifactId>jsoup</artifactId>
+			<version>${jsoup.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.httpcomponents.client5</groupId>
+			<artifactId>httpclient5</artifactId>
+		</dependency>
 		<dependency>
 			<groupId>io.github.labdev2025cmd</groupId>
 			<artifactId>papinho-frontend</artifactId>

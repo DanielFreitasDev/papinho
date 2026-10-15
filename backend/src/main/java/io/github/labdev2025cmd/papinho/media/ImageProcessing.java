@@ -2,6 +2,7 @@ package io.github.labdev2025cmd.papinho.media;
 
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
+import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -55,7 +56,11 @@ public final class ImageProcessing {
     }
 
     static BufferedImage decode(InputStream input) throws IOException {
-        try (ImageInputStream stream = ImageIO.createImageInputStream(input)) {
+        byte[] data = input.readAllBytes();
+        // A orientação EXIF é lida direto dos segmentos do JPEG: o leitor de metadados do ImageIO recusa
+        // arquivos comuns de celular (APP1 antes do APP0 JFIF).
+        int orientation = jpegOrientation(data);
+        try (ImageInputStream stream = ImageIO.createImageInputStream(new java.io.ByteArrayInputStream(data))) {
             if (stream == null) {
                 throw new InvalidImageException();
             }
@@ -74,7 +79,7 @@ public final class ImageProcessing {
                 if (image == null) {
                     throw new InvalidImageException();
                 }
-                return image;
+                return orient(image, orientation);
             } catch (IOException | RuntimeException exception) {
                 if (exception instanceof InvalidImageException invalid) {
                     throw invalid;
@@ -84,6 +89,146 @@ public final class ImageProcessing {
                 reader.dispose();
             }
         }
+    }
+
+    /** Decodifica uma imagem (PNG, JPEG, GIF ou BMP) já na orientação certa, recusando bombas de descompressão. */
+    public static BufferedImage read(InputStream input) throws IOException {
+        return decode(input);
+    }
+
+    /**
+     * Reduz proporcionalmente até o lado maior caber em {@code maxSide} (não amplia). Mantém o canal alfa
+     * quando houver.
+     */
+    public static BufferedImage fit(BufferedImage source, int maxSide) {
+        int longest = Math.max(source.getWidth(), source.getHeight());
+        if (longest <= maxSide) {
+            return source;
+        }
+        boolean alpha = source.getColorModel().hasAlpha();
+        BufferedImage current = source;
+        double scale = (double) maxSide / longest;
+        int targetW = Math.max(1, (int) Math.round(source.getWidth() * scale));
+        int targetH = Math.max(1, (int) Math.round(source.getHeight() * scale));
+        int w = current.getWidth();
+        int h = current.getHeight();
+        while (w / 2 >= targetW && h / 2 >= targetH) {
+            w /= 2;
+            h /= 2;
+            current = draw(current, w, h, alpha);
+        }
+        return w == targetW && h == targetH ? current : draw(current, targetW, targetH, alpha);
+    }
+
+    /** Recodifica em JPEG sem metadados, achatando transparência sobre branco. */
+    public static byte[] jpeg(BufferedImage image) throws IOException {
+        return encodeJpeg(toRgb(image));
+    }
+
+    /** Recodifica em PNG sem metadados de texto, EXIF ou perfil (preserva transparência). */
+    public static byte[] png(BufferedImage image) throws IOException {
+        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+        if (!ImageIO.write(image, "png", buffer)) {
+            throw new IOException("No PNG writer");
+        }
+        return buffer.toByteArray();
+    }
+
+    /**
+     * Orientação EXIF (1 a 8) do segmento APP1 de um JPEG; 1 quando não houver ou não for JPEG. Percorre os
+     * segmentos até o início da imagem (SOS) e lê só a tag 0x0112 do IFD0, sem biblioteca extra.
+     */
+    static int jpegOrientation(byte[] data) {
+        if (data.length < 4 || (data[0] & 0xFF) != 0xFF || (data[1] & 0xFF) != 0xD8) {
+            return 1;
+        }
+        int offset = 2;
+        while (offset + 4 <= data.length && (data[offset] & 0xFF) == 0xFF) {
+            int marker = data[offset + 1] & 0xFF;
+            if (marker == 0xDA || marker == 0xD9) {
+                return 1;
+            }
+            int length = ((data[offset + 2] & 0xFF) << 8) | (data[offset + 3] & 0xFF);
+            if (length < 2 || offset + 2 + length > data.length) {
+                return 1;
+            }
+            if (marker == 0xE1) {
+                int value = orientationFromExif(java.util.Arrays.copyOfRange(data, offset + 4, offset + 2 + length));
+                if (value != 1) {
+                    return value;
+                }
+            }
+            offset += 2 + length;
+        }
+        return 1;
+    }
+
+    static int orientationFromExif(byte[] data) {
+        if (data.length < 14 || data[0] != 'E' || data[1] != 'x' || data[2] != 'i' || data[3] != 'f') {
+            return 1;
+        }
+        int tiff = 6;
+        boolean little = data[tiff] == 'I' && data[tiff + 1] == 'I';
+        int ifd = tiff + readInt(data, tiff + 4, little);
+        if (ifd < tiff || ifd + 2 > data.length) {
+            return 1;
+        }
+        int entries = readShort(data, ifd, little);
+        for (int i = 0; i < entries; i++) {
+            int entry = ifd + 2 + i * 12;
+            if (entry + 12 > data.length) {
+                return 1;
+            }
+            if (readShort(data, entry, little) == 0x0112) {
+                int value = readShort(data, entry + 8, little);
+                return value >= 1 && value <= 8 ? value : 1;
+            }
+        }
+        return 1;
+    }
+
+    private static int readShort(byte[] data, int offset, boolean little) {
+        int a = data[offset] & 0xFF;
+        int b = data[offset + 1] & 0xFF;
+        return little ? a | (b << 8) : (a << 8) | b;
+    }
+
+    private static int readInt(byte[] data, int offset, boolean little) {
+        int value = 0;
+        for (int i = 0; i < 4; i++) {
+            int b = data[offset + (little ? 3 - i : i)] & 0xFF;
+            value = (value << 8) | b;
+        }
+        return value;
+    }
+
+    /** Aplica a orientação EXIF: 2–4 espelham/giram no plano, 5–8 trocam largura e altura. */
+    static BufferedImage orient(BufferedImage image, int orientation) {
+        if (orientation <= 1 || orientation > 8) {
+            return image;
+        }
+        int w = image.getWidth();
+        int h = image.getHeight();
+        boolean swap = orientation >= 5;
+        // Matrizes (m00, m10, m01, m11, m02, m12) que levam o pixel do arquivo para a posição de exibição.
+        AffineTransform t = switch (orientation) {
+            case 2 -> new AffineTransform(-1, 0, 0, 1, w, 0);
+            case 3 -> new AffineTransform(-1, 0, 0, -1, w, h);
+            case 4 -> new AffineTransform(1, 0, 0, -1, 0, h);
+            case 5 -> new AffineTransform(0, 1, 1, 0, 0, 0);
+            case 6 -> new AffineTransform(0, 1, -1, 0, h, 0);
+            case 7 -> new AffineTransform(0, -1, -1, 0, h, w);
+            default -> new AffineTransform(0, -1, 1, 0, 0, w);
+        };
+        int type = image.getColorModel().hasAlpha() ? BufferedImage.TYPE_INT_ARGB : BufferedImage.TYPE_INT_RGB;
+        BufferedImage target = new BufferedImage(swap ? h : w, swap ? w : h, type);
+        Graphics2D graphics = target.createGraphics();
+        try {
+            graphics.drawImage(image, t, null);
+        } finally {
+            graphics.dispose();
+        }
+        return target;
     }
 
     /** Redução em etapas de no máximo 50% com bicúbica: qualidade próxima do Lanczos sem dependência externa. */
@@ -98,13 +243,18 @@ public final class ImageProcessing {
     }
 
     private static BufferedImage draw(BufferedImage source, int size) {
-        BufferedImage target = new BufferedImage(size, size, BufferedImage.TYPE_INT_RGB);
+        return draw(source, size, size, false);
+    }
+
+    private static BufferedImage draw(BufferedImage source, int width, int height, boolean alpha) {
+        BufferedImage target = new BufferedImage(width, height,
+                alpha ? BufferedImage.TYPE_INT_ARGB : BufferedImage.TYPE_INT_RGB);
         Graphics2D graphics = target.createGraphics();
         try {
             graphics.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
             graphics.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
             graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            graphics.drawImage(source, 0, 0, size, size, null);
+            graphics.drawImage(source, 0, 0, width, height, null);
         } finally {
             graphics.dispose();
         }

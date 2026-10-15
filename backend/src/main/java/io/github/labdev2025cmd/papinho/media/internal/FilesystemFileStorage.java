@@ -10,6 +10,8 @@ import java.util.UUID;
 import java.util.regex.Pattern;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 
 import io.github.labdev2025cmd.papinho.media.FileStorage;
@@ -48,6 +50,12 @@ class FilesystemFileStorage implements FileStorage {
     public Optional<InputStream> read(String key) throws IOException {
         Path path = resolve(key);
         return Files.isRegularFile(path) ? Optional.of(Files.newInputStream(path)) : Optional.empty();
+    }
+
+    @Override
+    public Optional<Resource> resource(String key) {
+        Path path = resolve(key);
+        return Files.isRegularFile(path) ? Optional.of(new FileSystemResource(path)) : Optional.empty();
     }
 
     @Override

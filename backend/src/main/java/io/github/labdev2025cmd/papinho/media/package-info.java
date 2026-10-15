@@ -1,6 +1,8 @@
 /**
- * Mídia e arquivos (MD-*). Por enquanto, a porta de armazenamento {@link io.github.labdev2025cmd.papinho.media.FileStorage}
- * (ADR 0006) com a implementação em sistema de arquivos; upload retomável, Tika e miniaturas chegam na Fase 3.
+ * Mídia e arquivos (MD-01, MD-02, MD-06): upload retomável por tus (ADR 0009) com limite de 1 GB e cota, tipo
+ * detectado pelo conteúdo (Tika), imagens sem metadados com miniatura e ThumbHash, antivírus opcional e a porta
+ * de armazenamento {@link io.github.labdev2025cmd.papinho.media.FileStorage} (ADR 0006). Quem pode abrir um
+ * arquivo é decidido por {@link io.github.labdev2025cmd.papinho.media.MediaAccessPolicy}.
  */
 @ApplicationModule(displayName = "Mídia")
 @NullMarked

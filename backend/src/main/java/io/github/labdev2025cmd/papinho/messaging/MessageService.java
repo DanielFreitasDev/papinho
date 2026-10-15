@@ -264,6 +264,22 @@ public class MessageService {
         return new MessageInfo(toViews(me, List.of(message)).getFirst(), recipients);
     }
 
+    /**
+     * Cópia das últimas mensagens de uma conversa individual para uma denúncia (CT-04): só quem participa pede,
+     * e a cópia indica a outra pessoa da conversa como denunciada.
+     */
+    @Transactional(readOnly = true)
+    public ReportSnapshot reportSnapshot(UUID me, UUID conversationId, int count) {
+        conversations.requireMember(me, conversationId);
+        UUID peer = conversations.membersOf(conversationId).stream().map(ConversationMember::userId)
+                .filter(id -> !id.equals(me)).findFirst().orElseThrow(NotFoundException::new);
+        List<Message> latest = new ArrayList<>(messages.findBefore(conversationId, Long.MAX_VALUE,
+                Limit.of(Math.clamp(count, 1, MAX_PAGE))));
+        latest.sort(Comparator.comparingLong(Message::seq));
+        return new ReportSnapshot(peer, latest.stream()
+                .map(m -> new SnapshotMessage(m.id(), m.senderId(), m.body(), m.createdAt())).toList());
+    }
+
     private Message append(UUID me, UUID conversationId, UUID clientMessageId, String body,
             @Nullable UUID replyToId, int forwardCount) {
         Instant now = clock.instant();
@@ -376,6 +392,13 @@ public class MessageService {
     }
 
     public record MessageInfo(MessageView message, List<RecipientInfo> recipients) {
+    }
+
+    /** Últimas mensagens de uma conversa para denúncia, da mais antiga para a mais nova. */
+    public record ReportSnapshot(UUID peerId, List<SnapshotMessage> messages) {
+    }
+
+    public record SnapshotMessage(UUID id, @Nullable UUID senderId, String body, Instant sentAt) {
     }
 
     /** Destinatário no "Dados da mensagem"; horários nulos quando ainda não recebeu ou leu. */

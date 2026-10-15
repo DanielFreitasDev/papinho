@@ -31,6 +31,7 @@ public class RateLimiter {
         public static final Policy INVITE_CHECK_BY_IP = new Policy("invite-check-ip", 60, Duration.ofMinutes(10));
         public static final Policy INVITE_CREATE_BY_USER = new Policy("invite-create", 30, Duration.ofHours(1));
         public static final Policy SENSITIVE_BY_USER = new Policy("sensitive-user", 10, Duration.ofMinutes(15));
+        public static final Policy REPORT_BY_USER = new Policy("report-user", 20, Duration.ofHours(1));
     }
 
     private final Map<String, Entry> buckets = new ConcurrentHashMap<>();

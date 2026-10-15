@@ -190,6 +190,23 @@ function LoadedConversation({
   const [viewerImages, setViewerImages] = useState<Attachment[] | null>(null)
   // Painel de detalhes como terceira coluna só em telas largas; nas outras, gaveta (UI-01).
   const wide = useMediaQuery("(min-width: 80rem)")
+  // Esc fecha o painel de detalhes da coluna lateral (MS-13); diálogos e a gaveta tratam o próprio Esc.
+  useEffect(() => {
+    if (!wide || !detailsOpen) {
+      return
+    }
+    const onKey = (event: KeyboardEvent) => {
+      if (
+        event.key === "Escape" &&
+        !event.defaultPrevented &&
+        !document.querySelector('[role="dialog"],[role="alertdialog"]')
+      ) {
+        setDetailsOpen(false)
+      }
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [wide, detailsOpen])
   // Não lidas no momento em que a conversa abriu: o marcador fica até sair da conversa (MS-14).
   const [unread] = useState(() =>
     conversation.firstUnreadSeq !== null && conversation.unreadCount > 0
@@ -672,7 +689,9 @@ function LoadedConversation({
                   <EmptyHeader>
                     <EmptyTitle>{t("chat.noMessages")}</EmptyTitle>
                     <EmptyDescription>
-                      {t("chat.noMessagesDescription", { name: peerName })}
+                      {conversation.kind === "SELF"
+                        ? t("chat.savedEmpty")
+                        : t("chat.noMessagesDescription", { name: peerName })}
                     </EmptyDescription>
                   </EmptyHeader>
                 </Empty>

@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import {
   Link,
   Outlet,
@@ -49,6 +49,8 @@ import {
 } from "@/features/chat"
 import { AddContactDialog, ContactList, MyLinkDialog } from "@/features/contact"
 import { InviteDialog } from "@/features/invite"
+import { CommandPalette } from "./command-palette"
+import { ShortcutsDialog } from "./shortcuts-dialog"
 import { MiniPlayer } from "@/features/media"
 import { errorMessage } from "@/lib/api-client"
 
@@ -79,6 +81,37 @@ function SignedInShell({ me }: { me: Me }) {
   const [linkOpen, setLinkOpen] = useState(false)
   const [inviteOpen, setInviteOpen] = useState(false)
   const [groupOpen, setGroupOpen] = useState(false)
+  const [paletteOpen, setPaletteOpen] = useState(false)
+  const [shortcutsOpen, setShortcutsOpen] = useState(false)
+
+  // Atalhos globais (MS-13): Ctrl/Cmd+K abre a paleta; "?" fora de um campo de texto mostra a lista.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault()
+        setPaletteOpen((open) => !open)
+        return
+      }
+      const target = event.target as HTMLElement | null
+      const typing =
+        target?.isContentEditable ||
+        ["INPUT", "TEXTAREA", "SELECT"].includes(target?.tagName ?? "")
+      if (event.key === "?" && !typing && !event.ctrlKey && !event.metaKey) {
+        event.preventDefault()
+        setShortcutsOpen(true)
+      }
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [])
+
+  async function openSavedMessages() {
+    const saved = await openSaved.mutateAsync()
+    await navigate({
+      to: "/c/$conversationId",
+      params: { conversationId: saved.id },
+    })
+  }
   const [tab, setTab] = useState("conversations")
   const { account, profile } = me
 
@@ -160,15 +193,7 @@ function SignedInShell({ me }: { me: Me }) {
                   <MessageSquarePlusIcon />
                   {t("groups.newGroup")}
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={async () => {
-                    const saved = await openSaved.mutateAsync()
-                    await navigate({
-                      to: "/c/$conversationId",
-                      params: { conversationId: saved.id },
-                    })
-                  }}
-                >
+                <DropdownMenuItem onClick={() => void openSavedMessages()}>
                   <BookmarkIcon />
                   {t("chat.savedMessages")}
                 </DropdownMenuItem>
@@ -270,6 +295,35 @@ function SignedInShell({ me }: { me: Me }) {
       <MyLinkDialog open={linkOpen} onOpenChange={setLinkOpen} />
       <InviteDialog open={inviteOpen} onOpenChange={setInviteOpen} />
       <NewGroupDialog open={groupOpen} onOpenChange={setGroupOpen} />
+      <CommandPalette
+        open={paletteOpen}
+        onOpenChange={setPaletteOpen}
+        onConversation={(conversationId) =>
+          void navigate({
+            to: "/c/$conversationId",
+            params: { conversationId },
+          })
+        }
+        onAction={(action) => {
+          switch (action) {
+            case "newGroup":
+              return setGroupOpen(true)
+            case "saved":
+              return void openSavedMessages()
+            case "addContact":
+              return setAddOpen(true)
+            case "starred":
+              return void navigate({ to: "/starred" })
+            case "settings":
+              return void navigate({ to: "/settings/profile" })
+            case "invite":
+              return setInviteOpen(true)
+            case "shortcuts":
+              return setShortcutsOpen(true)
+          }
+        }}
+      />
+      <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
     </div>
   )
 }

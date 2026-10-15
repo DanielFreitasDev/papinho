@@ -388,7 +388,8 @@
       "7776000": "90 days",
       "defaultTitle": "Default disappearing message timer",
       "defaultDescription": "Chats and groups you start begin with this timer."
-    }
+    },
+    "savedEmpty": "Keep notes, links and files here, just for you."
   },
   "moderation": {
     "report": "Report",
@@ -569,5 +570,21 @@
     "alreadyMember": "You are already in this group.",
     "openGroup": "Open chat",
     "invalidInvite": "This invite link does not exist or was disabled."
+  },
+  "shortcuts": {
+    "title": "Keyboard shortcuts",
+    "palette": "Command palette",
+    "paletteDescription": "Search for a chat or an action.",
+    "search": "Search chat or action…",
+    "noResults": "Nothing found.",
+    "actions": "Actions",
+    "openPalette": "Open the command palette",
+    "showList": "Show this list",
+    "close": "Close panels and dialogs",
+    "editLast": "Edit your last message (empty field)",
+    "send": "Send message",
+    "newLine": "New line",
+    "pasteImage": "Paste an image or file in the field",
+    "dragHint": "You can also drag and drop files into the chat."
   }
 }

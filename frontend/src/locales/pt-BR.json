@@ -388,7 +388,8 @@
       "7776000": "90 dias",
       "defaultTitle": "Timer padrão de mensagens temporárias",
       "defaultDescription": "Conversas e grupos que você criar começam com este timer."
-    }
+    },
+    "savedEmpty": "Guarde aqui notas, links e arquivos só para você."
   },
   "moderation": {
     "report": "Denunciar",
@@ -569,5 +570,21 @@
     "alreadyMember": "Você já está neste grupo.",
     "openGroup": "Abrir conversa",
     "invalidInvite": "Este link de convite não existe ou foi desativado."
+  },
+  "shortcuts": {
+    "title": "Atalhos do teclado",
+    "palette": "Paleta de comandos",
+    "paletteDescription": "Busque uma conversa ou uma ação.",
+    "search": "Buscar conversa ou ação…",
+    "noResults": "Nada encontrado.",
+    "actions": "Ações",
+    "openPalette": "Abrir a paleta de comandos",
+    "showList": "Mostrar esta lista",
+    "close": "Fechar painéis e diálogos",
+    "editLast": "Editar a sua última mensagem (campo vazio)",
+    "send": "Enviar mensagem",
+    "newLine": "Quebrar linha",
+    "pasteImage": "Colar imagem ou arquivo no campo",
+    "dragHint": "Também dá para arrastar e soltar arquivos na conversa."
   }
 }

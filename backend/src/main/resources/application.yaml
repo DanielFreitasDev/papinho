@@ -88,6 +88,8 @@ logging:
 app:
   security:
     hsts: ${PAPINHO_HSTS:false}
+    # Só para e2e (tudo de um IP): multiplica os limites de tentativas. Nunca mude em produção.
+    rate-limit-multiplier: ${PAPINHO_RATE_LIMIT_MULTIPLIER:1}
   pki:
     enabled: false
     dir: ${PAPINHO_PKI_DIR:${user.home}/.papinho/pki}

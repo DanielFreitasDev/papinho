@@ -35,9 +35,11 @@ public class RateLimiter {
 
     private final Map<String, Entry> buckets = new ConcurrentHashMap<>();
     private final Clock clock;
+    private final int multiplier;
 
-    public RateLimiter(Clock clock) {
+    public RateLimiter(Clock clock, SecurityProperties properties) {
         this.clock = clock;
+        this.multiplier = properties.rateLimitMultiplier();
     }
 
     /**
@@ -46,9 +48,9 @@ public class RateLimiter {
      * @throws RateLimitedException se o balde estiver vazio
      */
     public void consume(Policy policy, String key) {
+        long capacity = (long) policy.capacity() * multiplier;
         Entry entry = buckets.computeIfAbsent(policy.name() + ":" + key, ignored -> new Entry(Bucket.builder()
-                .addLimit(Bandwidth.builder().capacity(policy.capacity())
-                        .refillGreedy(policy.capacity(), policy.refillPeriod()).build())
+                .addLimit(Bandwidth.builder().capacity(capacity).refillGreedy(capacity, policy.refillPeriod()).build())
                 .build()));
         entry.lastAccessMillis = clock.millis();
         ConsumptionProbe probe = entry.bucket.tryConsumeAndReturnRemaining(1);

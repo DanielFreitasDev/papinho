@@ -96,6 +96,9 @@ jobs:
       - name: Gerar papinho.jar
         run: ./mvnw -B -q install -DskipTests
       - name: Subir o Papinho (padrão e perfil lan)
+        env:
+          # O e2e roda tudo de um IP só; os limites de tentativas reais são provados no IdentityIT.
+          PAPINHO_RATE_LIMIT_MULTIPLIER: "10"
         run: |
           java -jar backend/target/papinho.jar pki init --ip 127.0.0.1 --network 127.0.0.0/8
           nohup java -jar backend/target/papinho.jar --server.port=8080 > papinho.log 2>&1 &

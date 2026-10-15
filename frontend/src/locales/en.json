@@ -389,7 +389,21 @@
       "defaultTitle": "Default disappearing message timer",
       "defaultDescription": "Chats and groups you start begin with this timer."
     },
-    "savedEmpty": "Keep notes, links and files here, just for you."
+    "savedEmpty": "Keep notes, links and files here, just for you.",
+    "sendOptions": "More send options",
+    "sendSilently": "Send without notification",
+    "schedule": "Schedule",
+    "scheduleTitle": "Schedule message",
+    "scheduleWhen": "Send at",
+    "scheduled": "Message scheduled",
+    "scheduledTitle": "Scheduled messages",
+    "scheduledDescription": "They go out on their own at the set time, even with the app closed.",
+    "scheduledCount_one": "{{count}} scheduled message",
+    "scheduledCount_other": "{{count}} scheduled messages",
+    "scheduleFailed": "Could not be sent at the set time",
+    "silent": "Sent without notification",
+    "remove": "Remove",
+    "draftPreview": "Draft: {{text}}"
   },
   "moderation": {
     "report": "Report",

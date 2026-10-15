@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 import {
+  BellOffIcon,
+  CalendarClockIcon,
   ChartBarIcon,
+  ChevronUpIcon,
   CheckIcon,
   PaperclipIcon,
   PencilIcon,
@@ -16,7 +19,14 @@ import {
   InputGroupButton,
   InputGroupTextarea,
 } from "@/components/ui/input-group"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { realtime } from "@/lib/realtime"
+import { saveDraft } from "../api"
 import { plainText } from "../format/parse"
 import { VoiceRecorder } from "./voice-recorder"
 import type { ReplyPreview } from "../types"
@@ -43,12 +53,14 @@ export function Composer({
   onCancelEdit,
   onEditLast,
   onPoll,
+  draft = null,
+  onSchedule,
 }: {
   conversationId: string
   replyTo: ReplyPreview | null
   replyName: string
   onCancelReply: () => void
-  onSend: (body: string) => void
+  onSend: (body: string, options?: { silent?: boolean }) => void
   /** Arquivos escolhidos pelo botão ou colados (Ctrl+V) no campo. */
   onFiles: (files: File[]) => void
   /** Mensagem de voz gravada (AU-01). */
@@ -62,9 +74,29 @@ export function Composer({
   onEditLast?: () => void
   /** Abre o diálogo de nova enquete (MS-09). */
   onPoll?: () => void
+  /** Rascunho salvo no servidor (MS-11): o campo começa com ele. */
+  draft?: string | null
+  /** Agendar o texto atual (MS-11). */
+  onSchedule?: (body: string) => void
 }) {
   const { t } = useTranslation()
-  const [value, setValue] = useState("")
+  const [value, setValue] = useState(draft ?? "")
+  // Rascunho sincronizado (MS-11): salvo no servidor um instante depois de parar de digitar.
+  const savedDraft = useRef(draft ?? "")
+  useEffect(() => {
+    if (editing || value === savedDraft.current) {
+      return
+    }
+    const timer = window.setTimeout(() => {
+      savedDraft.current = value
+      void saveDraft(conversationId, value.trim() === "" ? "" : value).catch(
+        () => {
+          savedDraft.current = ""
+        }
+      )
+    }, 800)
+    return () => window.clearTimeout(timer)
+  }, [conversationId, editing, value])
   const textarea = useRef<HTMLTextAreaElement>(null)
   const fileInput = useRef<HTMLInputElement>(null)
   const [recording, setRecording] = useState(false)
@@ -122,7 +154,7 @@ export function Composer({
     onCancelEdit?.()
   }
 
-  function submit() {
+  function submit(options?: { silent?: boolean }) {
     const body = value.trim()
     if (editing) {
       if (body !== "" && !disabled) {
@@ -134,7 +166,9 @@ export function Composer({
     if (body === "" || disabled) {
       return
     }
-    onSend(body)
+    onSend(body, options)
+    // O servidor apaga o rascunho ao enviar.
+    savedDraft.current = ""
     setValue("")
     lastTyping.current = 0
     textarea.current?.focus()
@@ -277,6 +311,46 @@ export function Composer({
             />
             {value.trim() !== "" || editing ? (
               <InputGroupAddon align="inline-end">
+                {!editing && onSchedule ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger
+                      render={
+                        <InputGroupButton
+                          type="button"
+                          size="icon-sm"
+                          aria-label={t("chat.sendOptions")}
+                          disabled={disabled}
+                        />
+                      }
+                    >
+                      <ChevronUpIcon />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" side="top">
+                      <DropdownMenuItem
+                        onClick={() => submit({ silent: true })}
+                      >
+                        <BellOffIcon />
+                        {t("chat.sendSilently")}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => {
+                          const body = value.trim()
+                          if (body !== "") {
+                            onSchedule(body)
+                            savedDraft.current = ""
+                            setValue("")
+                            void saveDraft(conversationId, "").catch(
+                              () => undefined
+                            )
+                          }
+                        }}
+                      >
+                        <CalendarClockIcon />
+                        {t("chat.schedule")}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : null}
                 <InputGroupButton
                   type="submit"
                   size="icon-sm"

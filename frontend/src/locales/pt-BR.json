@@ -389,7 +389,21 @@
       "defaultTitle": "Timer padrão de mensagens temporárias",
       "defaultDescription": "Conversas e grupos que você criar começam com este timer."
     },
-    "savedEmpty": "Guarde aqui notas, links e arquivos só para você."
+    "savedEmpty": "Guarde aqui notas, links e arquivos só para você.",
+    "sendOptions": "Mais opções de envio",
+    "sendSilently": "Enviar sem notificação",
+    "schedule": "Agendar envio",
+    "scheduleTitle": "Agendar mensagem",
+    "scheduleWhen": "Enviar em",
+    "scheduled": "Mensagem agendada",
+    "scheduledTitle": "Mensagens agendadas",
+    "scheduledDescription": "Saem sozinhas na hora marcada, mesmo com o app fechado.",
+    "scheduledCount_one": "{{count}} mensagem agendada",
+    "scheduledCount_other": "{{count}} mensagens agendadas",
+    "scheduleFailed": "Não pôde ser enviada na hora marcada",
+    "silent": "Enviada sem notificação",
+    "remove": "Remover",
+    "draftPreview": "Rascunho: {{text}}"
   },
   "moderation": {
     "report": "Denunciar",

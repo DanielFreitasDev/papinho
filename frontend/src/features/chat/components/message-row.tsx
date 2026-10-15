@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next"
 import {
   BanIcon,
+  BellOffIcon,
   CheckCheckIcon,
   CheckIcon,
   ClockIcon,
@@ -85,6 +86,7 @@ export type DisplayMessage = {
   kind: MessageKind
   poll: Poll | null
   viewOnce: ViewOnce | null
+  silent: boolean
 }
 
 export type MessageAction =
@@ -288,6 +290,13 @@ export function MessageRow({
               {message.starred ? (
                 <StarIcon
                   aria-label={t("chat.starred")}
+                  className="size-3"
+                  role="img"
+                />
+              ) : null}
+              {message.silent ? (
+                <BellOffIcon
+                  aria-label={t("chat.silent")}
                   className="size-3"
                   role="img"
                 />

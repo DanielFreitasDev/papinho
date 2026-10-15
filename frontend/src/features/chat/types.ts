@@ -127,6 +127,18 @@ export type Conversation = {
   blockedByMe: boolean
   /** Timer de mensagens temporárias em segundos (MS-07); nulo = desligado. */
   disappearingSeconds: number | null
+  /** Meu rascunho nesta conversa, sincronizado entre dispositivos (MS-11). */
+  draft: string | null
+}
+
+/** Mensagem agendada (MS-11). */
+export type ScheduledMessage = {
+  id: string
+  conversationId: string
+  body: string
+  sendAt: string
+  silent: boolean
+  failedAt: string | null
 }
 
 export type Reaction = { userId: string; emoji: string }
@@ -168,6 +180,8 @@ export type Message = {
   poll: Poll | null
   /** Visualização única (MS-08): o arquivo só abre por token, uma vez. */
   viewOnce: ViewOnce | null
+  /** Enviada sem notificação (MS-11). */
+  silent: boolean
 }
 
 export type ViewOnce = {

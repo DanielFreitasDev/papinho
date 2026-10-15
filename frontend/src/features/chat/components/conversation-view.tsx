@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
 import {
   ArrowLeftIcon,
+  CalendarClockIcon,
   ForwardIcon,
   MessageCircleIcon,
   PinIcon,
@@ -74,6 +75,7 @@ import { GroupDetails } from "./group-details"
 import { ForwardDialog } from "./forward-dialog"
 import { MessageInfoDialog } from "./message-info-dialog"
 import { PollDialog } from "./poll-dialog"
+import { ScheduleDialog, ScheduledListDialog } from "./schedule-dialogs"
 import { ViewOnceViewer } from "./view-once-viewer"
 import {
   MessageRow,
@@ -173,6 +175,9 @@ function LoadedConversation({
   const [deleteIds, setDeleteIds] = useState<string[]>([])
   const [pollOpen, setPollOpen] = useState(false)
   const [viewOnceId, setViewOnceId] = useState<string | null>(null)
+  const [scheduling, setScheduling] = useState<string | null>(null)
+  const [scheduledOpen, setScheduledOpen] = useState(false)
+  const scheduled = useQuery(chatQueries.scheduled(conversation.id))
   // "Responder em privado" chega aqui vindo do grupo, com a citação pronta.
   const [replyTo, setReplyTo] = useState<ReplyPreview | null>(() =>
     peekReplyDraft(conversation.id)
@@ -362,10 +367,11 @@ function LoadedConversation({
   function sendBody(
     body: string,
     clientMessageId: string = crypto.randomUUID(),
-    reply: ReplyPreview | null = replyTo
+    reply: ReplyPreview | null = replyTo,
+    silent = false
   ) {
     send.mutate(
-      { clientMessageId, body, replyTo: reply },
+      { clientMessageId, body, replyTo: reply, silent },
       {
         onError: (error) =>
           toast.add({
@@ -624,6 +630,16 @@ function LoadedConversation({
             ) : null}
           </button>
         ) : null}
+        {scheduled.data && scheduled.data.length > 0 ? (
+          <button
+            type="button"
+            onClick={() => setScheduledOpen(true)}
+            className="flex items-center gap-2 border-b bg-muted/50 px-4 py-2 text-left text-sm outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50"
+          >
+            <CalendarClockIcon aria-hidden="true" className="size-4 shrink-0" />
+            {t("chat.scheduledCount", { count: scheduled.data.length })}
+          </button>
+        ) : null}
         {conversation.state === "REQUEST" ? (
           <Alert className="rounded-none border-x-0 border-t-0">
             <AlertDescription className="flex flex-col gap-2">
@@ -873,7 +889,11 @@ function LoadedConversation({
             replyTo={replyTo}
             replyName={replyTo ? nameOf(replyTo.senderId) : ""}
             onCancelReply={() => setReplyTo(null)}
-            onSend={(body) => sendBody(body)}
+            onSend={(body, options) =>
+              sendBody(body, undefined, undefined, options?.silent ?? false)
+            }
+            draft={conversation.draft}
+            onSchedule={setScheduling}
             onFiles={chooseFiles}
             onVoice={(file) => sendFiles([file], "")}
             disabled={!canWrite}
@@ -901,6 +921,17 @@ function LoadedConversation({
           }}
         />
         <MessageInfoDialog messageId={infoId} onClose={() => setInfoId(null)} />
+        <ScheduleDialog
+          key={scheduling ?? "closed"}
+          conversationId={conversation.id}
+          body={scheduling}
+          onClose={() => setScheduling(null)}
+        />
+        <ScheduledListDialog
+          conversationId={conversation.id}
+          open={scheduledOpen}
+          onOpenChange={setScheduledOpen}
+        />
         <ViewOnceViewer
           messageId={viewOnceId}
           onClose={() => setViewOnceId(null)}
@@ -1008,6 +1039,7 @@ function toDisplay(
     kind: message.kind,
     poll: message.poll,
     viewOnce: message.viewOnce,
+    silent: message.silent,
   }))
   const pending: DisplayMessage[] = cache.pending.map((message) => ({
     key: message.clientMessageId,
@@ -1030,6 +1062,7 @@ function toDisplay(
     kind: "USER" as const,
     poll: null,
     viewOnce: null,
+    silent: false,
   }))
   return [...confirmed, ...pending]
 }

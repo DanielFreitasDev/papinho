@@ -25,6 +25,7 @@ import type {
   MessagePage,
   Presence,
   ReplyPreview,
+  ScheduledMessage,
 } from "./types"
 
 export const chatKeys = {
@@ -37,6 +38,7 @@ export const chatKeys = {
   info: (messageId: string) => ["message-info", messageId] as const,
   presence: (userId: string) => ["presence", userId] as const,
   preferences: ["messaging-preferences"] as const,
+  scheduled: (id: string) => ["scheduled", id] as const,
   gallery: (id: string, tab: GalleryTab) =>
     ["messages", id, "gallery", tab] as const,
 }
@@ -109,6 +111,14 @@ export const chatQueries = {
       initialPageParam: 0,
       getNextPageParam: (page) =>
         page.hasMore ? (page.messages.at(-1)?.seq ?? undefined) : undefined,
+    }),
+  scheduled: (id: string) =>
+    queryOptions({
+      queryKey: chatKeys.scheduled(id),
+      queryFn: ({ signal }) =>
+        apiFetch<ScheduledMessage[]>(`/api/v1/conversations/${id}/scheduled`, {
+          signal,
+        }),
     }),
   preferences: () =>
     queryOptions({
@@ -226,6 +236,8 @@ export function useSendMessage(conversationId: string) {
       replyTo: ReplyPreview | null
       attachmentId?: string | null
       attachment?: LocalAttachment | null
+      /** Sem notificação para quem recebe (MS-11). */
+      silent?: boolean
     }) =>
       apiFetch<Message>(`/api/v1/conversations/${conversationId}/messages`, {
         method: "POST",
@@ -235,6 +247,7 @@ export function useSendMessage(conversationId: string) {
           replyToId: input.replyTo?.id ?? null,
           attachmentId: input.attachmentId ?? null,
           viewOnce: input.attachment?.viewOnce ?? false,
+          silent: input.silent ?? false,
         },
       }),
     onMutate: (input) => {
@@ -381,6 +394,43 @@ export function useHideMessages(conversationId: string) {
       }),
     onSuccess: (_result, messageIds) =>
       hideLocally(queryClient, conversationId, messageIds),
+  })
+}
+
+/** Guarda o rascunho da conversa no servidor (MS-11); texto vazio apaga. */
+export function saveDraft(conversationId: string, body: string) {
+  return apiFetch<void>(`/api/v1/conversations/${conversationId}/draft`, {
+    method: "PUT",
+    json: { body },
+  })
+}
+
+/** Agenda ou cancela mensagens (MS-11). */
+export function useScheduleAction(conversationId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (
+      input:
+        | { action: "schedule"; body: string; sendAt: string; silent: boolean }
+        | { action: "cancel"; id: string }
+    ): Promise<unknown> =>
+      input.action === "schedule"
+        ? apiFetch<ScheduledMessage>(
+            `/api/v1/conversations/${conversationId}/scheduled`,
+            {
+              method: "POST",
+              json: {
+                body: input.body,
+                sendAt: input.sendAt,
+                silent: input.silent,
+              },
+            }
+          )
+        : apiFetch<void>(`/api/v1/scheduled/${input.id}`, { method: "DELETE" }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({
+        queryKey: chatKeys.scheduled(conversationId),
+      }),
   })
 }
 

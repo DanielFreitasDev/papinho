@@ -33,6 +33,7 @@ function message(seq: number, changeSeq = seq, body = `m${seq}`): Message {
     expiresAt: null,
     poll: null,
     viewOnce: null,
+    silent: false,
   }
 }
 

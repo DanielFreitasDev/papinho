@@ -586,5 +586,27 @@
     "newLine": "Quebrar linha",
     "pasteImage": "Colar imagem ou arquivo no campo",
     "dragHint": "Também dá para arrastar e soltar arquivos na conversa."
+  },
+  "poll": {
+    "new": "Nova enquete",
+    "newDescription": "Pergunte algo e deixe as pessoas votarem; os resultados aparecem em tempo real.",
+    "question": "Pergunta",
+    "options": "Opções",
+    "option": "Opção {{number}}",
+    "removeOption": "Remover opção {{number}}",
+    "addOption": "Adicionar opção",
+    "multiple": "Permitir várias respostas",
+    "anonymous": "Votos anônimos",
+    "closesAt": "Encerrar em (opcional)",
+    "send": "Enviar enquete",
+    "chooseOne": "Escolha uma opção",
+    "chooseMany": "Escolha uma ou mais",
+    "anonymousLabel": "anônima",
+    "votes_one": "{{count}} voto",
+    "votes_other": "{{count}} votos",
+    "voters_one": "{{count}} pessoa votou",
+    "voters_other": "{{count}} pessoas votaram",
+    "closed": "encerrada",
+    "closesOn": "encerra em {{when}}"
   }
 }

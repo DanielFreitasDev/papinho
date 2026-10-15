@@ -31,6 +31,7 @@ function message(seq: number, changeSeq = seq, body = `m${seq}`): Message {
     deleted: false,
     kind: "USER",
     expiresAt: null,
+    poll: null,
   }
 }
 

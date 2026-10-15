@@ -383,6 +383,41 @@ export function useHideMessages(conversationId: string) {
   })
 }
 
+/** Cria uma enquete (MS-09). */
+export function useCreatePoll(conversationId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: {
+      question: string
+      options: string[]
+      multiple: boolean
+      anonymous: boolean
+      closesAt: string | null
+    }) =>
+      apiFetch<Message>(`/api/v1/conversations/${conversationId}/polls`, {
+        method: "POST",
+        json: { clientMessageId: crypto.randomUUID(), ...input },
+      }),
+    onSuccess: (message) => {
+      updateMessage(queryClient, message)
+      void queryClient.invalidateQueries({ queryKey: chatKeys.conversations })
+    },
+  })
+}
+
+/** Vota numa enquete; lista vazia tira o voto (MS-09). */
+export function useVote() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: { messageId: string; optionIds: string[] }) =>
+      apiFetch<Message>(`/api/v1/messages/${input.messageId}/vote`, {
+        method: "PUT",
+        json: { optionIds: input.optionIds },
+      }),
+    onSuccess: (message) => updateMessage(queryClient, message),
+  })
+}
+
 /** Timer de mensagens temporárias da conversa (MS-07). */
 export function useDisappearing(conversationId: string) {
   const queryClient = useQueryClient()

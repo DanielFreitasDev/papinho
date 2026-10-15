@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 import {
+  ChartBarIcon,
   CheckIcon,
   PaperclipIcon,
   PencilIcon,
@@ -41,6 +42,7 @@ export function Composer({
   onEdit,
   onCancelEdit,
   onEditLast,
+  onPoll,
 }: {
   conversationId: string
   replyTo: ReplyPreview | null
@@ -58,6 +60,8 @@ export function Composer({
   onCancelEdit?: () => void
   /** ↑ com o campo vazio edita a minha última mensagem (MS-13). */
   onEditLast?: () => void
+  /** Abre o diálogo de nova enquete (MS-09). */
+  onPoll?: () => void
 }) {
   const { t } = useTranslation()
   const [value, setValue] = useState("")
@@ -213,6 +217,17 @@ export function Composer({
               >
                 <PaperclipIcon />
               </InputGroupButton>
+              {onPoll ? (
+                <InputGroupButton
+                  type="button"
+                  size="icon-sm"
+                  aria-label={t("poll.new")}
+                  disabled={disabled}
+                  onClick={onPoll}
+                >
+                  <ChartBarIcon />
+                </InputGroupButton>
+              ) : null}
             </InputGroupAddon>
             <InputGroupTextarea
               ref={textarea}

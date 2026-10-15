@@ -586,5 +586,27 @@
     "newLine": "New line",
     "pasteImage": "Paste an image or file in the field",
     "dragHint": "You can also drag and drop files into the chat."
+  },
+  "poll": {
+    "new": "New poll",
+    "newDescription": "Ask something and let people vote; results show in real time.",
+    "question": "Question",
+    "options": "Options",
+    "option": "Option {{number}}",
+    "removeOption": "Remove option {{number}}",
+    "addOption": "Add option",
+    "multiple": "Allow multiple answers",
+    "anonymous": "Anonymous votes",
+    "closesAt": "Close at (optional)",
+    "send": "Send poll",
+    "chooseOne": "Choose one option",
+    "chooseMany": "Choose one or more",
+    "anonymousLabel": "anonymous",
+    "votes_one": "{{count}} vote",
+    "votes_other": "{{count}} votes",
+    "voters_one": "{{count}} person voted",
+    "voters_other": "{{count}} people voted",
+    "closed": "closed",
+    "closesOn": "closes {{when}}"
   }
 }

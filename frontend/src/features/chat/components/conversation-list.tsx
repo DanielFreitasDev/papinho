@@ -157,17 +157,19 @@ function ConversationItem({
     ? t(activity.activity === "recording" ? "chat.recording" : "chat.typing")
     : last?.kind === "SYSTEM"
       ? describeNotice(last.body, meId, t)
-      : last?.deleted
-        ? last.senderId === meId
-          ? t("chat.deletedByMe")
-          : t("chat.deleted")
-        : last
-          ? `${sender}${
-              last.attachmentKind
-                ? `${t(`media.kind.${last.attachmentKind}`)}${last.body ? ` · ${plainText(last.body)}` : ""}`
-                : plainText(last.body)
-            }`
-          : ""
+      : last?.kind === "POLL" && !last.deleted
+        ? `${sender}📊 ${plainText(last.body)}`
+        : last?.deleted
+          ? last.senderId === meId
+            ? t("chat.deletedByMe")
+            : t("chat.deleted")
+          : last
+            ? `${sender}${
+                last.attachmentKind
+                  ? `${t(`media.kind.${last.attachmentKind}`)}${last.body ? ` · ${plainText(last.body)}` : ""}`
+                  : plainText(last.body)
+              }`
+            : ""
 
   return (
     <Item

@@ -73,6 +73,7 @@ import { ConversationAvatar, useConversationLabel } from "./conversation-avatar"
 import { GroupDetails } from "./group-details"
 import { ForwardDialog } from "./forward-dialog"
 import { MessageInfoDialog } from "./message-info-dialog"
+import { PollDialog } from "./poll-dialog"
 import {
   MessageRow,
   type DisplayMessage,
@@ -169,6 +170,7 @@ function LoadedConversation({
     null
   )
   const [deleteIds, setDeleteIds] = useState<string[]>([])
+  const [pollOpen, setPollOpen] = useState(false)
   // "Responder em privado" chega aqui vindo do grupo, com a citação pronta.
   const [replyTo, setReplyTo] = useState<ReplyPreview | null>(() =>
     peekReplyDraft(conversation.id)
@@ -379,6 +381,7 @@ function LoadedConversation({
     message.id !== null &&
     message.senderId === meId &&
     !message.deleted &&
+    message.kind === "USER" &&
     (message.body !== "" || message.attachment !== null) &&
     withinMinutes(message.createdAt, instance.data?.messageEditWindowMinutes)
   const canDeleteForEveryone = (ids: string[]) =>
@@ -869,6 +872,9 @@ function LoadedConversation({
             onVoice={(file) => sendFiles([file], "")}
             disabled={!canWrite}
             editing={editing}
+            onPoll={
+              conversation.kind === "SELF" ? undefined : () => setPollOpen(true)
+            }
             onEdit={saveEdit}
             onCancelEdit={() => setEditing(null)}
             onEditLast={() => {
@@ -889,6 +895,11 @@ function LoadedConversation({
           }}
         />
         <MessageInfoDialog messageId={infoId} onClose={() => setInfoId(null)} />
+        <PollDialog
+          conversationId={conversation.id}
+          open={pollOpen}
+          onOpenChange={setPollOpen}
+        />
         <DeleteMessagesDialog
           conversationId={conversation.id}
           messageIds={deleteIds}
@@ -985,6 +996,7 @@ function toDisplay(
     editedAt: message.editedAt,
     deleted: message.deleted,
     kind: message.kind,
+    poll: message.poll,
   }))
   const pending: DisplayMessage[] = cache.pending.map((message) => ({
     key: message.clientMessageId,
@@ -1005,6 +1017,7 @@ function toDisplay(
     editedAt: null,
     deleted: false,
     kind: "USER" as const,
+    poll: null,
   }))
   return [...confirmed, ...pending]
 }

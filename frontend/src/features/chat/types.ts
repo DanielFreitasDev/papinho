@@ -5,7 +5,18 @@ export type MemberRole = "MEMBER" | "ADMIN"
 export type ConversationKind = "DIRECT" | "GROUP" | "SELF"
 
 /** Mensagem de uma pessoa ou aviso da conversa (corpo em JSON, ver SystemNotice). */
-export type MessageKind = "USER" | "SYSTEM"
+export type MessageKind = "USER" | "SYSTEM" | "POLL"
+
+/** Enquete (MS-09); a pergunta é o corpo da mensagem. */
+export type Poll = {
+  multiple: boolean
+  anonymous: boolean
+  closesAt: string | null
+  closed: boolean
+  options: { id: string; text: string; votes: number; voters: string[] }[]
+  totalVoters: number
+  myVotes: string[]
+}
 
 /** Aviso do sistema num grupo ("Ana adicionou Bruno"), com os nomes da época. */
 export type SystemNotice = {
@@ -152,6 +163,7 @@ export type Message = {
   deleted: boolean
   /** Quando a mensagem temporária some (MS-07). */
   expiresAt: string | null
+  poll: Poll | null
 }
 
 export type MessagePage = {

@@ -38,6 +38,7 @@ import type { Track } from "@/features/media"
 import { formatTime } from "@/lib/format"
 import { LinkPreviewCard } from "@/features/linkpreview"
 import { MessageText } from "../format/message-text"
+import { PollView } from "./poll-view"
 import { firstLink, plainText } from "../format/parse"
 import type {
   Attachment,
@@ -45,6 +46,7 @@ import type {
   LocalAttachment,
   MessageKind,
   MessageStatus,
+  Poll,
   Reaction,
   ReplyPreview,
 } from "../types"
@@ -78,6 +80,7 @@ export type DisplayMessage = {
   /** Apagada para todos (MS-06). */
   deleted: boolean
   kind: MessageKind
+  poll: Poll | null
 }
 
 export type MessageAction =
@@ -250,7 +253,16 @@ export function MessageRow({
                 </span>
               </button>
             ) : null}
-            {message.body ? <MessageText text={message.body} /> : null}
+            {message.poll ? (
+              <PollView
+                messageId={message.id}
+                question={message.body}
+                poll={message.poll}
+                nameOf={nameOf}
+              />
+            ) : message.body ? (
+              <MessageText text={message.body} />
+            ) : null}
             {message.id && !message.attachment && firstLink(message.body) ? (
               <LinkPreviewCard url={firstLink(message.body)!} />
             ) : null}
@@ -350,10 +362,12 @@ export function MessageRow({
                   {t("groups.replyPrivately")}
                 </DropdownMenuItem>
               ) : null}
-              <DropdownMenuItem onClick={() => onAction("forward")}>
-                <ForwardIcon />
-                {t("chat.forward")}
-              </DropdownMenuItem>
+              {message.kind === "USER" ? (
+                <DropdownMenuItem onClick={() => onAction("forward")}>
+                  <ForwardIcon />
+                  {t("chat.forward")}
+                </DropdownMenuItem>
+              ) : null}
               <DropdownMenuItem
                 onClick={() => onAction(message.pinned ? "unpin" : "pin")}
               >

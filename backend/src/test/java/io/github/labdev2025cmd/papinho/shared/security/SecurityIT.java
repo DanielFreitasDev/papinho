@@ -86,7 +86,9 @@ class SecurityIT {
                 .hasHeader("Cross-Origin-Opener-Policy", "same-origin");
         String csp = result.getMvcResult().getResponse().getHeader("Content-Security-Policy");
         assertThat(csp).contains("default-src 'self'").contains("script-src 'self'")
-                .contains("frame-ancestors 'none'").doesNotContain("unsafe-inline").doesNotContain("unsafe-eval");
+                .contains("frame-ancestors 'none'").doesNotContain("unsafe-inline")
+                // Só WebAssembly (runtime ONNX da transcrição no navegador, AU-04); eval de JavaScript continua proibido.
+                .doesNotContain("'unsafe-eval'").contains("'wasm-unsafe-eval'");
         assertThat(result).doesNotContainHeader("Strict-Transport-Security");
     }
 

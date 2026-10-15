@@ -25,14 +25,18 @@ public record SecurityProperties(
         @DefaultValue(DEFAULT_PERMISSIONS_POLICY) @NotBlank String permissionsPolicy,
         @DefaultValue("1") @Min(1) @Max(100) int rateLimitMultiplier) {
 
-    /** CSP estrita: só a própria origem; iframes apenas dos provedores permitidos de incorporação (MD-05). */
+    /**
+     * CSP estrita: só a própria origem; iframes apenas dos provedores permitidos de incorporação (MD-05). Para a
+     * transcrição no navegador (AU-04): {@code 'wasm-unsafe-eval'} compila o runtime ONNX servido pelo próprio
+     * Papinho (não libera {@code eval} de JavaScript) e o modelo Whisper é baixado do Hugging Face.
+     */
     public static final String DEFAULT_CSP = "default-src 'self'; "
-            + "script-src 'self'; "
+            + "script-src 'self' 'wasm-unsafe-eval'; "
             + "style-src 'self'; "
             + "img-src 'self' data: blob:; "
             + "media-src 'self' blob:; "
             + "font-src 'self'; "
-            + "connect-src 'self'; "
+            + "connect-src 'self' https://huggingface.co https://*.huggingface.co https://*.hf.co; "
             + "worker-src 'self' blob:; "
             + "manifest-src 'self'; "
             + "frame-src https://www.youtube-nocookie.com https://player.vimeo.com https://open.spotify.com; "

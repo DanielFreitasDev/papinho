@@ -29,7 +29,7 @@ export default defineConfig({
       "/actuator": { target: backend, changeOrigin: false },
     },
   },
-  build: { outDir: "dist", sourcemap: true },
+  build: { outDir: "dist", sourcemap: false },
   test: {
     environment: "jsdom",
     setupFiles: ["./src/test/setup.ts"],

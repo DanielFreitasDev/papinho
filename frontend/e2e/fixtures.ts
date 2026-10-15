@@ -44,6 +44,23 @@ export { expect }
 
 /** axe sem violações críticas ou sérias (AR-03). */
 export async function expectNoSeriousA11yViolations(page: Page) {
+  // Diálogos entrando com opacidade parcial dão falso contraste: espera (até 2 s) as animações finitas
+  // em andamento acabarem.
+  await page.evaluate(() =>
+    Promise.race([
+      Promise.all(
+        document
+          .getAnimations()
+          .filter(
+            (animation) =>
+              animation.playState === "running" &&
+              animation.effect?.getComputedTiming().iterations !== Infinity
+          )
+          .map((animation) => animation.finished.catch(() => undefined))
+      ),
+      new Promise((resolve) => setTimeout(resolve, 2_000)),
+    ])
+  )
   const results = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
     .analyze()

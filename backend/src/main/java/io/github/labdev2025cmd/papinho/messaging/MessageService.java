@@ -75,6 +75,7 @@ public class MessageService {
     private final Polls polls;
     private final ViewOnceOpens viewOnceOpens;
     private final Broadcasts broadcasts;
+    private final StickerService stickers;
     private final io.github.labdev2025cmd.papinho.contact.ContactQueries contactsOf;
     private final java.security.SecureRandom random = new java.security.SecureRandom();
     private final InstanceSettingsService settings;
@@ -86,6 +87,7 @@ public class MessageService {
             ConversationService conversations, SequenceAllocator sequences, ReceiptLog receipts,
             UserDirectory users, ProfileService profiles, MediaService media, HiddenMessages hidden,
             MessagingPreferences preferences, Polls polls, ViewOnceOpens viewOnceOpens, Broadcasts broadcasts,
+            StickerService stickers,
             io.github.labdev2025cmd.papinho.contact.ContactQueries contactsOf,
             InstanceSettingsService settings, JsonMapper json, ApplicationEventPublisher events, Clock clock) {
         this.messages = messages;
@@ -102,6 +104,7 @@ public class MessageService {
         this.polls = polls;
         this.viewOnceOpens = viewOnceOpens;
         this.broadcasts = broadcasts;
+        this.stickers = stickers;
         this.contactsOf = contactsOf;
         this.settings = settings;
         this.json = json;
@@ -141,7 +144,14 @@ public class MessageService {
             MediaView file = media.requireOwned(me, attachmentId);
             attachment = new Message.Attachment(file.id(), file.kind().name());
         }
-        validateBody(body, attachment != null);
+        UUID stickerId = options.stickerId();
+        if (stickerId != null) {
+            if (attachment != null || !body.isEmpty()) {
+                throw new InvalidMessageException("sticker goes alone");
+            }
+            stickers.requireAvailable(stickerId);
+        }
+        validateBody(body, attachment != null || stickerId != null);
         conversations.requireSendable(me, conversationId);
         ConversationKind kind = conversations.find(conversationId).kind();
         if (viewOnce && (attachment == null || !VIEW_ONCE_KINDS.contains(attachment.kind())
@@ -159,7 +169,8 @@ public class MessageService {
         if (member.state() == MemberState.REQUEST) {
             member.changeState(MemberState.ACTIVE);
         }
-        Message saved = append(me, conversationId, clientMessageId, body, replyToId, 0, attachment);
+        Message saved = append(me, conversationId, MessageKind.USER, clientMessageId, body, replyToId, 0, attachment,
+                stickerId);
         if (viewOnce) {
             saved.markViewOnce();
         }
@@ -254,8 +265,8 @@ public class MessageService {
             }
             UUID direct = conversations.directWith(me, recipient);
             sequences.lock(direct);
-            Message copy = append(me, direct, UUID.randomUUID(), original.body(), null, original.forwardCount(),
-                    original.attachment());
+            Message copy = append(me, direct, MessageKind.USER, UUID.randomUUID(), original.body(), null,
+                    original.forwardCount(), original.attachment(), original.stickerId());
             if (ttl != null) {
                 copy.expireAt(copy.createdAt().plusSeconds(ttl));
             }
@@ -267,8 +278,12 @@ public class MessageService {
     }
 
     /** Opções de envio: visualização única (MS-08) e silenciosa (MS-11). */
-    public record SendOptions(boolean viewOnce, boolean silent) {
-        public static final SendOptions NONE = new SendOptions(false, false);
+    public record SendOptions(boolean viewOnce, boolean silent, @Nullable UUID stickerId) {
+        public static final SendOptions NONE = new SendOptions(false, false, null);
+
+        public SendOptions(boolean viewOnce, boolean silent) {
+            this(viewOnce, silent, null);
+        }
     }
 
     /** Token para abrir o conteúdo em {@code /api/v1/view-once/{token}}. */
@@ -335,8 +350,8 @@ public class MessageService {
             sequences.lock(target);
             boolean broadcast = conversations.find(target).kind() == ConversationKind.BROADCAST;
             for (Message source : sources) {
-                Message copy = append(me, target, UUID.randomUUID(), source.body(), null, source.forwardCount() + 1,
-                        source.attachment());
+                Message copy = append(me, target, MessageKind.USER, UUID.randomUUID(), source.body(), null,
+                        source.forwardCount() + 1, source.attachment(), source.stickerId());
                 created.add(copy);
                 if (broadcast) {
                     fanOut(me, copy, false);
@@ -596,7 +611,8 @@ public class MessageService {
         if (member.state() == MemberState.REQUEST) {
             member.changeState(MemberState.ACTIVE);
         }
-        Message saved = append(me, conversationId, MessageKind.POLL, clientMessageId, cleanQuestion, null, 0, null);
+        Message saved = append(me, conversationId, MessageKind.POLL, clientMessageId, cleanQuestion, null, 0, null,
+                null);
         polls.create(saved.id(), multiple, anonymous, closesAt, cleanOptions);
         return new SendResult(toViews(me, List.of(saved)).getFirst(), true);
     }
@@ -746,15 +762,17 @@ public class MessageService {
     private Message append(UUID me, UUID conversationId, UUID clientMessageId, String body,
             @Nullable UUID replyToId, int forwardCount, Message.@Nullable Attachment attachment) {
         return append(me, conversationId, MessageKind.USER, clientMessageId, body, replyToId, forwardCount,
-                attachment);
+                attachment, null);
     }
 
     private Message append(UUID me, UUID conversationId, MessageKind kind, UUID clientMessageId, String body,
-            @Nullable UUID replyToId, int forwardCount, Message.@Nullable Attachment attachment) {
+            @Nullable UUID replyToId, int forwardCount, Message.@Nullable Attachment attachment,
+            @Nullable UUID stickerId) {
         Instant now = clock.instant();
         long seq = sequences.next(conversationId, now);
         Message message = new Message(conversationId, seq, kind, me, clientMessageId, body, replyToId, forwardCount,
                 attachment, now);
+        message.useSticker(stickerId);
         Integer timer = conversations.find(conversationId).disappearingSeconds();
         if (timer != null) {
             message.expireAt(now.plusSeconds(timer));
@@ -837,6 +855,8 @@ public class MessageService {
         List<UUID> viewOnceIds = page.stream().filter(Message::viewOnce).map(Message::id).toList();
         Set<UUID> openedByMe = viewOnceOpens.openedBy(me, viewOnceIds);
         Map<UUID, Long> openCounts = viewOnceOpens.counts(viewOnceIds);
+        Map<UUID, UUID> stickerMedia = stickers.mediaOf(page.stream().map(Message::stickerId)
+                .filter(Objects::nonNull).collect(Collectors.toSet()));
         Instant now = clock.instant();
         return page.stream().map(m -> {
             Message reply = m.replyToId() == null ? null : replies.get(m.replyToId());
@@ -854,7 +874,9 @@ public class MessageService {
                     m.forwardCount() >= FORWARDED_MANY, m.pinnedAt(),
                     reactionsByMessage.getOrDefault(m.id(), List.of()), starred.contains(m.id()),
                     attachment == null ? null : AttachmentView.of(attachment), m.editedAt(), m.deleted(),
-                    m.expiresAt(), PollView.of(pollsById.get(m.id()), me, now), viewOnce, m.silent());
+                    m.expiresAt(), PollView.of(pollsById.get(m.id()), me, now), viewOnce, m.silent(),
+                    m.stickerId() == null || !stickerMedia.containsKey(m.stickerId()) ? null
+                            : new StickerRef(m.stickerId(), stickerMedia.get(m.stickerId())));
         }).toList();
     }
 
@@ -883,7 +905,11 @@ public class MessageService {
             boolean forwardedMany, @Nullable Instant pinnedAt, List<ReactionView> reactions, boolean starred,
             @Nullable AttachmentView attachment, @Nullable Instant editedAt, boolean deleted,
             @Nullable Instant expiresAt, @Nullable PollView poll, @Nullable ViewOnceView viewOnce,
-            boolean silent) {
+            boolean silent, @Nullable StickerRef sticker) {
+    }
+
+    /** Figurinha da mensagem (MS-10); a imagem vem de {@code /api/v1/media/{mediaId}/content}. */
+    public record StickerRef(UUID id, UUID mediaId) {
     }
 
     /**

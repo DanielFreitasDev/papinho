@@ -75,6 +75,8 @@ class Message {
     @Column(nullable = false)
     private boolean silent;
 
+    private @Nullable UUID stickerId;
+
     protected Message() {
         this.conversationId = new UUID(0, 0);
         this.kind = MessageKind.USER;
@@ -202,6 +204,15 @@ class Message {
         this.silent = true;
     }
 
+    /** Figurinha enviada (MS-10), se for uma mensagem de figurinha. */
+    @Nullable UUID stickerId() {
+        return stickerId;
+    }
+
+    void useSticker(@Nullable UUID stickerId) {
+        this.stickerId = stickerId;
+    }
+
     /** Tipo do anexo, que fica mesmo depois de o arquivo de visualização única sair do servidor. */
     @Nullable String attachmentKind() {
         return attachmentKind;
@@ -236,6 +247,7 @@ class Message {
         this.attachmentId = null;
         this.attachmentKind = null;
         this.replyToId = null;
+        this.stickerId = null;
         this.forwardCount = 0;
         this.pinnedAt = null;
         this.editedAt = null;

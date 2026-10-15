@@ -451,7 +451,7 @@ public class ConversationService {
         return last == null ? null
                 : new MessagePreview(last.id(), last.seq(), last.senderId(),
                         last.senderId() == null ? null : senderLabels.get(last.senderId()), last.body(),
-                        last.createdAt(), last.attachmentKind(), last.deleted(), last.kind());
+                        last.createdAt(), last.attachmentKind(), last.deleted(), last.kind(), last.sticker());
     }
 
     /**
@@ -513,10 +513,11 @@ public class ConversationService {
      * @param attachmentKind tipo do anexo (IMAGE, VIDEO, AUDIO, DOCUMENT), para "📷 Foto" e afins
      * @param deleted apagada para todos (MS-06)
      * @param senderLabel nome de quem mandou, só em grupo e quando não fui eu
-     * @param kind USER ou SYSTEM (aviso do grupo, corpo em JSON)
+     * @param kind USER, SYSTEM (aviso do grupo, corpo em JSON) ou POLL
+     * @param sticker é uma figurinha (MS-10)
      */
     public record MessagePreview(UUID id, long seq, @Nullable UUID senderId, @Nullable String senderLabel,
-            String body, Instant createdAt,
-            @Nullable String attachmentKind, boolean deleted, MessageKind kind) {
+            String body, Instant createdAt, @Nullable String attachmentKind, boolean deleted, MessageKind kind,
+            boolean sticker) {
     }
 }

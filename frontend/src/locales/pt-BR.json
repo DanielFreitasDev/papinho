@@ -1,0 +1,23 @@
+{
+  "app": {
+    "name": "Papinho",
+    "tagline": "Chat auto-hospedado com privacidade nativa"
+  },
+  "common": {
+    "loading": "Carregando…",
+    "retry": "Tentar de novo",
+    "back": "Voltar",
+    "goHome": "Ir para o início"
+  },
+  "errors": {
+    "notFoundTitle": "Página não encontrada",
+    "notFoundDescription": "O endereço não existe ou foi removido.",
+    "genericTitle": "Algo deu errado",
+    "genericDescription": "Não foi possível concluir a ação. Tente de novo em instantes."
+  },
+  "home": {
+    "status": "Status do servidor",
+    "statusUp": "Servidor disponível",
+    "statusDown": "Servidor indisponível"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "app": {
+    "name": "Papinho",
+    "tagline": "Self-hosted chat with built-in privacy"
+  },
+  "common": {
+    "loading": "Loading…",
+    "retry": "Try again",
+    "back": "Back",
+    "goHome": "Go to home"
+  },
+  "errors": {
+    "notFoundTitle": "Page not found",
+    "notFoundDescription": "The address does not exist or was removed.",
+    "genericTitle": "Something went wrong",
+    "genericDescription": "The action could not be completed. Please try again shortly."
+  },
+  "home": {
+    "status": "Server status",
+    "statusUp": "Server available",
+    "statusDown": "Server unavailable"
+  }
+}

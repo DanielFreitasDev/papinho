@@ -158,8 +158,8 @@ function ConversationItem({
     <Item
       size="sm"
       className={cn(
-        "relative gap-0 p-0 has-[a:hover]:bg-muted",
-        active && "bg-muted"
+        "relative gap-0 p-0 has-[a:hover]:bg-muted/50",
+        active && "bg-muted/50"
       )}
     >
       <Link

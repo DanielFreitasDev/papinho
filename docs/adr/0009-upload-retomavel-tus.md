@@ -29,3 +29,12 @@ recomeça do zero a cada queda.
 
 - Multipart simples: sem retomada.
 - Upload direto para S3 com URLs pré-assinadas: não funciona no armazenamento em disco da LAN.
+
+## Notas de implementação (Fase 3, 2026-10-16)
+
+- Servidor tus próprio no módulo `media` (`TusController`/`UploadService`): extensões `creation`,
+  `termination` e `expiration`. Os pedaços ficam num diretório local (`PAPINHO_UPLOAD_DIR`) e o arquivo só
+  vai para a porta `FileStorage` ao completar; assim a porta continua simples (gravar inteiro, ler com faixa).
+- O id do upload vira o id da mídia; o último `PATCH` responde com `Papinho-Media-Id`.
+- Escolhidas as linhas mais estabelecidas: **Uppy 5** (`@uppy/core` 5.2, `@uppy/tus` 5.1; a 6 saiu há
+  poucas semanas) e **Apache Tika 3.3** (`tika-core`; a 4.x é recente). Pedaços de 50 MB no cliente.

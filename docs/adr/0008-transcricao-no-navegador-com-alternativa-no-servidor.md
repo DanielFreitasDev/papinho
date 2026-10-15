@@ -33,3 +33,13 @@ proposta do produto, e a máquina do dono pode não ter GPU.
 
 - Só servidor: exige GPU ou envio a terceiros.
 - Web Speech API: depende do provedor do navegador e não transcreve arquivos.
+
+## Notas de implementação (Fase 3, 2026-10-16)
+
+- **Transformers.js 4** (`@huggingface/transformers`, linha estável desde março de 2026) num Web Worker;
+  WebGPU quando há adaptador, senão WASM (`q8`). Modelos `onnx-community/whisper-base` (padrão) e
+  `whisper-small`, escolhidos por aparelho.
+- O runtime ONNX (`.wasm`/`.mjs`) é servido pelo próprio JAR, sem CDN; a CSP ganhou `'wasm-unsafe-eval'` e
+  `connect-src` do Hugging Face (`huggingface.co`, `*.huggingface.co`, `*.hf.co`).
+- Provedores no servidor: o admin cadastra quantos quiser; o "padrão da instância" pode ser um deles ou o
+  navegador. O pedido ao servidor responde 409 quando a escolha é o navegador, e o cliente envia o texto.

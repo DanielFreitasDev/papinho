@@ -64,6 +64,23 @@ cd frontend && pnpm exec playwright install chromium && PAPINHO_E2E_URL=http://l
 | `PAPINHO_PUBLIC_HTTPS_PORT` / `PAPINHO_PUBLIC_HTTP_PORT` | iguais às de escuta | portas que os amigos usam (80/443 com redirecionamento) |
 | `PAPINHO_HSTS` | `false` | liga HSTS (produção) |
 | `PAPINHO_FORWARD_HEADERS` | `none` | `framework` atrás de proxy reverso |
+| `PAPINHO_DATA_DIR` | `~/.papinho` | base de `files/` (arquivos enviados), `uploads/` (uploads em andamento) e da chave de cifra |
+| `PAPINHO_STORAGE_DIR` / `PAPINHO_UPLOAD_DIR` | dentro de `PAPINHO_DATA_DIR` | troca cada um desses diretórios |
+| `PAPINHO_CLAMAV_ENABLED` | `false` | analisa cada arquivo com o ClamAV (`PAPINHO_CLAMAV_HOST`, `PAPINHO_CLAMAV_PORT`, padrão `localhost:3310`) |
+| `PAPINHO_LINK_PREVIEW` | `true` | prévia de links buscada pelo servidor (desligue se a instância não deve acessar a internet) |
+
+A cota por usuário (padrão 5 GB), as janelas de edição e exclusão e os provedores de transcrição ficam no
+painel do admin. Arquivos têm limite de 1 GB e sobem por upload retomável (tus): atrás de um proxy, libere
+`PATCH` em `/api/v1/uploads/**` com corpo de até 50 MB por requisição.
+
+### Transcrição de áudios
+
+Por padrão os áudios são transcritos **no navegador** (Whisper com Transformers.js): o modelo (≈80 MB no
+`base`, ≈250 MB no `small`) é baixado do Hugging Face na primeira vez em cada aparelho e o áudio não sai dele.
+No painel do admin, aba Transcrição, dá para cadastrar provedores no servidor compatíveis com a API da OpenAI —
+Groq (`https://api.groq.com/openai`, `whisper-large-v3-turbo`, até 25 MB), um Whisper próprio (com
+`hotwords` e verificação em `GET {base}/health`), a OpenAI ou uma URL qualquer — e escolher o padrão. A chave
+fica cifrada no banco e nunca volta para o navegador; cada pessoa escolhe o provedor em Configurações.
 
 ## Subir na rede local (HTTPS com CA própria)
 
@@ -135,6 +152,7 @@ curl -fsSL http://papinho.lan:8080/setup/install-ca.sh | sh -s -- --uninstall
 - Atrás do proxy: `PAPINHO_FORWARD_HEADERS=framework`, `PAPINHO_HSTS=true`; o proxy precisa repassar
   WebSocket em `/ws`.
 - PostgreSQL gerenciado ou em contêiner com volume e backup.
+- O proxy precisa aceitar corpos de até 50 MB em `PATCH /api/v1/uploads/**` (pedaços do upload retomável).
 
 ## Backup
 

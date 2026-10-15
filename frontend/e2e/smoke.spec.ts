@@ -6,16 +6,14 @@ import {
 } from "./fixtures"
 
 test.describe("fumaça", () => {
-  test("tela inicial carrega do JAR com o servidor disponível", async ({
+  test("sem sessão, a tela inicial leva para a entrada", async ({
     page,
     pageErrors,
   }) => {
     await page.goto("/")
 
-    await expect(
-      page.getByRole("heading", { name: "Papinho", level: 1 })
-    ).toBeVisible()
-    await expect(page.getByRole("status")).toHaveText("Servidor disponível")
+    await expect(page).toHaveURL(/\/(login|register)/)
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible()
     await expect(page.locator("html")).toHaveAttribute("lang", "pt-BR")
     await expectNoSeriousA11yViolations(page)
     expect(pageErrors).toEqual([])
@@ -28,7 +26,7 @@ test.describe("fumaça", () => {
     await page.setViewportSize({ width: 320, height: 640 })
     await page.goto("/")
 
-    await expect(page.getByRole("status")).toBeVisible()
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible()
     await expectNoHorizontalScroll(page)
     expect(pageErrors).toEqual([])
   })
@@ -41,7 +39,7 @@ test.describe("fumaça", () => {
 
     await expect(page.getByText("Página não encontrada")).toBeVisible()
     await page.getByRole("link", { name: "Ir para o início" }).click()
-    await expect(page).toHaveURL("/")
+    await expect(page).toHaveURL(/\/(login|register)/)
     await expectNoSeriousA11yViolations(page)
     expect(pageErrors).toEqual([])
   })

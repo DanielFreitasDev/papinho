@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next"
 import * as React from "react"
 import { Toast as ToastPrimitive } from "@base-ui/react/toast"
 import { cn } from "cn"
@@ -116,13 +117,23 @@ function ToastAction({
 function ToastClose({
   className,
   children,
-  render = <Button variant="ghost" size="icon-sm" />,
+  // Toasts empilhados atrás do primeiro recebem aria-hidden do Base UI; o botão sai da ordem de foco
+  // junto, senão o axe acusa aria-hidden-focus (AR-03).
+  render = (closeProps) => (
+    <Button
+      variant="ghost"
+      size="icon-sm"
+      {...closeProps}
+      tabIndex={closeProps["aria-hidden"] ? -1 : closeProps.tabIndex}
+    />
+  ),
   ...props
 }: ToastPrimitive.Close.Props) {
+  const { t } = useTranslation()
   return (
     <ToastPrimitive.Close
       data-slot="toast-close"
-      aria-label="Close toast"
+      aria-label={t("common.closeNotification")}
       render={render}
       className={cn(
         "relative shrink-0 text-muted-foreground after:absolute after:-inset-2 after:content-[''] hover:text-foreground",

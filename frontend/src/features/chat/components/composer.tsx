@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/input-group"
 import { realtime } from "@/lib/realtime"
 import { plainText } from "../format/parse"
+import { VoiceRecorder } from "./voice-recorder"
 import type { ReplyPreview } from "../types"
 
 /** Reenvia "digitando" no máximo a cada 3 s; o servidor e o outro lado expiram em ~6 s. */
@@ -28,6 +29,7 @@ export function Composer({
   onCancelReply,
   onSend,
   onFiles,
+  onVoice,
   disabled,
 }: {
   conversationId: string
@@ -37,12 +39,15 @@ export function Composer({
   onSend: (body: string) => void
   /** Arquivos escolhidos pelo botão ou colados (Ctrl+V) no campo. */
   onFiles: (files: File[]) => void
+  /** Mensagem de voz gravada (AU-01). */
+  onVoice: (file: File) => void
   disabled: boolean
 }) {
   const { t } = useTranslation()
   const [value, setValue] = useState("")
   const textarea = useRef<HTMLTextAreaElement>(null)
   const fileInput = useRef<HTMLInputElement>(null)
+  const [recording, setRecording] = useState(false)
   const lastTyping = useRef(0)
 
   useEffect(() => {
@@ -128,64 +133,80 @@ export function Composer({
           }
         }}
       />
-      <InputGroup>
-        <InputGroupAddon align="inline-start">
-          <InputGroupButton
-            type="button"
-            size="icon-sm"
-            aria-label={t("media.attach")}
-            disabled={disabled}
-            onClick={() => fileInput.current?.click()}
-          >
-            <PaperclipIcon />
-          </InputGroupButton>
-        </InputGroupAddon>
-        <InputGroupTextarea
-          ref={textarea}
-          aria-label={t("chat.composerLabel")}
-          placeholder={t("chat.composerPlaceholder")}
-          value={value}
-          maxLength={MAX_LENGTH}
-          rows={1}
-          disabled={disabled}
-          enterKeyHint="send"
-          className="field-sizing-content max-h-40 min-h-11 resize-none"
-          onChange={(event) => typing(event.target.value)}
-          onPaste={(event) => {
-            const pasted = [...event.clipboardData.files]
-            if (pasted.length > 0) {
-              event.preventDefault()
-              onFiles(pasted)
-            }
-          }}
-          onKeyDown={(event) => {
-            const coarse = window.matchMedia("(pointer: coarse)").matches
-            if (
-              event.key === "Enter" &&
-              !event.shiftKey &&
-              !coarse &&
-              !event.nativeEvent.isComposing
-            ) {
-              event.preventDefault()
-              submit()
-            }
-            if (event.key === "Escape" && replyTo) {
-              onCancelReply()
-            }
-          }}
-        />
-        <InputGroupAddon align="inline-end">
-          <InputGroupButton
-            type="submit"
-            size="icon-sm"
-            variant="default"
-            aria-label={t("chat.send")}
-            disabled={disabled || value.trim() === ""}
-          >
-            <SendHorizontalIcon />
-          </InputGroupButton>
-        </InputGroupAddon>
-      </InputGroup>
+      <div className="flex items-end gap-2">
+        {recording ? null : (
+          <InputGroup className="flex-1">
+            <InputGroupAddon align="inline-start">
+              <InputGroupButton
+                type="button"
+                size="icon-sm"
+                aria-label={t("media.attach")}
+                disabled={disabled}
+                onClick={() => fileInput.current?.click()}
+              >
+                <PaperclipIcon />
+              </InputGroupButton>
+            </InputGroupAddon>
+            <InputGroupTextarea
+              ref={textarea}
+              aria-label={t("chat.composerLabel")}
+              placeholder={t("chat.composerPlaceholder")}
+              value={value}
+              maxLength={MAX_LENGTH}
+              rows={1}
+              disabled={disabled}
+              enterKeyHint="send"
+              className="field-sizing-content max-h-40 min-h-11 resize-none"
+              onChange={(event) => typing(event.target.value)}
+              onPaste={(event) => {
+                const pasted = [...event.clipboardData.files]
+                if (pasted.length > 0) {
+                  event.preventDefault()
+                  onFiles(pasted)
+                }
+              }}
+              onKeyDown={(event) => {
+                const coarse = window.matchMedia("(pointer: coarse)").matches
+                if (
+                  event.key === "Enter" &&
+                  !event.shiftKey &&
+                  !coarse &&
+                  !event.nativeEvent.isComposing
+                ) {
+                  event.preventDefault()
+                  submit()
+                }
+                if (event.key === "Escape" && replyTo) {
+                  onCancelReply()
+                }
+              }}
+            />
+            {value.trim() !== "" ? (
+              <InputGroupAddon align="inline-end">
+                <InputGroupButton
+                  type="submit"
+                  size="icon-sm"
+                  variant="default"
+                  aria-label={t("chat.send")}
+                  disabled={disabled || value.trim() === ""}
+                >
+                  <SendHorizontalIcon />
+                </InputGroupButton>
+              </InputGroupAddon>
+            ) : null}
+          </InputGroup>
+        )}
+        {value.trim() === "" || recording ? (
+          <div className={recording ? "flex min-w-0 flex-1" : "flex"}>
+            <VoiceRecorder
+              conversationId={conversationId}
+              disabled={disabled}
+              onActiveChange={setRecording}
+              onSend={onVoice}
+            />
+          </div>
+        ) : null}
+      </div>
     </form>
   )
 }

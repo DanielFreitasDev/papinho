@@ -399,5 +399,23 @@
       "DOCUMENTS": "No documents",
       "AUDIO": "No audio"
     }
+  },
+  "audio": {
+    "record": "Record voice message",
+    "recording": "Recording voice message",
+    "stop": "Stop and listen",
+    "send": "Send audio",
+    "cancel": "Cancel recording",
+    "discard": "Discard audio",
+    "preview": "Audio preview",
+    "locked": "Recording locked",
+    "slideToLock": "Slide up to lock",
+    "microphoneDenied": "Could not use the microphone. Check the browser permission.",
+    "play": "Play audio",
+    "pause": "Pause audio",
+    "position": "Audio position",
+    "speed": "Speed {{rate}}; tap to change",
+    "miniPlayer": "Audio playing",
+    "closePlayer": "Close player"
   }
 }

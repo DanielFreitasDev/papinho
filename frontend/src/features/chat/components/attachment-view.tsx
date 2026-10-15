@@ -13,8 +13,9 @@ import {
 import { cn } from "cn"
 
 import { Button } from "@/components/ui/button"
-import { formatBytes, mediaUrl } from "@/features/media"
+import { formatBytes, mediaUrl, type Track } from "@/features/media"
 import { useUploadProgress } from "../attachments"
+import { AudioMessage } from "./audio-message"
 import type { Attachment, AttachmentKind, LocalAttachment } from "../types"
 
 /** Ícone por tipo de anexo (lista, prévia de resposta e documentos). */
@@ -57,9 +58,12 @@ function placeholder(thumbhash: string | null): string | null {
 export function AttachmentView({
   attachment,
   onOpenImage,
+  audio,
 }: {
   attachment: Attachment
   onOpenImage: (id: string) => void
+  /** Faixa no tocador global; sem ela, o áudio usa o controle nativo (galeria). */
+  audio?: { track: Track; queue: Track[] }
 }) {
   const { t, i18n } = useTranslation()
   const blur = useMemo(
@@ -114,6 +118,9 @@ export function AttachmentView({
         />
       )
     case "AUDIO":
+      if (audio) {
+        return <AudioMessage track={audio.track} queue={audio.queue} />
+      }
       return (
         <audio
           controls

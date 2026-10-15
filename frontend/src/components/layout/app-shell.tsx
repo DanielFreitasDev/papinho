@@ -45,6 +45,7 @@ import {
 } from "@/features/chat"
 import { AddContactDialog, ContactList, MyLinkDialog } from "@/features/contact"
 import { InviteDialog } from "@/features/invite"
+import { MiniPlayer } from "@/features/media"
 import { errorMessage } from "@/lib/api-client"
 
 /**
@@ -240,6 +241,7 @@ function SignedInShell({ me }: { me: Me }) {
           isHome ? "hidden md:flex" : "flex"
         )}
       >
+        <MiniPlayer />
         <Outlet />
       </main>
       <AddContactDialog open={addOpen} onOpenChange={setAddOpen} />

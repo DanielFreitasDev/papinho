@@ -36,7 +36,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { toast } from "@/components/ui/toast"
 import { useBlock } from "@/features/contact"
 import { useMediaQuery } from "@/hooks/use-media-query"
-import { MAX_FILE_SIZE } from "@/features/media"
+import { MAX_FILE_SIZE, type Track } from "@/features/media"
 import { ApiError, errorMessage } from "@/lib/api-client"
 import { dayKey, formatDay } from "@/lib/format"
 import {
@@ -207,6 +207,19 @@ function LoadedConversation({
   const display = useMemo(
     () => toDisplay(cache, conversation, meId),
     [cache, conversation, meId]
+  )
+  // Fila de áudios da conversa, em ordem, para tocar em sequência (AU-02).
+  const audioQueue = useMemo<Track[]>(
+    () =>
+      cache.messages
+        .filter((message) => message.attachment?.kind === "AUDIO")
+        .map((message) => ({
+          mediaId: message.attachment!.id,
+          conversationId: conversation.id,
+          messageId: message.id,
+          title: `${message.senderId === meId ? t("chat.you") : peerName} · ${t("media.kind.AUDIO")}`,
+        })),
+    [cache.messages, conversation.id, meId, peerName, t]
   )
   const images = useMemo(
     () =>
@@ -577,6 +590,7 @@ function LoadedConversation({
                         }
                         onAction={(action) => onAction(message, action)}
                         onJump={(id) => void jumpTo(id)}
+                        audioQueue={audioQueue}
                       />
                     </MessageScrollerItem>
                   </Fragment>
@@ -651,6 +665,7 @@ function LoadedConversation({
             onCancelReply={() => setReplyTo(null)}
             onSend={(body) => sendBody(body)}
             onFiles={chooseFiles}
+            onVoice={(file) => sendFiles([file], "")}
             disabled={!canWrite}
           />
         )}

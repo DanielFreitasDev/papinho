@@ -399,5 +399,23 @@
       "DOCUMENTS": "Nenhum documento",
       "AUDIO": "Nenhum áudio"
     }
+  },
+  "audio": {
+    "record": "Gravar mensagem de voz",
+    "recording": "Gravando mensagem de voz",
+    "stop": "Parar e ouvir",
+    "send": "Enviar áudio",
+    "cancel": "Cancelar gravação",
+    "discard": "Descartar áudio",
+    "preview": "Pré-escuta do áudio",
+    "locked": "Gravação travada",
+    "slideToLock": "Arraste para cima para travar",
+    "microphoneDenied": "Não foi possível usar o microfone. Verifique a permissão do navegador.",
+    "play": "Tocar áudio",
+    "pause": "Pausar áudio",
+    "position": "Posição do áudio",
+    "speed": "Velocidade {{rate}}; tocar para trocar",
+    "miniPlayer": "Áudio tocando",
+    "closePlayer": "Fechar o tocador"
   }
 }

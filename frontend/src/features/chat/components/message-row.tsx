@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Message, MessageContent } from "@/components/ui/message"
 import { toast } from "@/components/ui/toast"
+import type { Track } from "@/features/media"
 import { formatTime } from "@/lib/format"
 import { MessageText } from "../format/message-text"
 import { plainText } from "../format/parse"
@@ -94,6 +95,7 @@ export function MessageRow({
   selected,
   onAction,
   onJump,
+  audioQueue = [],
 }: {
   message: DisplayMessage
   mine: boolean
@@ -104,6 +106,8 @@ export function MessageRow({
   selected: boolean
   onAction: (action: MessageAction) => void
   onJump: (messageId: string) => void
+  /** Áudios da conversa em ordem, para tocar em sequência (AU-02). */
+  audioQueue?: Track[]
 }) {
   const { t } = useTranslation()
   const confirmed = message.id !== null
@@ -150,6 +154,21 @@ export function MessageRow({
               <AttachmentView
                 attachment={message.attachment}
                 onOpenImage={(id) => onAction({ openImage: id })}
+                audio={
+                  message.attachment.kind === "AUDIO"
+                    ? {
+                        track: audioQueue.find(
+                          (item) => item.mediaId === message.attachment!.id
+                        ) ?? {
+                          mediaId: message.attachment.id,
+                          conversationId: "",
+                          messageId: message.id ?? message.key,
+                          title: senderName,
+                        },
+                        queue: audioQueue,
+                      }
+                    : undefined
+                }
               />
             ) : message.localAttachment ? (
               <LocalAttachmentView

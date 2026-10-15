@@ -1,3 +1,5 @@
+// custom: troca de tema sem <style> inline (CSP estrita) e sem o atalho global "d" do template,
+// que disparava ao digitar fora de campos; o tema é escolhido nas configurações (UI-02).
 import * as React from "react"
 
 type Theme = "dark" | "light" | "system"
@@ -38,42 +40,22 @@ function getSystemTheme(): ResolvedTheme {
   return "light"
 }
 
+/**
+ * Desliga as transições durante a troca de tema por uma classe definida em index.css.
+ * custom: o template injetava um <style> inline, que a CSP estrita (style-src 'self') bloqueia.
+ */
 function disableTransitionsTemporarily() {
-  const style = document.createElement("style")
-  style.appendChild(
-    document.createTextNode(
-      "*,*::before,*::after{-webkit-transition:none!important;transition:none!important}"
-    )
-  )
-  document.head.appendChild(style)
+  const root = document.documentElement
+  root.classList.add("theme-switching")
 
   return () => {
     window.getComputedStyle(document.body)
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        style.remove()
+        root.classList.remove("theme-switching")
       })
     })
   }
-}
-
-function isEditableTarget(target: EventTarget | null) {
-  if (!(target instanceof HTMLElement)) {
-    return false
-  }
-
-  if (target.isContentEditable) {
-    return true
-  }
-
-  const editableParent = target.closest(
-    "input, textarea, select, [contenteditable='true']"
-  )
-  if (editableParent) {
-    return true
-  }
-
-  return false
 }
 
 export function ThemeProvider({
@@ -137,46 +119,6 @@ export function ThemeProvider({
       mediaQuery.removeEventListener("change", handleChange)
     }
   }, [theme, applyTheme])
-
-  React.useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.repeat) {
-        return
-      }
-
-      if (event.metaKey || event.ctrlKey || event.altKey) {
-        return
-      }
-
-      if (isEditableTarget(event.target)) {
-        return
-      }
-
-      if (event.key.toLowerCase() !== "d") {
-        return
-      }
-
-      setThemeState((currentTheme) => {
-        const nextTheme =
-          currentTheme === "dark"
-            ? "light"
-            : currentTheme === "light"
-              ? "dark"
-              : getSystemTheme() === "dark"
-                ? "light"
-                : "dark"
-
-        localStorage.setItem(storageKey, nextTheme)
-        return nextTheme
-      })
-    }
-
-    window.addEventListener("keydown", handleKeyDown)
-
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown)
-    }
-  }, [storageKey])
 
   React.useEffect(() => {
     const handleStorageChange = (event: StorageEvent) => {

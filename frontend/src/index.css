@@ -131,3 +131,9 @@
     @apply font-sans;
     }
 }
+/* Troca de tema sem animar cores (ver components/theme-provider.tsx). */
+.theme-switching *,
+.theme-switching *::before,
+.theme-switching *::after {
+  transition: none !important;
+}

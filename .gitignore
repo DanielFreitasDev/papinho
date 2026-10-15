@@ -1,0 +1,56 @@
+# Build
+target/
+build/
+!**/src/main/**/target/
+!**/src/test/**/target/
+!**/src/main/**/build/
+!**/src/test/**/build/
+dist/
+dist-ssr/
+out/
+HELP.md
+.mvn/wrapper/maven-wrapper.jar
+# Node
+node/
+node_modules/
+.vite/
+*.tsbuildinfo
+# Ambiente e segredos
+.env
+.env.*.local
+*.local
+*.p12
+*.jks
+*.key
+*.pem
+!frontend/public/**/*.pem
+# Dados locais da instância (PKI, arquivos enviados, backups)
+data/
+backups/
+# Agentes
+CLAUDE.local.md
+.claude/settings.local.json
+# Testes e relatórios
+test-results/
+playwright-report/
+blob-report/
+coverage/
+# Logs
+logs/
+*.log
+# IDE e SO
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+*.sw?

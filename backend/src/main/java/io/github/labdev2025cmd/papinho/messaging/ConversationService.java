@@ -186,11 +186,40 @@ public class ConversationService {
         publishReceipts(member);
     }
 
+    /**
+     * Avisa os outros participantes do avanço dos ponteiros de quem leu (com a leitura escondida enquanto for
+     * solicitação, CT-02) e os outros dispositivos de quem leu, que só precisam atualizar a conversa.
+     */
     private void publishReceipts(ConversationMember member) {
-        Set<UUID> recipients = new HashSet<>(audience(member.conversationId()));
+        Set<UUID> others = new HashSet<>(audience(member.conversationId()));
+        others.remove(member.userId());
         long readSeq = member.state() == MemberState.ACTIVE ? member.readSeq() : 0;
         events.publishEvent(new MessagingEvents.ReceiptsChanged(member.conversationId(), member.userId(),
-                member.deliveredSeq(), readSeq, recipients));
+                member.deliveredSeq(), readSeq, others));
+        events.publishEvent(new MessagingEvents.ConversationUpdated(member.conversationId(),
+                Set.of(member.userId())));
+    }
+
+    /** Pode {@code me} mostrar "digitando" nesta conversa? Só participante ativo, sem bloqueio (CT-02, CT-03). */
+    @Transactional(readOnly = true)
+    public Set<UUID> typingAudience(UUID me, UUID conversationId) {
+        ConversationMember member = requireMember(me, conversationId);
+        if (member.state() != MemberState.ACTIVE || blockedWithSomeone(me, conversationId)) {
+            return Set.of();
+        }
+        Set<UUID> others = new HashSet<>(audience(conversationId));
+        others.remove(me);
+        return others;
+    }
+
+    /**
+     * Pessoas com quem {@code userId} tem conversa individual aceita pelos dois lados e sem bloqueio: quem pode
+     * ver a presença dele por enquanto (RT-03; a visibilidade configurável entra com PV-04).
+     */
+    @Transactional(readOnly = true)
+    public Set<UUID> mutualPeers(UUID userId) {
+        return queries.mutualPeers(userId).stream().filter(peer -> !contacts.isBlockedEitherWay(userId, peer))
+                .collect(Collectors.toSet());
     }
 
     private List<ConversationView> toViews(UUID me, List<ConversationQueries.Row> rows) {

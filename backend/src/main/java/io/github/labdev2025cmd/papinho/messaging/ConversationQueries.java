@@ -55,6 +55,16 @@ class ConversationQueries {
         return jdbc.query(LIST, params, (rs, index) -> toRow(rs));
     }
 
+    /** Quem tem conversa individual com {@code userId} em que os dois estão ACTIVE. */
+    List<UUID> mutualPeers(UUID userId) {
+        return jdbc.queryForList("""
+                select peer.user_id from conversation_members me
+                  join conversations c on c.id = me.conversation_id and c.kind = 'DIRECT'
+                  join conversation_members peer on peer.conversation_id = c.id and peer.user_id <> me.user_id
+                 where me.user_id = :userId and me.state = 'ACTIVE' and peer.state = 'ACTIVE'
+                """, new MapSqlParameterSource("userId", userId), UUID.class);
+    }
+
     private static Row toRow(ResultSet rs) throws SQLException {
         UUID lastId = rs.getObject("last_id", UUID.class);
         LastMessage last = lastId == null ? null

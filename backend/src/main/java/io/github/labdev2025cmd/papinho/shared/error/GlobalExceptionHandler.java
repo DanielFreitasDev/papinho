@@ -1,0 +1,83 @@
+package io.github.labdev2025cmd.papinho.shared.error;
+
+import java.net.URI;
+import java.util.List;
+import java.util.Locale;
+
+import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.http.ProblemDetail;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
+
+/**
+ * Converte toda exceção da camada web em Problem Details (RFC 9457) com textos vindos dos bundles de mensagem.
+ * Exceções inesperadas são registradas uma única vez aqui e respondidas como 500 genérico, sem stack trace.
+ */
+@RestControllerAdvice
+class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    private final MessageSource messageSource;
+
+    GlobalExceptionHandler(MessageSource messageSource) {
+        this.messageSource = messageSource;
+        setMessageSource(messageSource);
+    }
+
+    @ExceptionHandler(ApiException.class)
+    ResponseEntity<ProblemDetail> handleApiException(ApiException exception) {
+        Locale locale = LocaleContextHolder.getLocale();
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(exception.status(), messageSource.getMessage(
+                "problem." + exception.slug() + ".detail", exception.detailArguments(), locale));
+        problem.setTitle(messageSource.getMessage("problem." + exception.slug() + ".title", null, locale));
+        problem.setType(exception.type());
+        exception.properties().forEach(problem::setProperty);
+        if (exception.status().is5xxServerError()) {
+            log.error("Request failed slug={}", exception.slug(), exception);
+        }
+        return ResponseEntity.status(exception.status()).body(problem);
+    }
+
+    @ExceptionHandler(Exception.class)
+    ResponseEntity<ProblemDetail> handleUnexpected(Exception exception) {
+        log.error("Unexpected error while handling request", exception);
+        Locale locale = LocaleContextHolder.getLocale();
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR,
+                messageSource.getMessage("problem.internal.detail", null, locale));
+        problem.setTitle(messageSource.getMessage("problem.internal.title", null, locale));
+        problem.setType(URI.create("urn:papinho:problem:internal"));
+        return ResponseEntity.internalServerError().body(problem);
+    }
+
+    /** Erros de validação: lista cada campo inválido com a mensagem já traduzida. */
+    @Override
+    protected @Nullable ResponseEntity<Object> handleMethodArgumentNotValid(MethodArgumentNotValidException exception,
+            HttpHeaders headers, HttpStatusCode status, WebRequest request) {
+        Locale locale = LocaleContextHolder.getLocale();
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST,
+                messageSource.getMessage("problem.validation.detail", null, locale));
+        problem.setTitle(messageSource.getMessage("problem.validation.title", null, locale));
+        problem.setType(URI.create("urn:papinho:problem:validation"));
+        List<FieldViolation> violations = exception.getBindingResult().getFieldErrors().stream()
+                .map(error -> new FieldViolation(error.getField(), messageSource.getMessage(error, locale)))
+                .toList();
+        problem.setProperty("violations", violations);
+        return ResponseEntity.badRequest().body(problem);
+    }
+
+    /** Campo inválido devolvido no Problem Details de validação. */
+    record FieldViolation(String field, String message) {
+    }
+}

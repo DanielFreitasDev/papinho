@@ -1,0 +1,102 @@
+# Configuração base de todos os ambientes. Segredos e valores do ambiente vêm de variáveis (12-factor).
+spring:
+  application:
+    name: papinho
+  main:
+    banner-mode: "off"
+  threads:
+    virtual:
+      enabled: true
+  messages:
+    basename: messages
+    fallback-to-system-locale: false
+  jackson:
+    time-zone: UTC
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/papinho}
+    username: ${DATABASE_USERNAME:papinho}
+    password: ${DATABASE_PASSWORD:}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    locations: classpath:db/migration
+  session:
+    timeout: 30d
+    jdbc:
+      initialize-schema: never
+      cleanup-cron: "0 */10 * * * *"
+  mvc:
+    problemdetails:
+      enabled: true
+  servlet:
+    multipart:
+      max-file-size: 25MB
+      max-request-size: 26MB
+  modulith:
+    events:
+      republish-outstanding-events-on-restart: true
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+  docker:
+    compose:
+      enabled: false
+
+server:
+  port: ${PAPINHO_PORT:8080}
+  shutdown: graceful
+  forward-headers-strategy: ${PAPINHO_FORWARD_HEADERS:none}
+  http2:
+    enabled: true
+  compression:
+    enabled: true
+    additional-mime-types: application/problem+json
+  error:
+    include-message: never
+    include-stacktrace: never
+    include-binding-errors: never
+  servlet:
+    session:
+      timeout: 30d
+      cookie:
+        # ADR 0003: __Host- exige Secure, Path=/ e nenhum Domain; o navegador recusa o cookie de outra forma.
+        name: __Host-SESSION
+        http-only: true
+        secure: true
+        same-site: lax
+        path: /
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when-authorized
+      probes:
+        enabled: true
+  info:
+    java:
+      enabled: true
+
+logging:
+  level:
+    root: INFO
+    io.github.labdev2025cmd.papinho: INFO
+    org.hibernate.SQL: WARN
+
+app:
+  security:
+    hsts: ${PAPINHO_HSTS:false}
+  pki:
+    enabled: false
+    dir: ${PAPINHO_PKI_DIR:${user.home}/.papinho/pki}
+    http-port: ${PAPINHO_HTTP_PORT:8080}
+    public-http-port: ${PAPINHO_PUBLIC_HTTP_PORT:80}
+    public-https-port: ${PAPINHO_PUBLIC_HTTPS_PORT:443}

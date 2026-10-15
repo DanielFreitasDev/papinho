@@ -1,0 +1,15 @@
+# Máquina do desenvolvedor: sobe o PostgreSQL do compose.yaml da raiz e usa logs legíveis.
+# Credenciais descartáveis, iguais às do compose.yaml; nunca de produção.
+spring:
+  docker:
+    compose:
+      enabled: true
+      file: ../compose.yaml
+      lifecycle-management: start-only
+  datasource:
+    url: jdbc:postgresql://localhost:5432/papinho
+    username: papinho
+    password: papinho
+logging:
+  level:
+    io.github.labdev2025cmd.papinho: DEBUG

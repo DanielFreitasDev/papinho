@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -158,6 +159,25 @@ class MessagingController {
         return messages.star(CurrentUser.id(), messageId, false);
     }
 
+    /** Edita o texto de uma mensagem própria dentro da janela (MS-05). */
+    @PatchMapping("/messages/{messageId}")
+    MessageService.MessageView edit(@PathVariable UUID messageId, @Valid @RequestBody EditMessageRequest body) {
+        return messages.edit(CurrentUser.id(), messageId, body.body());
+    }
+
+    /** Apaga para todos (MS-06); devolve o aviso "Esta mensagem foi apagada". */
+    @DeleteMapping("/messages/{messageId}")
+    MessageService.MessageView deleteForEveryone(@PathVariable UUID messageId) {
+        return messages.deleteForEveryone(CurrentUser.id(), messageId);
+    }
+
+    /** Apaga para mim (MS-06). */
+    @PostMapping("/messages/hide")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    void hide(@Valid @RequestBody HideRequest body) {
+        messages.hide(CurrentUser.id(), body.messageIds());
+    }
+
     @GetMapping("/messages/starred")
     List<MessageService.MessageView> starred() {
         return messages.starred(CurrentUser.id());
@@ -181,6 +201,12 @@ class MessagingController {
 
     record ForwardRequest(@NotEmpty @Size(max = 20) List<@NotNull UUID> messageIds,
             @NotEmpty @Size(max = 5) List<@NotNull UUID> conversationIds) {
+    }
+
+    record EditMessageRequest(@NotNull @Size(max = Message.MAX_BODY_LENGTH) String body) {
+    }
+
+    record HideRequest(@NotEmpty @Size(max = 100) List<@NotNull UUID> messageIds) {
     }
 
     record ReactionRequest(@NotBlank @Size(max = 32) String emoji) {

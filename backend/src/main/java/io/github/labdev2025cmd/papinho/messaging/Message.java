@@ -57,6 +57,10 @@ class Message {
     @Column(nullable = false)
     private Instant createdAt;
 
+    private @Nullable Instant editedAt;
+
+    private @Nullable Instant deletedAt;
+
     protected Message() {
         this.conversationId = new UUID(0, 0);
         this.clientMessageId = new UUID(0, 0);
@@ -131,6 +135,43 @@ class Message {
 
     Instant createdAt() {
         return createdAt;
+    }
+
+    @Nullable Instant editedAt() {
+        return editedAt;
+    }
+
+    @Nullable Instant deletedAt() {
+        return deletedAt;
+    }
+
+    boolean deleted() {
+        return deletedAt != null;
+    }
+
+    /** Troca o texto (MS-05); a legenda de um anexo também pode ser editada. */
+    void edit(String body, Instant now, long changeSeq) {
+        this.body = body;
+        this.editedAt = now;
+        changed(changeSeq);
+    }
+
+    /**
+     * Apaga para todos (MS-06): some o texto, o anexo, a resposta e o selo de encaminhada; fica só o aviso. Devolve
+     * o anexo que deixou de ser usado por esta mensagem, para o arquivo ser removido.
+     */
+    @Nullable Attachment deleteForEveryone(Instant now, long changeSeq) {
+        Attachment removed = attachment();
+        this.body = "";
+        this.attachmentId = null;
+        this.attachmentKind = null;
+        this.replyToId = null;
+        this.forwardCount = 0;
+        this.pinnedAt = null;
+        this.editedAt = null;
+        this.deletedAt = now;
+        changed(changeSeq);
+        return removed;
     }
 
     /** Registra uma alteração visível a todos (reação, fixar), com o seq novo da conversa. */

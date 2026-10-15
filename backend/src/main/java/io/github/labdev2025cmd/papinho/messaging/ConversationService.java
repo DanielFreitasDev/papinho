@@ -248,7 +248,7 @@ public class ConversationService {
         ConversationQueries.LastMessage last = row.last();
         MessagePreview preview = last == null ? null
                 : new MessagePreview(last.id(), last.seq(), last.senderId(), last.body(), last.createdAt(),
-                        last.attachmentKind());
+                        last.attachmentKind(), last.deleted());
         return new ConversationView(row.id(), row.kind().name(), row.state(), peerView, row.lastSeq(), preview,
                 row.unreadCount(), row.firstUnreadSeq(), row.markedUnread(), row.readSeq(), row.peerDeliveredSeq(),
                 peerReadSeq, row.updatedAt(), !blockedByMe && peer.active(), blockedByMe);
@@ -277,8 +277,9 @@ public class ConversationService {
      * Última mensagem para a prévia da lista (corpo cortado em 200 caracteres).
      *
      * @param attachmentKind tipo do anexo (IMAGE, VIDEO, AUDIO, DOCUMENT), para "📷 Foto" e afins
+     * @param deleted apagada para todos (MS-06)
      */
     public record MessagePreview(UUID id, long seq, @Nullable UUID senderId, String body, Instant createdAt,
-            @Nullable String attachmentKind) {
+            @Nullable String attachmentKind, boolean deleted) {
     }
 }

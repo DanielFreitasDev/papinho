@@ -227,6 +227,82 @@ class MessagingIT {
         assertThat(brunoId).isNotBlank();
     }
 
+    @Test
+    @DisplayName("editar e apagar para todos só pelo autor e dentro da janela; o anexo sai do servidor (MS-05, MS-06)")
+    void shouldEditAndDeleteForEveryone() {
+        assertThat(bruno.post("/api/v1/contacts", Map.of("username", "ana"))).hasStatus(201);
+        String conversation = open(ana, "bruno");
+        String message = send(ana, conversation, "Oi Bruo");
+        String reply = bruno.json(bruno.post(messages(conversation), Map.of("clientMessageId", UUID.randomUUID(),
+                "body", "oi", "replyToId", message))).get("id").asString();
+
+        JsonNode edited = ana.json(ana.patch("/api/v1/messages/" + message, Map.of("body", "Oi Bruno")));
+        assertThat(edited.get("body").asString()).isEqualTo("Oi Bruno");
+        assertThat(edited.get("editedAt").isNull()).isFalse();
+        JsonNode changes = bruno.json(bruno.get(messages(conversation) + "?afterSeq=2"));
+        assertThat(changes.get("messages").get(0).get("body").asString()).as("edição chega pelo afterSeq")
+                .isEqualTo("Oi Bruno");
+        assertThat(bruno.patch("/api/v1/messages/" + message, Map.of("body", "invadido"))).as("só o autor")
+                .hasStatus(403);
+        assertThat(ana.patch("/api/v1/messages/" + message, Map.of("body", " "))).hasStatus(400);
+
+        String photo = io.github.labdev2025cmd.papinho.support.Uploads.upload(ana,
+                io.github.labdev2025cmd.papinho.support.Images.png(64, 48), "foto.png", "image/png");
+        io.github.labdev2025cmd.papinho.support.Uploads.send(ana, conversation, photo, "legenda");
+        bruno.put("/api/v1/messages/" + message + "/star", null);
+        bruno.put("/api/v1/messages/" + message + "/reaction", Map.of("emoji", "👍"));
+        assertThat(bruno.delete("/api/v1/messages/" + message, null)).as("só o autor apaga para todos")
+                .hasStatus(403);
+        JsonNode deleted = ana.json(ana.delete("/api/v1/messages/" + message, null));
+        assertThat(deleted.get("deleted").asBoolean()).isTrue();
+        assertThat(deleted.get("body").asString()).isEmpty();
+        assertThat(deleted.get("reactions")).isEmpty();
+        assertThat(bruno.json(bruno.get("/api/v1/messages/starred"))).as("favorita some").isEmpty();
+        JsonNode replyView = bruno.json(bruno.get(messages(conversation) + "?afterSeq=0")).get("messages");
+        JsonNode replyNode = StreamSupport.stream(replyView.spliterator(), false)
+                .filter(n -> n.get("id").asString().equals(reply)).findFirst().orElseThrow();
+        assertThat(replyNode.get("replyTo").get("deleted").asBoolean()).isTrue();
+        assertThat(replyNode.get("replyTo").get("body").asString()).isEmpty();
+        assertThat(ana.patch("/api/v1/messages/" + message, Map.of("body", "volta"))).hasStatus(403);
+        assertThat(bruno.put("/api/v1/messages/" + message + "/reaction", Map.of("emoji", "👍"))).hasStatus(400);
+
+        JsonNode withPhoto = ana.json(ana.get(messages(conversation) + "?limit=1")).get("messages").get(0);
+        assertThat(ana.get("/api/v1/media/" + photo + "/content")).hasStatusOk();
+        ana.delete("/api/v1/messages/" + withPhoto.get("id").asString(), null);
+        assertThat(ana.get("/api/v1/media/" + photo + "/content")).as("arquivo removido do servidor")
+                .hasStatus(404);
+        assertThat(bruno.json(bruno.get(conversationPath(conversation))).get("lastMessage").get("deleted")
+                .asBoolean()).isTrue();
+
+        assertThat(ana.put("/api/v1/admin/settings", Map.of("registrationMode", "INVITE_ONLY",
+                "usernameChangeCooldownDays", 30, "messageEditWindowMinutes", 0, "messageDeleteWindowHours", 0,
+                "userQuotaMegabytes", 5120, "breachedPasswordCheck", false))).hasStatusOk();
+        String late = send(ana, conversation, "tarde demais");
+        assertThat(ana.patch("/api/v1/messages/" + late, Map.of("body", "x"))).hasStatus(409);
+        assertThat(ana.delete("/api/v1/messages/" + late, null)).hasStatus(409);
+    }
+
+    @Test
+    @DisplayName("apagar para mim esconde só de quem apagou, também no histórico, na sincronização e na prévia")
+    void shouldHideForMe() {
+        String conversation = open(ana, "bruno");
+        String first = send(ana, conversation, "primeira");
+        String second = send(ana, conversation, "segunda");
+        assertThat(bruno.post("/api/v1/messages/hide", Map.of("messageIds", List.of(second)))).hasStatus(204);
+
+        assertThat(ids(bruno.json(bruno.get(messages(conversation))).get("messages"))).containsExactly(first);
+        assertThat(ids(bruno.json(bruno.get(messages(conversation) + "?afterSeq=0")).get("messages")))
+                .containsExactly(first);
+        assertThat(bruno.json(bruno.get(conversationPath(conversation))).get("lastMessage").get("body").asString())
+                .isEqualTo("primeira");
+        assertThat(ids(ana.json(ana.get(messages(conversation))).get("messages"))).as("a Ana ainda vê")
+                .containsExactly(first, second);
+
+        ApiClient carla = clients.create();
+        Accounts.register(carla, "carla", Accounts.invite(ana));
+        assertThat(carla.post("/api/v1/messages/hide", Map.of("messageIds", List.of(first)))).hasStatus(404);
+    }
+
     private String open(ApiClient client, String username) {
         return open(client, username, false);
     }
@@ -256,6 +332,10 @@ class MessagingIT {
 
     private static String messages(String conversation) {
         return conversationPath(conversation) + "/messages";
+    }
+
+    private static List<String> ids(JsonNode messages) {
+        return StreamSupport.stream(messages.spliterator(), false).map(n -> n.get("id").asString()).toList();
     }
 
     private static List<Long> seqs(JsonNode messages) {

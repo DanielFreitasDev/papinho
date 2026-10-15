@@ -22,6 +22,7 @@ import org.springframework.data.domain.Limit;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import io.github.labdev2025cmd.papinho.admin.InstanceSettingsService;
 import io.github.labdev2025cmd.papinho.identity.UserDirectory;
 import io.github.labdev2025cmd.papinho.identity.UserDirectory.UserSummary;
 import io.github.labdev2025cmd.papinho.media.MediaService;
@@ -60,13 +61,15 @@ public class MessageService {
     private final UserDirectory users;
     private final ProfileService profiles;
     private final MediaService media;
+    private final HiddenMessages hidden;
+    private final InstanceSettingsService settings;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
     MessageService(MessageRepository messages, MessageReactionRepository reactions, MessageStarRepository stars,
             ConversationService conversations, SequenceAllocator sequences, ReceiptLog receipts,
-            UserDirectory users, ProfileService profiles, MediaService media, ApplicationEventPublisher events,
-            Clock clock) {
+            UserDirectory users, ProfileService profiles, MediaService media, HiddenMessages hidden,
+            InstanceSettingsService settings, ApplicationEventPublisher events, Clock clock) {
         this.messages = messages;
         this.reactions = reactions;
         this.stars = stars;
@@ -76,6 +79,8 @@ public class MessageService {
         this.users = users;
         this.profiles = profiles;
         this.media = media;
+        this.hidden = hidden;
+        this.settings = settings;
         this.events = events;
         this.clock = clock;
     }
@@ -107,6 +112,7 @@ public class MessageService {
         }
         if (replyToId != null) {
             messages.findById(replyToId).filter(m -> m.conversationId().equals(conversationId))
+                    .filter(m -> !m.deleted())
                     .orElseThrow(() -> new InvalidMessageException("reply target outside conversation"));
         }
         if (member.state() == MemberState.REQUEST) {
@@ -125,7 +131,7 @@ public class MessageService {
         boolean hasMore = found.size() > size;
         List<Message> page = hasMore ? found.subList(0, size) : found;
         long lastSeq = sequences.current(conversationId);
-        return new SyncResponse(toViews(me, page), lastSeq, hasMore);
+        return new SyncResponse(toViews(me, withoutHidden(me, page)), lastSeq, hasMore);
     }
 
     /** Página de histórico antes de {@code beforeSeq}, devolvida em ordem crescente de {@code seq}. */
@@ -138,7 +144,8 @@ public class MessageService {
         boolean hasMore = found.size() > size;
         List<Message> page = new ArrayList<>(hasMore ? found.subList(0, size) : found);
         page.sort(Comparator.comparingLong(Message::seq));
-        return new HistoryResponse(toViews(me, page), sequences.current(conversationId), hasMore);
+        return new HistoryResponse(toViews(me, withoutHidden(me, page)), sequences.current(conversationId),
+                hasMore);
     }
 
     /**
@@ -151,6 +158,9 @@ public class MessageService {
         for (UUID id : new LinkedHashSet<>(messageIds)) {
             Message message = messages.findById(id).orElseThrow(NotFoundException::new);
             conversations.requireMember(me, message.conversationId());
+            if (message.deleted()) {
+                throw new InvalidMessageException("deleted message");
+            }
             sources.add(message);
         }
         sources.sort(Comparator.comparing(Message::createdAt).thenComparingLong(Message::seq));
@@ -176,6 +186,9 @@ public class MessageService {
     @Transactional
     public MessageView react(UUID me, UUID messageId, @Nullable String emoji) {
         Message message = requireVisible(me, messageId);
+        if (message.deleted() && emoji != null) {
+            throw new InvalidMessageException("deleted message");
+        }
         sequences.lock(message.conversationId());
         MessageReaction.Key key = new MessageReaction.Key(messageId, me);
         if (emoji == null) {
@@ -202,6 +215,9 @@ public class MessageService {
         Message message = requireVisible(me, messageId);
         sequences.lock(message.conversationId());
         Instant now = clock.instant();
+        if (pinned && message.deleted()) {
+            throw new InvalidMessageException("deleted message");
+        }
         if (pinned && message.pinnedAt() == null) {
             List<Message> current = messages.findPinned(message.conversationId());
             for (int i = 0; i <= current.size() - MAX_PINNED; i++) {
@@ -219,7 +235,7 @@ public class MessageService {
     @Transactional(readOnly = true)
     public List<MessageView> pinned(UUID me, UUID conversationId) {
         conversations.requireMember(me, conversationId);
-        return toViews(me, messages.findPinned(conversationId));
+        return toViews(me, withoutHidden(me, messages.findPinned(conversationId)));
     }
 
     /**
@@ -241,7 +257,7 @@ public class MessageService {
             case LINKS -> messages.findWithLinks(conversationId, before, Limit.of(size + 1));
         };
         boolean hasMore = found.size() > size;
-        return new HistoryResponse(toViews(me, hasMore ? found.subList(0, size) : found),
+        return new HistoryResponse(toViews(me, withoutHidden(me, hasMore ? found.subList(0, size) : found)),
                 sequences.current(conversationId), hasMore);
     }
 
@@ -271,8 +287,8 @@ public class MessageService {
         Map<UUID, Message> found = messages.findAllById(ids).stream()
                 .collect(Collectors.toMap(Message::id, Function.identity()));
         List<Message> visible = ids.stream().map(found::get).filter(Objects::nonNull)
-                .filter(m -> isVisible(me, m.conversationId())).toList();
-        return toViews(me, visible);
+                .filter(m -> !m.deleted() && isVisible(me, m.conversationId())).toList();
+        return toViews(me, withoutHidden(me, visible));
     }
 
     /** "Dados da mensagem": quando cada destinatário recebeu e leu. Só o autor vê (MS-02). */
@@ -315,8 +331,78 @@ public class MessageService {
         List<Message> latest = new ArrayList<>(messages.findBefore(conversationId, Long.MAX_VALUE,
                 Limit.of(Math.clamp(count, 1, MAX_PAGE))));
         latest.sort(Comparator.comparingLong(Message::seq));
-        return new ReportSnapshot(peer, latest.stream()
+        return new ReportSnapshot(peer, latest.stream().filter(m -> !m.deleted())
                 .map(m -> new SnapshotMessage(m.id(), m.senderId(), m.body(), m.createdAt())).toList());
+    }
+
+    /**
+     * Edita o texto (ou a legenda) de uma mensagem própria dentro da janela configurada pelo admin (MS-05). O
+     * selo "editada" vem de {@code editedAt}.
+     */
+    @Transactional
+    public MessageView edit(UUID me, UUID messageId, String body) {
+        Message message = requireVisible(me, messageId);
+        requireAuthorWithin(me, message, settings.current().messageEditWindow());
+        validateBody(body, message.attachment() != null);
+        if (!body.equals(message.body())) {
+            sequences.lock(message.conversationId());
+            message.edit(body, clock.instant(), sequences.nextChange(message.conversationId()));
+            messages.flush();
+            notifyChanged(message.conversationId());
+        }
+        return toViews(me, List.of(message)).getFirst();
+    }
+
+    /**
+     * Apaga para todos (MS-06): só o autor, dentro da janela configurada. O texto, o anexo (se nenhuma outra
+     * mensagem o usa), as reações e as favoritas saem do servidor; fica o aviso "Esta mensagem foi apagada".
+     */
+    @Transactional
+    public MessageView deleteForEveryone(UUID me, UUID messageId) {
+        Message message = requireVisible(me, messageId);
+        if (message.deleted()) {
+            return toViews(me, List.of(message)).getFirst();
+        }
+        requireAuthorWithin(me, message, settings.current().messageDeleteWindow());
+        sequences.lock(message.conversationId());
+        Message.Attachment removed = message.deleteForEveryone(clock.instant(),
+                sequences.nextChange(message.conversationId()));
+        reactions.deleteByMessage(messageId);
+        stars.deleteByMessage(messageId);
+        messages.flush();
+        if (removed != null && !messages.existsByAttachmentId(removed.id())) {
+            media.delete(removed.id());
+        }
+        notifyChanged(message.conversationId());
+        return toViews(me, List.of(message)).getFirst();
+    }
+
+    /** Apaga para mim (MS-06): some só da minha tela, em todos os meus dispositivos. */
+    @Transactional
+    public void hide(UUID me, List<UUID> messageIds) {
+        Map<UUID, List<UUID>> byConversation = new HashMap<>();
+        Instant now = clock.instant();
+        for (UUID id : new LinkedHashSet<>(messageIds)) {
+            Message message = requireVisible(me, id);
+            hidden.hide(me, id, now);
+            byConversation.computeIfAbsent(message.conversationId(), key -> new ArrayList<>()).add(id);
+        }
+        byConversation.forEach((conversationId, ids) -> events
+                .publishEvent(new MessagingEvents.MessagesHidden(conversationId, List.copyOf(ids), me)));
+    }
+
+    private void requireAuthorWithin(UUID me, Message message, java.time.Duration window) {
+        if (!me.equals(message.senderId()) || message.deleted()) {
+            throw new MessagingExceptions.NotAuthorException();
+        }
+        if (message.createdAt().plus(window).isBefore(clock.instant())) {
+            throw new MessagingExceptions.WindowExpiredException();
+        }
+    }
+
+    private List<Message> withoutHidden(UUID me, List<Message> page) {
+        Set<UUID> mine = hidden.hiddenAmong(me, page.stream().map(Message::id).toList());
+        return mine.isEmpty() ? page : page.stream().filter(m -> !mine.contains(m.id())).toList();
     }
 
     private Message append(UUID me, UUID conversationId, UUID clientMessageId, String body,
@@ -402,13 +488,13 @@ public class MessageService {
             Message reply = m.replyToId() == null ? null : replies.get(m.replyToId());
             ReplyPreview replyTo = reply == null ? null
                     : new ReplyPreview(reply.id(), reply.seq(), reply.senderId(), preview(reply.body()),
-                            reply.attachment() == null ? null : reply.attachment().kind());
+                            reply.attachment() == null ? null : reply.attachment().kind(), reply.deleted());
             MediaView attachment = m.attachment() == null ? null : files.get(m.attachment().id());
             return new MessageView(m.id(), m.conversationId(), m.seq(), m.changeSeq(), m.senderId(),
                     m.clientMessageId(), m.body(), m.createdAt(), replyTo, m.forwardCount(),
                     m.forwardCount() >= FORWARDED_MANY, m.pinnedAt(),
                     reactionsByMessage.getOrDefault(m.id(), List.of()), starred.contains(m.id()),
-                    attachment == null ? null : AttachmentView.of(attachment));
+                    attachment == null ? null : AttachmentView.of(attachment), m.editedAt(), m.deleted());
         }).toList();
     }
 
@@ -426,11 +512,13 @@ public class MessageService {
      * @param changeSeq seq da última alteração; o cliente guarda o maior para o próximo {@code afterSeq}
      * @param forwardCount quantas vezes foi encaminhada até aqui (0 = original)
      * @param starred favoritada por quem pediu
+     * @param editedAt quando foi editada pela última vez (selo "editada", MS-05)
+     * @param deleted apagada para todos: sem texto nem anexo, mostra "Esta mensagem foi apagada" (MS-06)
      */
     public record MessageView(UUID id, UUID conversationId, long seq, long changeSeq, @Nullable UUID senderId,
             UUID clientMessageId, String body, Instant createdAt, @Nullable ReplyPreview replyTo, int forwardCount,
             boolean forwardedMany, @Nullable Instant pinnedAt, List<ReactionView> reactions, boolean starred,
-            @Nullable AttachmentView attachment) {
+            @Nullable AttachmentView attachment, @Nullable Instant editedAt, boolean deleted) {
     }
 
     /** Anexo como o cliente o vê; o conteúdo vem de {@code /api/v1/media/{id}/content}. */
@@ -445,7 +533,7 @@ public class MessageService {
 
     /** Trecho da mensagem respondida, para o salto até a original. */
     public record ReplyPreview(UUID id, long seq, @Nullable UUID senderId, String body,
-            @Nullable String attachmentKind) {
+            @Nullable String attachmentKind, boolean deleted) {
     }
 
     public record ReactionView(UUID userId, String emoji) {

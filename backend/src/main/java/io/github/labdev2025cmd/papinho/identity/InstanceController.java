@@ -28,7 +28,9 @@ class InstanceController {
 
     @GetMapping("/instance")
     InstanceResponse instance() {
-        return new InstanceResponse("Papinho", settings.current().registrationMode(), identity.isSetupRequired());
+        var current = settings.current();
+        return new InstanceResponse("Papinho", current.registrationMode(), identity.isSetupRequired(),
+                current.messageEditWindow().toMinutes(), current.messageDeleteWindow().toMinutes());
     }
 
     @GetMapping("/usernames/availability")
@@ -39,8 +41,11 @@ class InstanceController {
 
     /**
      * @param setupRequired nenhuma conta existe: o próximo cadastro cria o admin sem convite
+     * @param messageEditWindowMinutes janela para editar mensagens (MS-05), para o menu esconder o que expirou
+     * @param messageDeleteWindowMinutes janela para apagar para todos (MS-06)
      */
-    record InstanceResponse(String name, RegistrationMode registrationMode, boolean setupRequired) {
+    record InstanceResponse(String name, RegistrationMode registrationMode, boolean setupRequired,
+            long messageEditWindowMinutes, long messageDeleteWindowMinutes) {
     }
 
     record AvailabilityResponse(boolean available) {

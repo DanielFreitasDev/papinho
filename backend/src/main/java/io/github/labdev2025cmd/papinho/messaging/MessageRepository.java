@@ -12,6 +12,9 @@ interface MessageRepository extends JpaRepository<Message, UUID> {
 
     Optional<Message> findBySenderIdAndClientMessageId(UUID senderId, UUID clientMessageId);
 
+    /** Alguma mensagem ainda usa o arquivo (encaminhar copia a referência)? */
+    boolean existsByAttachmentId(UUID attachmentId);
+
     /** Alterações depois de {@code afterSeq}, na ordem em que aconteceram (sincronização, RT-01). */
     @Query("select m from Message m where m.conversationId = :conversationId and m.changeSeq > :afterSeq "
             + "order by m.changeSeq")

@@ -20,4 +20,8 @@ final class MessagingEvents {
     /** A conversa mudou para quem está em {@code recipients} (nova, aceita, recusada, marcada como não lida). */
     record ConversationUpdated(UUID conversationId, Set<UUID> recipients) {
     }
+
+    /** {@code userId} apagou mensagens só para si: os outros dispositivos dela tiram da tela (MS-06). */
+    record MessagesHidden(UUID conversationId, java.util.List<UUID> messageIds, UUID userId) {
+    }
 }

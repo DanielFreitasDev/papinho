@@ -38,6 +38,11 @@ class MessagingNotifier {
         send(event.recipients(), new ConversationEvent("conversation", event.conversationId()));
     }
 
+    @TransactionalEventListener
+    void on(MessagingEvents.MessagesHidden event) {
+        send(Set.of(event.userId()), new HiddenEvent("hidden", event.conversationId(), event.messageIds()));
+    }
+
     void send(Set<UUID> recipients, Object payload) {
         // O nome do principal no WebSocket é o id da conta (PapinhoUser.getUsername()).
         recipients.forEach(user -> broker.convertAndSendToUser(user.toString(), DESTINATION, payload));
@@ -47,6 +52,9 @@ class MessagingNotifier {
     }
 
     record ReceiptsEvent(String type, UUID conversationId, UUID userId, long deliveredSeq, long readSeq) {
+    }
+
+    record HiddenEvent(String type, UUID conversationId, java.util.List<UUID> messageIds) {
     }
 
     record ConversationEvent(String type, UUID conversationId) {

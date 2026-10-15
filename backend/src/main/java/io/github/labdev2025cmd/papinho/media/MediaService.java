@@ -8,9 +8,13 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /**
  * Consulta e leitura de arquivos enviados (MD-01, MD-02). Quem enviou sempre abre; os demais, quando alguma
@@ -18,6 +22,8 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Service
 public class MediaService {
+
+    private static final Logger log = LoggerFactory.getLogger(MediaService.class);
 
     private final MediaFileRepository files;
     private final FileStorage storage;
@@ -63,6 +69,35 @@ public class MediaService {
         Resource resource = storage.resource(key).orElseThrow(MediaExceptions.NotFoundException::new);
         String type = thumbnail ? "image/jpeg" : file.contentType();
         return new Content(resource, type, file.filename(), ContentTypes.inline(type));
+    }
+
+    /**
+     * Remove o arquivo do servidor (MS-06, MS-07, MS-08): os metadados na transação e o conteúdo depois do
+     * commit. Quem chama garante que nenhuma mensagem ainda o usa.
+     */
+    @Transactional
+    public void delete(UUID id) {
+        files.findById(id).ifPresent(file -> {
+            files.delete(file);
+            Runnable removeContent = () -> {
+                try {
+                    storage.delete(MediaFile.contentKey(id));
+                    storage.delete(MediaFile.thumbnailKey(id));
+                } catch (IOException e) {
+                    log.warn("Falha ao remover o conteúdo do arquivo {}", id, e);
+                }
+            };
+            if (TransactionSynchronizationManager.isSynchronizationActive()) {
+                TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        removeContent.run();
+                    }
+                });
+            } else {
+                removeContent.run();
+            }
+        });
     }
 
     private MediaFile requireReadable(UUID viewer, UUID id) {

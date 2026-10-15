@@ -42,4 +42,18 @@ final class MessagingExceptions {
             super(HttpStatus.CONFLICT, "message-conflict", "clientMessageId already used in another conversation");
         }
     }
+
+    /** Só quem enviou edita ou apaga para todos (MS-05, MS-06). */
+    static class NotAuthorException extends ApiException {
+        NotAuthorException() {
+            super(HttpStatus.FORBIDDEN, "message-not-author", "Only the sender can change this message");
+        }
+    }
+
+    /** Passou a janela configurada pelo admin para editar ou apagar para todos. */
+    static class WindowExpiredException extends ApiException {
+        WindowExpiredException() {
+            super(HttpStatus.CONFLICT, "message-window-expired", "The time window for this change has expired");
+        }
+    }
 }

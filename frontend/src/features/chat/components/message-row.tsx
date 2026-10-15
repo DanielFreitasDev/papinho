@@ -17,6 +17,7 @@ import {
   PencilIcon,
   PinIcon,
   PinOffIcon,
+  SmilePlusIcon,
   RotateCwIcon,
   StarIcon,
   StarOffIcon,
@@ -105,6 +106,7 @@ export type MessageAction =
   | "replyPrivately"
   | { react: string }
   | { openImage: string }
+  | "moreReactions"
   | "openViewOnce"
   | "unreact"
 
@@ -369,6 +371,12 @@ export function MessageRow({
                   {emoji}
                 </DropdownMenuItem>
               ))}
+            </DropdownMenuGroup>
+            <DropdownMenuGroup>
+              <DropdownMenuItem onClick={() => onAction("moreReactions")}>
+                <SmilePlusIcon />
+                {t("emoji.moreReactions")}
+              </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>

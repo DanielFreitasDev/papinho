@@ -657,5 +657,25 @@
     "expiredShort": "Lista expirada",
     "expiresOn": "Expira em {{when}}",
     "timerOn": "Mensagens temporárias: {{timer}}"
+  },
+  "emoji": {
+    "search": "Buscar emoji",
+    "categories": "Categorias de emoji",
+    "recent": "Recentes",
+    "results": "Resultados",
+    "noResults": "Nenhum emoji encontrado",
+    "open": "Emojis",
+    "moreReactions": "Mais reações",
+    "group": {
+      "0": "Sorrisos e emoções",
+      "1": "Pessoas e corpo",
+      "3": "Animais e natureza",
+      "4": "Comida e bebida",
+      "5": "Viagens e lugares",
+      "6": "Atividades",
+      "7": "Objetos",
+      "8": "Símbolos",
+      "9": "Bandeiras"
+    }
   }
 }

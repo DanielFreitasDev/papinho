@@ -9,6 +9,7 @@ import {
   PaperclipIcon,
   PencilIcon,
   SendHorizontalIcon,
+  SmileIcon,
   XIcon,
 } from "lucide-react"
 
@@ -25,6 +26,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import { EmojiPicker } from "@/features/emoji"
 import { realtime } from "@/lib/realtime"
 import { saveDraft } from "../api"
 import { plainText } from "../format/parse"
@@ -100,6 +107,7 @@ export function Composer({
   const textarea = useRef<HTMLTextAreaElement>(null)
   const fileInput = useRef<HTMLInputElement>(null)
   const [recording, setRecording] = useState(false)
+  const [emojiOpen, setEmojiOpen] = useState(false)
   const lastTyping = useRef(0)
 
   useEffect(() => {
@@ -147,6 +155,19 @@ export function Composer({
       realtime.activity(conversationId, "typing")
       lastTyping.current = now
     }
+  }
+
+  /** Põe o emoji onde está o cursor (MS-10). */
+  function insertEmoji(emoji: string) {
+    const field = textarea.current
+    const start = field?.selectionStart ?? value.length
+    const end = field?.selectionEnd ?? value.length
+    typing(value.slice(0, start) + emoji + value.slice(end))
+    setEmojiOpen(false)
+    window.requestAnimationFrame(() => {
+      field?.focus()
+      field?.setSelectionRange(start + emoji.length, start + emoji.length)
+    })
   }
 
   function cancelEdit() {
@@ -251,6 +272,23 @@ export function Composer({
               >
                 <PaperclipIcon />
               </InputGroupButton>
+              <Popover open={emojiOpen} onOpenChange={setEmojiOpen}>
+                <PopoverTrigger
+                  render={
+                    <InputGroupButton
+                      type="button"
+                      size="icon-sm"
+                      aria-label={t("emoji.open")}
+                      disabled={disabled}
+                    />
+                  }
+                >
+                  <SmileIcon />
+                </PopoverTrigger>
+                <PopoverContent side="top" align="start" className="w-auto">
+                  <EmojiPicker onSelect={insertEmoji} />
+                </PopoverContent>
+              </Popover>
               {onPoll ? (
                 <InputGroupButton
                   type="button"

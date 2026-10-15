@@ -32,7 +32,9 @@ import {
   MessageScrollerViewport,
   useMessageScroller,
 } from "@/components/ui/message-scroller"
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
+import { EmojiPicker } from "@/features/emoji"
 import { Skeleton } from "@/components/ui/skeleton"
 import { toast } from "@/components/ui/toast"
 import { authQueries } from "@/features/auth"
@@ -176,6 +178,7 @@ function LoadedConversation({
   const [deleteIds, setDeleteIds] = useState<string[]>([])
   const [pollOpen, setPollOpen] = useState(false)
   const [viewOnceId, setViewOnceId] = useState<string | null>(null)
+  const [reactingTo, setReactingTo] = useState<string | null>(null)
   const [scheduling, setScheduling] = useState<string | null>(null)
   const [scheduledOpen, setScheduledOpen] = useState(false)
   const scheduled = useQuery(chatQueries.scheduled(conversation.id))
@@ -473,6 +476,9 @@ function LoadedConversation({
         return
       case "openViewOnce":
         setViewOnceId(id)
+        return
+      case "moreReactions":
+        setReactingTo(id)
         return
       case "replyPrivately": {
         const author = members.data?.find(
@@ -947,6 +953,26 @@ function LoadedConversation({
           open={scheduledOpen}
           onOpenChange={setScheduledOpen}
         />
+        <Dialog
+          open={reactingTo !== null}
+          onOpenChange={(open) => (open ? null : setReactingTo(null))}
+        >
+          <DialogContent className="w-auto">
+            <DialogTitle>{t("emoji.moreReactions")}</DialogTitle>
+            <EmojiPicker
+              onSelect={(emoji) => {
+                if (reactingTo) {
+                  messageAction.mutate({
+                    messageId: reactingTo,
+                    action: "react",
+                    emoji,
+                  })
+                }
+                setReactingTo(null)
+              }}
+            />
+          </DialogContent>
+        </Dialog>
         <ViewOnceViewer
           messageId={viewOnceId}
           onClose={() => setViewOnceId(null)}

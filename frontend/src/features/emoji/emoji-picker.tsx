@@ -1,0 +1,164 @@
+import { useEffect, useMemo, useState } from "react"
+import { useQuery } from "@tanstack/react-query"
+import { useTranslation } from "react-i18next"
+import { cn } from "cn"
+
+import { Input } from "@/components/ui/input"
+import { Skeleton } from "@/components/ui/skeleton"
+import { authQueries } from "@/features/auth"
+import {
+  GROUPS,
+  loadEmojis,
+  pushRecent,
+  readRecent,
+  searchEmojis,
+  type EmojiItem,
+} from "./data"
+
+/** Primeiro emoji de cada grupo, para o ícone da aba. */
+const GROUP_ICONS: Record<number, string> = {
+  0: "😀",
+  1: "👋",
+  3: "🐶",
+  4: "🍕",
+  5: "🚗",
+  6: "⚽",
+  7: "💡",
+  8: "❤️",
+  9: "🏳️",
+}
+
+/**
+ * Seletor de emojis (MS-10): busca por nome e etiquetas no idioma da interface, recentes e abas por categoria.
+ * Os dados vêm do emojibase empacotado no próprio app (sem CDN, dentro da CSP).
+ */
+export function EmojiPicker({
+  onSelect,
+}: {
+  onSelect: (emoji: string) => void
+}) {
+  const { t, i18n } = useTranslation()
+  const me = useQuery(authQueries.me())
+  const userId = me.data?.account.id ?? "anon"
+  const [emojis, setEmojis] = useState<EmojiItem[] | null>(null)
+  const [query, setQuery] = useState("")
+  const [group, setGroup] = useState<number | "recent">("recent")
+  const [recent, setRecent] = useState<string[]>(() => readRecent(userId))
+
+  useEffect(() => {
+    let active = true
+    void loadEmojis(i18n.language).then((list) => {
+      if (active) {
+        setEmojis(list)
+      }
+    })
+    return () => {
+      active = false
+    }
+  }, [i18n.language])
+
+  const byUnicode = useMemo(
+    () => new Map((emojis ?? []).map((emoji) => [emoji.unicode, emoji])),
+    [emojis]
+  )
+  const shownGroup = group === "recent" && recent.length === 0 ? 0 : group
+  const visible: EmojiItem[] =
+    emojis === null
+      ? []
+      : query.trim() !== ""
+        ? searchEmojis(emojis, query)
+        : shownGroup === "recent"
+          ? recent.map(
+              (unicode) =>
+                byUnicode.get(unicode) ?? {
+                  unicode,
+                  label: unicode,
+                  tags: [],
+                  group: -1,
+                  order: 0,
+                }
+            )
+          : emojis.filter((emoji) => emoji.group === shownGroup)
+
+  function choose(emoji: string) {
+    setRecent(pushRecent(userId, emoji))
+    onSelect(emoji)
+  }
+
+  const heading =
+    query.trim() !== ""
+      ? t("emoji.results")
+      : shownGroup === "recent"
+        ? t("emoji.recent")
+        : t(`emoji.group.${shownGroup}`)
+
+  return (
+    <div className="flex w-[min(20rem,calc(100vw-2rem))] flex-col gap-2">
+      <Input
+        type="search"
+        aria-label={t("emoji.search")}
+        placeholder={t("emoji.search")}
+        value={query}
+        onChange={(event) => setQuery(event.target.value)}
+        autoFocus
+      />
+      {query.trim() === "" ? (
+        <div
+          role="tablist"
+          aria-label={t("emoji.categories")}
+          className="flex gap-0.5 overflow-x-auto"
+        >
+          {(["recent", ...GROUPS] as const).map((key) => (
+            <button
+              key={key}
+              type="button"
+              role="tab"
+              aria-selected={shownGroup === key}
+              aria-label={
+                key === "recent" ? t("emoji.recent") : t(`emoji.group.${key}`)
+              }
+              disabled={key === "recent" && recent.length === 0}
+              onClick={() => setGroup(key)}
+              className={cn(
+                "flex size-9 shrink-0 items-center justify-center rounded-md text-lg outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-40",
+                shownGroup === key && "bg-muted"
+              )}
+            >
+              <span aria-hidden="true">
+                {key === "recent" ? "🕘" : GROUP_ICONS[key]}
+              </span>
+            </button>
+          ))}
+        </div>
+      ) : null}
+      <p
+        className="text-xs font-medium text-muted-foreground"
+        aria-live="polite"
+      >
+        {heading}
+      </p>
+      {emojis === null ? (
+        <Skeleton className="h-56 w-full" />
+      ) : visible.length === 0 ? (
+        <p className="py-6 text-center text-sm text-muted-foreground">
+          {t("emoji.noResults")}
+        </p>
+      ) : (
+        <div className="grid h-56 grid-cols-8 content-start gap-0.5 overflow-y-auto">
+          {visible.map((emoji) => (
+            <button
+              key={emoji.unicode}
+              type="button"
+              aria-label={emoji.label}
+              title={emoji.label}
+              onClick={() => choose(emoji.unicode)}
+              className="flex aspect-square items-center justify-center rounded-md text-xl outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50"
+            >
+              {emoji.unicode}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}

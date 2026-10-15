@@ -109,6 +109,9 @@ app:
       enabled: ${PAPINHO_CLAMAV_ENABLED:false}
       host: ${PAPINHO_CLAMAV_HOST:localhost}
       port: ${PAPINHO_CLAMAV_PORT:3310}
+  link-preview:
+    enabled: ${PAPINHO_LINK_PREVIEW:true}
+    cache-ttl: 24h
   identity:
     webauthn:
       rp-id: ${PAPINHO_RP_ID:localhost}

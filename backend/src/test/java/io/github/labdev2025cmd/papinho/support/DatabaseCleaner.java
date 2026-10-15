@@ -12,7 +12,7 @@ public class DatabaseCleaner extends AbstractTestExecutionListener {
     @Override
     public void beforeTestMethod(TestContext testContext) {
         JdbcTemplate jdbc = testContext.getApplicationContext().getBean(JdbcTemplate.class);
-        jdbc.execute("TRUNCATE TABLE user_accounts, spring_session, event_publication CASCADE");
+        jdbc.execute("TRUNCATE TABLE user_accounts, spring_session, event_publication, link_previews CASCADE");
         jdbc.update("""
                 UPDATE instance_settings SET registration_mode = 'INVITE_ONLY', username_change_cooldown_days = 30,
                        message_edit_window_minutes = 15, message_delete_window_hours = 48,

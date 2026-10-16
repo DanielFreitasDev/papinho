@@ -64,6 +64,9 @@ Exceções explícitas aos guias:
   resource server JWT do `JAVA.md` não se aplicam; os demais princípios de segurança se aplicam.
 - **Localização dos guias:** ficam na raiz, não em `docs/guides/`.
 - **Git:** commits e push em `main` são autorizados (seção 4).
+- **Controles nativos:** o `UI.md` §1.4 admite `NativeSelect` e `<input type="date">`
+  com aparência do sistema em alguns casos. Neste projeto **não**: vale o UI-05, sem exceção
+  por conveniência ou desempenho.
 
 ---
 
@@ -469,6 +472,42 @@ Use os componentes oficiais de chat do shadcn (`message-scroller`, `message`, `b
   permissão.
 - **UI-04** — Lista de mensagens performática com milhares de itens (virtualização ou
   `message-scroller` com paginação reversa).
+- **UI-05** — **Nenhum elemento com a aparência padrão do navegador ou do sistema
+  operacional.** Todo controle visível tem estilo próprio do projeto, derivado dos tokens
+  do tema (claro e escuro) e coerente com o preset do shadcn. Isso inclui, sem se limitar a:
+  - **seleção:** dropdown/`<select>`, combobox, menus e listas de opções → `Select`,
+    `Combobox`, `DropdownMenu`. `NativeSelect` é proibido;
+  - **marcação:** checkbox, radio, switch → `Checkbox`, `RadioGroup`, `Switch`;
+  - **valores:** `range` → `Slider`; spinners de `type="number"` removidos ou substituídos
+    por botões próprios; data, hora e cor → `Calendar`/`Popover` e seletores próprios;
+  - **barras de rolagem:** em todo o app (lista de conversas, mensagens, painéis, modais,
+    menus, `textarea`), via `ScrollArea` ou CSS global (`scrollbar-width`,
+    `scrollbar-color` e `::-webkit-scrollbar`), com cores dos tokens. A rolagem
+    continua nativa; muda só a aparência;
+  - **mídia:** `<audio>` e `<video>` sem `controls` nativos; player, forma de onda,
+    velocidade e mini-player próprios (AU-01, AU-02, MS-08);
+  - **arquivos:** `<input type="file">` oculto, acionado por botão ou área de soltar do
+    projeto;
+  - **campos:** anel de foco próprio (nunca o `outline` padrão nem foco removido sem
+    substituto), `::placeholder`, `caret-color`, `::selection`, preenchimento automático
+    (`:-webkit-autofill` sem o fundo amarelo/azul) e botão de limpar do `type="search"`;
+  - **outros:** `<progress>` → `Progress`; `<details>`/`<summary>` → `Accordion`/
+    `Collapsible`; `title=""` → `Tooltip`; `alert`/`confirm`/`prompt` → `AlertDialog`/
+    `Dialog`/toast;
+  - `color-scheme` declarado em `:root` e `.dark`, para que nada nativo residual destoe do
+    tema.
+
+  Preservar semântica, teclado, leitor de tela, zoom e autofill: o estilo muda, o
+  comportamento acessível não. Únicas exceções aceitas, por serem do sistema e não do app:
+  janela de escolha de arquivo, pedidos de permissão (câmera, microfone, notificações),
+  notificações do sistema e a folha de instalação do PWA. Nesses casos, o **gatilho** e a
+  explicação anterior são do projeto.
+
+  Evidência exigida no `STATUS.md`: teste Playwright com captura de tela em Chromium,
+  Firefox e WebKit (claro e escuro), cobrindo lista de conversas, conversa, formulários,
+  configurações e modais, sem nenhum controle nativo visível. Também uma regra de lint ou
+  teste que proíba `<select>`, `<input type="checkbox|radio|range|date|time|color">`,
+  `<progress>` e `controls` em `<audio>`/`<video>` fora de `components/ui/`.
 
 ### 8.4 Acessibilidade e responsividade (AR)
 
@@ -541,14 +580,17 @@ Use os componentes oficiais de chat do shadcn (`message-scroller`, `message`, `b
 
 | Fase | Conteúdo | Requisitos |
 |---|---|---|
-| 0 | Fundação: geradores, layout D2, `AGENTS.md`, `CLAUDE.md`, `LEARNING.md`, `STATUS.md`, ADRs, `compose.yaml`, CI, segurança base, PKI | QA-04, QA-05 (parcial), PK-* |
+| 0 | Fundação: geradores, layout D2, `AGENTS.md`, `CLAUDE.md`, `LEARNING.md`, `STATUS.md`, ADRs, `compose.yaml`, CI, segurança base, PKI, **estilos base do UI-05 (scrollbars, foco, seleção, autofill, `color-scheme`) e a regra de lint** | QA-04, QA-05 (parcial), PK-*, UI-05 (base) |
 | 1 | Contas e contatos | ID-*, CT-* |
 | 2 | Conversas individuais em tempo real | MS-01..04, MS-14, RT-*, UI-01 |
 | 3 | Mídia, áudio e links | MD-*, AU-* |
 | 4 | Grupos e mensagens avançadas | GR-01..04, MS-05..13 |
 | 5 | Privacidade | PV-*, SG-04 |
 | 6 | Organização, busca, notificações e PWA | GR-05, GR-06, NT-* |
-| 7 | Backup, admin, endurecimento e e2e completo | BK-*, AD-*, AR-*, QA-03 |
+| 7 | Backup, admin, endurecimento e e2e completo, **auditoria do UI-05 em todas as telas** | BK-*, AD-*, AR-*, QA-03, UI-05 |
+
+O UI-05 é transversal: toda tela entregue em qualquer fase já deve cumpri-lo. Um controle
+com aparência nativa conta como regressão.
 
 Uma fase só começa quando a anterior compila, passa nos testes e está utilizável.
 Prefira entregar funcionalidades completas de ponta a ponta (backend, frontend e testes)

@@ -152,7 +152,8 @@
     "appearance": "Aparência",
     "transcription": "Transcrição",
     "chats": "Conversas",
-    "privacy": "Privacidade"
+    "privacy": "Privacidade",
+    "notifications": "Notificações"
   },
   "profile": {
     "about": "Recado",
@@ -905,5 +906,44 @@
     "older": "Resultado mais antigo",
     "close": "Fechar a busca",
     "position": "{{current}} de {{total}}{{more}}"
+  },
+  "pwa": {
+    "updateTitle": "Nova versão do Papinho",
+    "updateDescription": "Atualize quando quiser; a página vai recarregar.",
+    "update": "Atualizar"
+  },
+  "notifications": {
+    "browserTitle": "Notificações neste navegador",
+    "browserDescription": "O navegador pede permissão uma vez. Com o app fechado, o aviso chega por push.",
+    "enable": "Ativar notificações",
+    "allowed": "Notificações permitidas neste navegador.",
+    "denied": "Notificações bloqueadas. Libere nas configurações do site, no navegador.",
+    "unsupported": "Este navegador não mostra notificações.",
+    "pushUnavailable": "Este navegador não recebe push com o app fechado; os avisos aparecem só com o Papinho aberto.",
+    "internetTitle": "O push depende de internet",
+    "internetDescription": "Com o app fechado, o aviso passa pelo serviço de push do navegador (Google, Mozilla ou Apple). Numa rede local sem internet, só chegam avisos com o Papinho aberto. O texto vai cifrado; marque \"Ocultar conteúdo\" em Privacidade para mandar só \"Nova mensagem\".",
+    "iosTitle": "No iPhone e no iPad, instale o app",
+    "iosDescription": "O iOS só entrega push para o Papinho adicionado à tela de início: no Safari, toque em Compartilhar e em \"Adicionar à Tela de Início\", e ative as notificações por lá.",
+    "typesTitle": "O que avisa",
+    "typesDescription": "Vale para todos os seus dispositivos.",
+    "toggle": {
+      "enabled": "Notificações",
+      "direct": "Conversas individuais",
+      "groups": "Grupos",
+      "mentions": "Menções nos grupos",
+      "sound": "Som"
+    },
+    "toggleHint": {
+      "enabled": "Desligado, nada avisa.",
+      "direct": "Mensagens nas conversas individuais.",
+      "groups": "Todas as mensagens dos grupos.",
+      "mentions": "Quando alguém escreve o seu @usuario ou @todos, mesmo com os grupos desligados.",
+      "sound": "Tocar o som do sistema."
+    },
+    "perConversation": "Para uma conversa só, use Silenciar no menu dela."
+  },
+  "connection": {
+    "offline": "Sem conexão. Você vê as conversas recentes e os textos saem quando a conexão voltar.",
+    "reconnecting": "Reconectando…"
   }
 }

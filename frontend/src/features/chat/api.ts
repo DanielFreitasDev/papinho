@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-query"
 
 import { apiFetch, ApiError } from "@/lib/api-client"
+import { dequeue, enqueue, networkFirst, queuedFor } from "@/lib/offline-db"
 import {
   addPending,
   applyChanges,
@@ -50,15 +51,22 @@ export type GalleryTab = "MEDIA" | "LINKS" | "DOCUMENTS" | "AUDIO"
 
 const PAGE = 50
 
+const isApiError = (error: unknown) => error instanceof ApiError
+
 export const chatQueries = {
   list: (requests = false) =>
     queryOptions({
       queryKey: chatKeys.list(requests),
-      queryFn: ({ signal }) =>
-        apiFetch<Conversation[]>(
-          `/api/v1/conversations${requests ? "?requests=true" : ""}`,
-          { signal }
-        ),
+      queryFn: ({ signal }) => {
+        const load = () =>
+          apiFetch<Conversation[]>(
+            `/api/v1/conversations${requests ? "?requests=true" : ""}`,
+            { signal }
+          )
+        return requests ? load() : networkFirst("list", load, isApiError)
+      },
+      // Roda mesmo sem rede, para cair no que ficou guardado (NT-05).
+      networkMode: "always",
     }),
   locked: () =>
     queryOptions({
@@ -72,7 +80,13 @@ export const chatQueries = {
     queryOptions({
       queryKey: chatKeys.detail(id),
       queryFn: ({ signal }) =>
-        apiFetch<Conversation>(`/api/v1/conversations/${id}`, { signal }),
+        networkFirst(
+          `detail:${id}`,
+          () =>
+            apiFetch<Conversation>(`/api/v1/conversations/${id}`, { signal }),
+          isApiError
+        ),
+      networkMode: "always",
       retry: (count, error) =>
         !(
           error instanceof ApiError &&
@@ -83,13 +97,35 @@ export const chatQueries = {
   messages: (id: string) =>
     queryOptions({
       queryKey: chatKeys.messages(id),
-      queryFn: async ({ signal }) =>
-        fromHistory(
-          await apiFetch<MessagePage>(
-            `/api/v1/conversations/${id}/messages?limit=${PAGE}`,
-            { signal }
-          )
-        ),
+      queryFn: async ({ signal }) => {
+        const cache = await networkFirst(
+          `messages:${id}`,
+          async () =>
+            fromHistory(
+              await apiFetch<MessagePage>(
+                `/api/v1/conversations/${id}/messages?limit=${PAGE}`,
+                { signal }
+              )
+            ),
+          isApiError
+        )
+        // Textos ainda na fila offline continuam aparecendo como "enviando" (NT-05).
+        return (await queuedFor(id)).reduce(
+          (current, item) =>
+            addPending(current, {
+              clientMessageId: item.clientMessageId,
+              conversationId: id,
+              body: item.body,
+              replyTo: null,
+              createdAt: item.createdAt,
+              status: "sending",
+              attachment: null,
+              attachmentId: null,
+            }),
+          cache
+        )
+      },
+      networkMode: "always",
       staleTime: Infinity,
       gcTime: 5 * 60_000,
       retry: (count, error) =>
@@ -248,7 +284,7 @@ function updateMessage(queryClient: QueryClient, message: Message) {
 export function useSendMessage(conversationId: string) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (input: {
+    mutationFn: async (input: {
       clientMessageId: string
       body: string
       replyTo: ReplyPreview | null
@@ -258,19 +294,36 @@ export function useSendMessage(conversationId: string) {
       silent?: boolean
       /** Figurinha (MS-10). */
       stickerId?: string | null
-    }) =>
-      apiFetch<Message>(`/api/v1/conversations/${conversationId}/messages`, {
-        method: "POST",
-        json: {
+    }) => {
+      if (isPlainText(input)) {
+        // Antes do POST: se a rede cair no meio, o texto continua na fila (NT-05).
+        await enqueue({
           clientMessageId: input.clientMessageId,
+          conversationId,
           body: input.body,
           replyToId: input.replyTo?.id ?? null,
-          attachmentId: input.attachmentId ?? null,
-          viewOnce: input.attachment?.viewOnce ?? false,
           silent: input.silent ?? false,
-          stickerId: input.stickerId ?? null,
-        },
-      }),
+          createdAt: new Date().toISOString(),
+        })
+      }
+      return apiFetch<Message>(
+        `/api/v1/conversations/${conversationId}/messages`,
+        {
+          method: "POST",
+          json: {
+            clientMessageId: input.clientMessageId,
+            body: input.body,
+            replyToId: input.replyTo?.id ?? null,
+            attachmentId: input.attachmentId ?? null,
+            viewOnce: input.attachment?.viewOnce ?? false,
+            silent: input.silent ?? false,
+            stickerId: input.stickerId ?? null,
+          },
+        }
+      )
+    },
+    // Tenta mesmo sem rede: o texto fica na fila offline e sai quando a conexão voltar (NT-05).
+    networkMode: "always",
     onMutate: (input) => {
       queryClient.setQueryData<ConversationCache>(
         chatKeys.messages(conversationId),
@@ -290,10 +343,16 @@ export function useSendMessage(conversationId: string) {
       )
     },
     onSuccess: (message) => {
+      void dequeue(message.clientMessageId)
       updateMessage(queryClient, message)
       void queryClient.invalidateQueries({ queryKey: chatKeys.conversations })
     },
-    onError: (_error, input) => {
+    onError: (error, input) => {
+      // Sem rede, o texto continua "enviando" na fila; recusa do servidor ou anexo viram falha.
+      if (!(error instanceof ApiError) && isPlainText(input)) {
+        return
+      }
+      void dequeue(input.clientMessageId)
       queryClient.setQueryData<ConversationCache>(
         chatKeys.messages(conversationId),
         (current) =>
@@ -301,6 +360,15 @@ export function useSendMessage(conversationId: string) {
       )
     },
   })
+}
+
+/** Só texto entra na fila offline; anexo e figurinha precisam da rede na hora. */
+function isPlainText(input: {
+  attachmentId?: string | null
+  attachment?: LocalAttachment | null
+  stickerId?: string | null
+}) {
+  return !input.attachmentId && !input.attachment && !input.stickerId
 }
 
 export function useOpenDirect() {

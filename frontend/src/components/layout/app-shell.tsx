@@ -45,14 +45,17 @@ import {
 import { authQueries, useLogout, type Me } from "@/features/auth"
 import {
   BroadcastDialog,
+  chatQueries,
   ConversationList,
   NewGroupDialog,
+  useOfflineChat,
   useOpenDirect,
   useOpenSaved,
   useRealtimeSync,
 } from "@/features/chat"
 import { AddContactDialog, ContactList, MyLinkDialog } from "@/features/contact"
 import { InviteDialog } from "@/features/invite"
+import { useNotifications } from "@/features/notification"
 import {
   lockScreenNow,
   privacyQueries,
@@ -61,6 +64,7 @@ import {
 } from "@/features/privacy"
 import { CommandPalette } from "./command-palette"
 import { ShortcutsDialog } from "./shortcuts-dialog"
+import { ConnectionBanner } from "./connection-banner"
 import { MiniPlayer } from "@/features/media"
 import { errorMessage } from "@/lib/api-client"
 
@@ -83,7 +87,15 @@ function SignedInShell({ me }: { me: Me }) {
   const openDirect = useOpenDirect()
   const openSaved = useOpenSaved()
   useRealtimeSync(me.account.id)
+  useOfflineChat(me.account.id, me)
   usePrivateMode()
+  const conversations = useQuery(chatQueries.list(false))
+  useNotifications(
+    (conversations.data ?? []).reduce(
+      (total, conversation) => total + conversation.unreadCount,
+      0
+    )
+  )
   const screenLock = useQuery(privacyQueries.screenLock())
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
@@ -129,197 +141,201 @@ function SignedInShell({ me }: { me: Me }) {
   const { account, profile } = me
 
   return (
-    <div className="grid h-dvh min-h-0 grid-cols-1 md:grid-cols-[minmax(18rem,26rem)_1fr]">
-      <aside
-        aria-label={t("chat.sidebar")}
-        className={cn(
-          "min-h-0 flex-col border-r bg-sidebar text-sidebar-foreground",
-          isHome ? "flex" : "hidden md:flex"
-        )}
-      >
-        <header className="flex min-h-14 items-center gap-2 px-3 pt-[env(safe-area-inset-top)]">
-          <Link
-            to="/settings/profile"
-            className="flex min-w-0 flex-1 items-center gap-2 rounded-lg p-1 outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-          >
-            <UserAvatar
-              userId={profile.userId}
-              name={profile.displayName}
-              hasPhoto={profile.hasPhoto}
-              version={profile.updatedAt}
-              className="size-9"
-            />
-            <span className="flex min-w-0 flex-col">
-              <span className="truncate text-sm font-medium">
-                {profile.displayName}
-              </span>
-              <span className="truncate text-xs text-muted-foreground">
-                @{account.username}
-              </span>
-            </span>
-          </Link>
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label={t("shell.addContact")}
-                  onClick={() => setAddOpen(true)}
-                />
-              }
-            >
-              <UserPlusIcon />
-            </TooltipTrigger>
-            <TooltipContent>{t("shell.addContact")}</TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label={t("contacts.myLink")}
-                  onClick={() => setLinkOpen(true)}
-                />
-              }
-            >
-              <QrCodeIcon />
-            </TooltipTrigger>
-            <TooltipContent>{t("contacts.myLink")}</TooltipContent>
-          </Tooltip>
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label={t("shell.menu")}
-                />
-              }
-            >
-              <EllipsisVerticalIcon />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuGroup>
-                <DropdownMenuItem onClick={() => setGroupOpen(true)}>
-                  <MessageSquarePlusIcon />
-                  {t("groups.newGroup")}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setBroadcastOpen(true)}>
-                  <MegaphoneIcon />
-                  {t("broadcast.new")}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => void openSavedMessages()}>
-                  <BookmarkIcon />
-                  {t("chat.savedMessages")}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setInviteOpen(true)}>
-                  <UsersIcon />
-                  {t("shell.invite")}
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => void navigate({ to: "/starred" })}
-                >
-                  <StarIcon />
-                  {t("chat.starredMessages")}
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => void navigate({ to: "/locked" })}
-                >
-                  <LockKeyholeIcon />
-                  {t("privacy.locked.folder")}
-                </DropdownMenuItem>
-                {screenLock.data?.enabled ? (
-                  <DropdownMenuItem onClick={() => lockScreenNow()}>
-                    <LockIcon />
-                    {t("privacy.screenLock.lockNow")}
-                  </DropdownMenuItem>
-                ) : null}
-                <DropdownMenuItem
-                  onClick={() => void navigate({ to: "/settings/profile" })}
-                >
-                  <SettingsIcon />
-                  {t("shell.settings")}
-                </DropdownMenuItem>
-                {account.admin ? (
-                  <DropdownMenuItem
-                    onClick={() => void navigate({ to: "/admin" })}
-                  >
-                    <ShieldIcon />
-                    {t("shell.admin")}
-                  </DropdownMenuItem>
-                ) : null}
-              </DropdownMenuGroup>
-              <DropdownMenuSeparator />
-              <DropdownMenuGroup>
-                <DropdownMenuItem
-                  onClick={async () => {
-                    await logout.mutateAsync().catch(() => undefined)
-                    await navigate({ to: "/login" })
-                  }}
-                >
-                  <LogOutIcon />
-                  {t("auth.logout")}
-                </DropdownMenuItem>
-              </DropdownMenuGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </header>
-        <Tabs
-          value={tab}
-          onValueChange={(value) => setTab(String(value))}
-          className="min-h-0 flex-1 gap-1"
+    <div className="flex h-dvh min-h-0 flex-col">
+      {/* Sem conexão ou reconectando (NT-05): acima das duas colunas, visível também no celular. */}
+      <ConnectionBanner />
+      <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[minmax(18rem,26rem)_1fr]">
+        <aside
+          aria-label={t("chat.sidebar")}
+          className={cn(
+            "min-h-0 flex-col border-r bg-sidebar text-sidebar-foreground",
+            isHome ? "flex" : "hidden md:flex"
+          )}
         >
-          <TabsList className="mx-3 w-[calc(100%-1.5rem)]">
-            <TabsTrigger value="conversations">
-              {t("chat.conversations")}
-            </TabsTrigger>
-            <TabsTrigger value="contacts">{t("shell.contacts")}</TabsTrigger>
-          </TabsList>
-          <TabsContent value="conversations" className="min-h-0 flex-1">
-            <ScrollArea className="h-full">
-              <div className="px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
-                <ConversationList meId={account.id} />
-              </div>
-            </ScrollArea>
-          </TabsContent>
-          <TabsContent value="contacts" className="min-h-0 flex-1">
-            <ScrollArea className="h-full">
-              <div className="px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
-                <ContactList
-                  onOpen={async (contact) => {
-                    try {
-                      const conversation = await openDirect.mutateAsync(
-                        contact.username
-                      )
-                      setTab("conversations")
-                      await navigate({
-                        to: "/c/$conversationId",
-                        params: { conversationId: conversation.id },
-                      })
-                    } catch (error) {
-                      toast.add({
-                        title: errorMessage(error, t("common.genericError")),
-                        type: "error",
-                      })
-                    }
-                  }}
-                />
-              </div>
-            </ScrollArea>
-          </TabsContent>
-        </Tabs>
-      </aside>
-      <main
-        className={cn(
-          "min-h-0 min-w-0 flex-col overflow-y-auto",
-          isHome ? "hidden md:flex" : "flex"
-        )}
-      >
-        <MiniPlayer />
-        <Outlet />
-      </main>
+          <header className="flex min-h-14 items-center gap-2 px-3 pt-[env(safe-area-inset-top)]">
+            <Link
+              to="/settings/profile"
+              className="flex min-w-0 flex-1 items-center gap-2 rounded-lg p-1 outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+            >
+              <UserAvatar
+                userId={profile.userId}
+                name={profile.displayName}
+                hasPhoto={profile.hasPhoto}
+                version={profile.updatedAt}
+                className="size-9"
+              />
+              <span className="flex min-w-0 flex-col">
+                <span className="truncate text-sm font-medium">
+                  {profile.displayName}
+                </span>
+                <span className="truncate text-xs text-muted-foreground">
+                  @{account.username}
+                </span>
+              </span>
+            </Link>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label={t("shell.addContact")}
+                    onClick={() => setAddOpen(true)}
+                  />
+                }
+              >
+                <UserPlusIcon />
+              </TooltipTrigger>
+              <TooltipContent>{t("shell.addContact")}</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label={t("contacts.myLink")}
+                    onClick={() => setLinkOpen(true)}
+                  />
+                }
+              >
+                <QrCodeIcon />
+              </TooltipTrigger>
+              <TooltipContent>{t("contacts.myLink")}</TooltipContent>
+            </Tooltip>
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label={t("shell.menu")}
+                  />
+                }
+              >
+                <EllipsisVerticalIcon />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuGroup>
+                  <DropdownMenuItem onClick={() => setGroupOpen(true)}>
+                    <MessageSquarePlusIcon />
+                    {t("groups.newGroup")}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setBroadcastOpen(true)}>
+                    <MegaphoneIcon />
+                    {t("broadcast.new")}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => void openSavedMessages()}>
+                    <BookmarkIcon />
+                    {t("chat.savedMessages")}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setInviteOpen(true)}>
+                    <UsersIcon />
+                    {t("shell.invite")}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => void navigate({ to: "/starred" })}
+                  >
+                    <StarIcon />
+                    {t("chat.starredMessages")}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => void navigate({ to: "/locked" })}
+                  >
+                    <LockKeyholeIcon />
+                    {t("privacy.locked.folder")}
+                  </DropdownMenuItem>
+                  {screenLock.data?.enabled ? (
+                    <DropdownMenuItem onClick={() => lockScreenNow()}>
+                      <LockIcon />
+                      {t("privacy.screenLock.lockNow")}
+                    </DropdownMenuItem>
+                  ) : null}
+                  <DropdownMenuItem
+                    onClick={() => void navigate({ to: "/settings/profile" })}
+                  >
+                    <SettingsIcon />
+                    {t("shell.settings")}
+                  </DropdownMenuItem>
+                  {account.admin ? (
+                    <DropdownMenuItem
+                      onClick={() => void navigate({ to: "/admin" })}
+                    >
+                      <ShieldIcon />
+                      {t("shell.admin")}
+                    </DropdownMenuItem>
+                  ) : null}
+                </DropdownMenuGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuGroup>
+                  <DropdownMenuItem
+                    onClick={async () => {
+                      await logout.mutateAsync().catch(() => undefined)
+                      await navigate({ to: "/login" })
+                    }}
+                  >
+                    <LogOutIcon />
+                    {t("auth.logout")}
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </header>
+          <Tabs
+            value={tab}
+            onValueChange={(value) => setTab(String(value))}
+            className="min-h-0 flex-1 gap-1"
+          >
+            <TabsList className="mx-3 w-[calc(100%-1.5rem)]">
+              <TabsTrigger value="conversations">
+                {t("chat.conversations")}
+              </TabsTrigger>
+              <TabsTrigger value="contacts">{t("shell.contacts")}</TabsTrigger>
+            </TabsList>
+            <TabsContent value="conversations" className="min-h-0 flex-1">
+              <ScrollArea className="h-full">
+                <div className="px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+                  <ConversationList meId={account.id} />
+                </div>
+              </ScrollArea>
+            </TabsContent>
+            <TabsContent value="contacts" className="min-h-0 flex-1">
+              <ScrollArea className="h-full">
+                <div className="px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+                  <ContactList
+                    onOpen={async (contact) => {
+                      try {
+                        const conversation = await openDirect.mutateAsync(
+                          contact.username
+                        )
+                        setTab("conversations")
+                        await navigate({
+                          to: "/c/$conversationId",
+                          params: { conversationId: conversation.id },
+                        })
+                      } catch (error) {
+                        toast.add({
+                          title: errorMessage(error, t("common.genericError")),
+                          type: "error",
+                        })
+                      }
+                    }}
+                  />
+                </div>
+              </ScrollArea>
+            </TabsContent>
+          </Tabs>
+        </aside>
+        <main
+          className={cn(
+            "min-h-0 min-w-0 flex-col overflow-y-auto",
+            isHome ? "hidden md:flex" : "flex"
+          )}
+        >
+          <MiniPlayer />
+          <Outlet />
+        </main>
+      </div>
       <AddContactDialog open={addOpen} onOpenChange={setAddOpen} />
       <MyLinkDialog open={linkOpen} onOpenChange={setLinkOpen} />
       <InviteDialog open={inviteOpen} onOpenChange={setInviteOpen} />

@@ -152,7 +152,8 @@
     "appearance": "Appearance",
     "transcription": "Transcription",
     "chats": "Chats",
-    "privacy": "Privacy"
+    "privacy": "Privacy",
+    "notifications": "Notifications"
   },
   "profile": {
     "about": "About",
@@ -905,5 +906,44 @@
     "older": "Older result",
     "close": "Close search",
     "position": "{{current}} of {{total}}{{more}}"
+  },
+  "pwa": {
+    "updateTitle": "New Papinho version",
+    "updateDescription": "Update whenever you like; the page will reload.",
+    "update": "Update"
+  },
+  "notifications": {
+    "browserTitle": "Notifications in this browser",
+    "browserDescription": "The browser asks for permission once. With the app closed, alerts arrive by push.",
+    "enable": "Turn on notifications",
+    "allowed": "Notifications allowed in this browser.",
+    "denied": "Notifications are blocked. Allow them in the site settings of your browser.",
+    "unsupported": "This browser does not show notifications.",
+    "pushUnavailable": "This browser does not receive push with the app closed; alerts show only while Papinho is open.",
+    "internetTitle": "Push needs the internet",
+    "internetDescription": "With the app closed, the alert goes through the browser's push service (Google, Mozilla or Apple). On a local network without internet, alerts arrive only while Papinho is open. The text is encrypted; turn on \"Hide content\" in Privacy to send only \"New message\".",
+    "iosTitle": "On iPhone and iPad, install the app",
+    "iosDescription": "iOS only delivers push to Papinho added to the Home Screen: in Safari, tap Share and \"Add to Home Screen\", then turn on notifications there.",
+    "typesTitle": "What alerts you",
+    "typesDescription": "Applies to all your devices.",
+    "toggle": {
+      "enabled": "Notifications",
+      "direct": "Direct chats",
+      "groups": "Groups",
+      "mentions": "Mentions in groups",
+      "sound": "Sound"
+    },
+    "toggleHint": {
+      "enabled": "Off, nothing alerts you.",
+      "direct": "Messages in direct chats.",
+      "groups": "All group messages.",
+      "mentions": "When someone writes your @username or @todos, even with groups off.",
+      "sound": "Play the system sound."
+    },
+    "perConversation": "For a single chat, use Mute in its menu."
+  },
+  "connection": {
+    "offline": "No connection. You see recent chats and your texts go out when the connection is back.",
+    "reconnecting": "Reconnecting…"
   }
 }

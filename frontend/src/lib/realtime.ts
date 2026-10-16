@@ -20,6 +20,15 @@ export type RealtimeEvent =
   | { type: "cleared"; conversationId: string }
   | { type: "folders" }
   | {
+      type: "notify"
+      conversationId: string
+      title: string
+      body: string
+      tag: string
+      silent: boolean
+      badge: number | null
+    }
+  | {
       type: "activity"
       conversationId: string
       userId: string

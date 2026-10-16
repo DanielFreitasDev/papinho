@@ -5,7 +5,9 @@ import {
 } from "@tanstack/react-query"
 
 import { setUnlockToken } from "@/lib/unlock-token"
-import { apiFetch } from "@/lib/api-client"
+import { ApiError, apiFetch } from "@/lib/api-client"
+import { lastUserId, readSnapshot } from "@/lib/offline-db"
+import { runLogoutCleanups } from "@/lib/logout-cleanup"
 import type { Instance, Me, RegisterResponse } from "./types"
 
 export const authKeys = {
@@ -18,9 +20,23 @@ export const authQueries = {
   me: () =>
     queryOptions({
       queryKey: authKeys.me,
-      queryFn: async ({ signal }) =>
-        (await apiFetch<{ me: Me | null }>("/api/v1/auth/session", { signal }))
-          .me,
+      queryFn: async ({ signal }) => {
+        try {
+          return (
+            await apiFetch<{ me: Me | null }>("/api/v1/auth/session", {
+              signal,
+            })
+          ).me
+        } catch (error) {
+          // Sem rede (não uma resposta do servidor): abre com a conta guardada para as conversas offline (NT-05).
+          const userId = lastUserId()
+          if (error instanceof ApiError || !userId) {
+            throw error
+          }
+          return (await readSnapshot<Me>("me")) ?? null
+        }
+      },
+      networkMode: "always",
       staleTime: 60_000,
     }),
   instance: () =>
@@ -84,7 +100,10 @@ export function useRecover() {
 export function useLogout() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: () => apiFetch<void>("/api/v1/auth/logout", { method: "POST" }),
+    mutationFn: async () => {
+      await runLogoutCleanups()
+      return apiFetch<void>("/api/v1/auth/logout", { method: "POST" })
+    },
     onSettled: () => {
       // Nada da conta anterior fica em memória (NT-05): limpa todo o cache do TanStack Query e o token das
       // conversas trancadas (PV-03).

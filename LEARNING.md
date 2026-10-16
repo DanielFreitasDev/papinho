@@ -13,6 +13,7 @@ Leia as entradas relacionadas à tarefa. Os detalhes ficam em `docs/learning/`.
 - [Aviso perdido antes da primeira conexão do WebSocket](docs/learning/bug-websocket-primeira-conexao-sem-sync.md) — sincronize em toda conexão, não só na reconexão.
 - [Recargas canceladas em rajada derrubavam o HTTP/2](docs/learning/bug-recarga-cancelada-derruba-http2.md) — invalidateQueries vira RST_STREAM; use refreshQueries.
 - [Cadastros em fila pelo advisory lock do primeiro usuário](docs/learning/bug-cadastro-serializado-pela-trava.md) — trava global presa durante 11 hashes Argon2; só com a instância vazia.
+- [Invalidar lista ainda carregando não traz a mudança](docs/learning/bug-invalidar-lista-ainda-carregando.md) — invalidate sem dados reaproveita a 1ª busca; use refreshQueries.
 - [Hover grudado no toque revelava o modo privado](docs/learning/bug-hover-grudado-no-toque.md) — revelar com :hover só em @media (hover: hover); toque longo de verdade pelo CDP.
 
 ## Pegadinhas de ambiente, dependências e bibliotecas

@@ -5,6 +5,7 @@ import {
 } from "@tanstack/react-query"
 
 import { apiFetch } from "@/lib/api-client"
+import { refreshQueries } from "@/lib/query-refresh"
 
 export type Invite = {
   id: string
@@ -37,8 +38,11 @@ export function useCreateInvite() {
         method: "POST",
         json: input,
       }),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: inviteKeys.list }),
+    // O diálogo cria convite antes de a lista carregar: invalidar reaproveitaria a primeira busca, sem o convite
+    // novo. Sem await, o link criado aparece na hora.
+    onSuccess: () => {
+      void refreshQueries(queryClient, inviteKeys.list)
+    },
   })
 }
 

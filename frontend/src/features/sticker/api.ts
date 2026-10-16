@@ -5,6 +5,7 @@ import {
 } from "@tanstack/react-query"
 
 import { apiFetch } from "@/lib/api-client"
+import { refreshQueries } from "@/lib/query-refresh"
 
 export type Sticker = {
   id: string
@@ -103,8 +104,9 @@ export function useStickerAction() {
           })
       }
     },
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: stickerKeys.all }),
+    // Recarrega depois da busca em andamento: invalidar uma lista ainda sem dados reaproveita a primeira busca, que
+    // saiu antes da mudança (um pacote criado com o diálogo recém-aberto não aparecia).
+    onSuccess: () => refreshQueries(queryClient, stickerKeys.all),
   })
 }
 

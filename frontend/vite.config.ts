@@ -89,9 +89,26 @@ export default defineConfig({
   },
   build: { outDir: "dist", sourcemap: false },
   test: {
-    environment: "jsdom",
-    setupFiles: ["./src/test/setup.ts"],
-    include: ["src/**/*.test.{ts,tsx}"],
-    css: false,
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: "app",
+          environment: "jsdom",
+          setupFiles: ["./src/test/setup.ts"],
+          include: ["src/**/*.test.{ts,tsx}"],
+          css: false,
+        },
+      },
+      {
+        // Regra de lint do UI-05 com o ESLint de verdade: ambiente node, sem o setup do app.
+        extends: true,
+        test: {
+          name: "lint",
+          environment: "node",
+          include: ["lint/**/*.test.ts"],
+        },
+      },
+    ],
   },
 })

@@ -403,3 +403,11 @@ html[data-wallpaper="waves"] .chat-wallpaper {
 html[data-wallpaper="tint"] .chat-wallpaper {
   background-color: color-mix(in oklch, var(--primary) 8%, var(--background));
 }
+
+/*
+ * Áudio na conversa: a trilha do Slider (bg-muted) tem a mesma cor do balão das mensagens recebidas e sumia. Dentro
+ * dos balões ela usa um tom do texto, visível nos dois temas e nos dois tipos de balão.
+ */
+[data-slot="bubble-content"] [data-slot="slider-track"] {
+  background-color: color-mix(in oklch, var(--foreground) 18%, transparent);
+}

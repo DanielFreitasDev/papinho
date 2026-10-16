@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/item"
 import { Skeleton } from "@/components/ui/skeleton"
 import { toast } from "@/components/ui/toast"
+import { errorMessage } from "@/lib/api-client"
 import { formatDateTime } from "@/lib/format"
 import { accountQueries, useRevokeSession } from "../api"
 import { SettingsSection } from "./settings-section"
@@ -39,8 +40,15 @@ export function SessionsSettings() {
             size="sm"
             className="w-fit"
             onClick={async () => {
-              await revoke.mutateAsync(null)
-              toast.add({ title: t("sessions.revoked") })
+              try {
+                await revoke.mutateAsync(null)
+                toast.add({ title: t("sessions.revoked") })
+              } catch (error) {
+                toast.add({
+                  title: errorMessage(error, t("common.genericError")),
+                  type: "error",
+                })
+              }
             }}
           >
             {t("sessions.revokeOthers")}
@@ -85,8 +93,18 @@ export function SessionsSettings() {
                       variant="ghost"
                       size="sm"
                       onClick={async () => {
-                        await revoke.mutateAsync(session.id)
-                        toast.add({ title: t("sessions.revoked") })
+                        try {
+                          await revoke.mutateAsync(session.id)
+                          toast.add({ title: t("sessions.revoked") })
+                        } catch (error) {
+                          toast.add({
+                            title: errorMessage(
+                              error,
+                              t("common.genericError")
+                            ),
+                            type: "error",
+                          })
+                        }
                       }}
                     >
                       {t("sessions.revoke")}

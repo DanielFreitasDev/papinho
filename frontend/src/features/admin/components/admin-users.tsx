@@ -7,6 +7,7 @@ import { QueryState } from "@/components/query-state"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { toast } from "@/components/ui/toast"
+import { errorMessage } from "@/lib/api-client"
 import {
   Dialog,
   DialogContent,
@@ -41,6 +42,11 @@ export function AdminUsers() {
   const debounced = useDebouncedValue(query, 300)
   const users = useQuery(adminQueries.users(debounced, 0))
   const action = useUserAction()
+  const onError = (error: unknown) =>
+    toast.add({
+      title: errorMessage(error, t("common.genericError")),
+      type: "error",
+    })
   const [password, setPassword] = useState<{
     user: AdminUser
     value: string
@@ -99,10 +105,13 @@ export function AdminUsers() {
                         variant="outline"
                         size="sm"
                         onClick={() =>
-                          action.mutate({
-                            id: user.id,
-                            action: user.enabled ? "disable" : "enable",
-                          })
+                          action.mutate(
+                            {
+                              id: user.id,
+                              action: user.enabled ? "disable" : "enable",
+                            },
+                            { onError }
+                          )
                         }
                       >
                         {user.enabled ? t("admin.disable") : t("admin.enable")}
@@ -110,18 +119,22 @@ export function AdminUsers() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={async () => {
-                          const result = await action.mutateAsync({
-                            id: user.id,
-                            action: "reset-password",
-                          })
-                          if (result?.temporaryPassword) {
-                            setPassword({
-                              user,
-                              value: result.temporaryPassword,
-                            })
-                          }
-                        }}
+                        onClick={() =>
+                          action.mutate(
+                            { id: user.id, action: "reset-password" },
+                            {
+                              onSuccess: (result) => {
+                                if (result?.temporaryPassword) {
+                                  setPassword({
+                                    user,
+                                    value: result.temporaryPassword,
+                                  })
+                                }
+                              },
+                              onError,
+                            }
+                          )
+                        }
                       >
                         {t("admin.resetPassword")}
                       </Button>
@@ -139,6 +152,7 @@ export function AdminUsers() {
                             {
                               onSuccess: () =>
                                 toast.add({ title: t("admin.roleChanged") }),
+                              onError,
                             }
                           )
                         }

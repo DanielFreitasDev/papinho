@@ -131,11 +131,18 @@ function SignedInShell({ me }: { me: Me }) {
   }, [])
 
   async function openSavedMessages() {
-    const saved = await openSaved.mutateAsync()
-    await navigate({
-      to: "/c/$conversationId",
-      params: { conversationId: saved.id },
-    })
+    try {
+      const saved = await openSaved.mutateAsync()
+      await navigate({
+        to: "/c/$conversationId",
+        params: { conversationId: saved.id },
+      })
+    } catch (error) {
+      toast.add({
+        title: errorMessage(error, t("common.genericError")),
+        type: "error",
+      })
+    }
   }
   const [tab, setTab] = useState("conversations")
   const { account, profile } = me

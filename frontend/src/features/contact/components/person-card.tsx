@@ -23,6 +23,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
 import { toast } from "@/components/ui/toast"
+import { errorMessage } from "@/lib/api-client"
 import { contactQueries, useAddContact } from "../api"
 
 /** Tela aberta pelo link ou QR Code de alguém: mostra o cartão e adiciona aos contatos (CT-01). */
@@ -84,7 +85,15 @@ export function PersonCard({ username }: { username: string }) {
           <Button
             disabled={add.isPending}
             onClick={async () => {
-              await add.mutateAsync({ username: data.username })
+              try {
+                await add.mutateAsync({ username: data.username })
+              } catch (error) {
+                toast.add({
+                  title: errorMessage(error, t("common.genericError")),
+                  type: "error",
+                })
+                return
+              }
               toast.add({ title: t("contacts.added"), type: "success" })
               void person.refetch()
             }}

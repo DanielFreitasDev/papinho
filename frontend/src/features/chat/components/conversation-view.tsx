@@ -525,20 +525,27 @@ function LoadedConversation({
           (member) => member.userId === message.senderId
         )
         if (author) {
-          void openDirect.mutateAsync(author.username).then((direct) => {
-            setReplyDraft(direct.id, {
-              id,
-              conversationId: conversation.id,
-              seq: message.seq!,
-              senderId: message.senderId,
-              body: message.body,
-              attachmentKind: message.attachment?.kind ?? null,
-            })
-            return navigate({
-              to: "/c/$conversationId",
-              params: { conversationId: direct.id },
-            })
-          })
+          void openDirect.mutateAsync(author.username).then(
+            (direct) => {
+              setReplyDraft(direct.id, {
+                id,
+                conversationId: conversation.id,
+                seq: message.seq!,
+                senderId: message.senderId,
+                body: message.body,
+                attachmentKind: message.attachment?.kind ?? null,
+              })
+              return navigate({
+                to: "/c/$conversationId",
+                params: { conversationId: direct.id },
+              })
+            },
+            (error: unknown) =>
+              toast.add({
+                title: errorMessage(error, t("common.genericError")),
+                type: "error",
+              })
+          )
         }
         return
       }
@@ -765,10 +772,18 @@ function LoadedConversation({
                   size="sm"
                   variant="outline"
                   onClick={async () => {
-                    await conversationAction.mutateAsync({
-                      conversationId: conversation.id,
-                      action: "decline",
-                    })
+                    try {
+                      await conversationAction.mutateAsync({
+                        conversationId: conversation.id,
+                        action: "decline",
+                      })
+                    } catch (error) {
+                      toast.add({
+                        title: errorMessage(error, t("common.genericError")),
+                        type: "error",
+                      })
+                      return
+                    }
                     toast.add({ title: t("chat.declined") })
                     await navigate({ to: "/requests" })
                   }}
@@ -779,14 +794,23 @@ function LoadedConversation({
                   size="sm"
                   variant="outline"
                   onClick={async () => {
-                    await block.mutateAsync({
-                      userId: conversation.peer!.userId,
-                      blocked: true,
-                    })
-                    await conversationAction.mutateAsync({
-                      conversationId: conversation.id,
-                      action: "decline",
-                    })
+                    try {
+                      await block.mutateAsync({
+                        userId: conversation.peer!.userId,
+                        blocked: true,
+                      })
+                      await conversationAction.mutateAsync({
+                        conversationId: conversation.id,
+                        action: "decline",
+                      })
+                    } catch (error) {
+                      toast.add({
+                        title: errorMessage(error, t("common.genericError")),
+                        type: "error",
+                      })
+                      return
+                    }
+                    toast.add({ title: t("chat.blockedToast") })
                     await navigate({ to: "/requests" })
                   }}
                 >

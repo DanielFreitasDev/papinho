@@ -47,6 +47,7 @@ import {
 } from "@/components/ui/item"
 import { Skeleton } from "@/components/ui/skeleton"
 import { toast } from "@/components/ui/toast"
+import { errorMessage } from "@/lib/api-client"
 import {
   contactQueries,
   useBlock,
@@ -201,8 +202,17 @@ export function ContactList({
         onClose={() => setRenaming(null)}
         onSave={async (nickname) => {
           if (renaming) {
-            await rename.mutateAsync({ userId: renaming.userId, nickname })
-            toast.add({ title: t("common.saved") })
+            try {
+              await rename.mutateAsync({ userId: renaming.userId, nickname })
+              toast.add({ title: t("common.saved") })
+            } catch (error) {
+              // O diálogo fica aberto para tentar de novo.
+              toast.add({
+                title: errorMessage(error, t("common.genericError")),
+                type: "error",
+              })
+              return
+            }
           }
           setRenaming(null)
         }}

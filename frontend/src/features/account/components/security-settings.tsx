@@ -266,7 +266,15 @@ function TotpSection() {
   async function begin() {
     setError(null)
     setCode("")
-    setEnrollment(await start.mutateAsync())
+    try {
+      setEnrollment(await start.mutateAsync())
+    } catch (caught) {
+      // O erro do diálogo só aparece com ele aberto; aqui ele ainda não abriu.
+      toast.add({
+        title: errorMessage(caught, t("common.genericError")),
+        type: "error",
+      })
+    }
   }
 
   async function finish() {

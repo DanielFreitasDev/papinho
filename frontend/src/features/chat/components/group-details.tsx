@@ -288,13 +288,23 @@ export function GroupDetails({
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem
                           onClick={async () => {
-                            const direct = await openDirect.mutateAsync(
-                              member.username
-                            )
-                            await navigate({
-                              to: "/c/$conversationId",
-                              params: { conversationId: direct.id },
-                            })
+                            try {
+                              const direct = await openDirect.mutateAsync(
+                                member.username
+                              )
+                              await navigate({
+                                to: "/c/$conversationId",
+                                params: { conversationId: direct.id },
+                              })
+                            } catch (error) {
+                              toast.add({
+                                title: errorMessage(
+                                  error,
+                                  t("common.genericError")
+                                ),
+                                type: "error",
+                              })
+                            }
                           }}
                         >
                           {t("groups.messageMember", { name: member.label })}
@@ -641,6 +651,11 @@ function InviteDialog({
   const { t } = useTranslation()
   const invite = useQuery(groupQueries.invite(conversationId))
   const action = useGroupAction(conversationId)
+  const onError = (error: unknown) =>
+    toast.add({
+      title: errorMessage(error, t("common.genericError")),
+      type: "error",
+    })
   return (
     <Dialog open onOpenChange={(open) => (open ? null : onClose())}>
       <DialogContent>
@@ -668,16 +683,19 @@ function InviteDialog({
           <Button
             variant="outline"
             onClick={() =>
-              void action
-                .mutateAsync({ action: "revokeInvite" })
-                .then(() => onClose())
+              action.mutate(
+                { action: "revokeInvite" },
+                { onSuccess: onClose, onError }
+              )
             }
           >
             {t("groups.revokeInvite")}
           </Button>
           <Button
             variant="outline"
-            onClick={() => void action.mutateAsync({ action: "resetInvite" })}
+            onClick={() =>
+              action.mutate({ action: "resetInvite" }, { onError })
+            }
           >
             {t("groups.resetInvite")}
           </Button>

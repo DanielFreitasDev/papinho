@@ -31,3 +31,10 @@ date: 2026-10-15
 
 **Evidência:** falhas do axe e dos seletores em `media.spec.ts`, `audio.spec.ts` e `moderation.spec.ts`;
 29/29 verdes depois, 2026-10-15.
+
+Passada 6 (2026-10-16):
+- O `Spinner` do shadcn já tem `role="status"` e `aria-label="Loading"` (em inglês); dentro de outro
+  `role="status"` fica duplicado. Em texto de carregando, passe `role="none" aria-hidden="true"` ao spinner.
+- O `Item` do shadcn é `role="listitem"`: fora de `ItemGroup` o axe acusa `aria-required-parent` (séria).
+- Para forçar estados de erro com `page.route`, use 4xx ou `route.abort("internetdisconnected")`: o fixture só
+  tolera esses erros de console; 5xx reprova o teste.

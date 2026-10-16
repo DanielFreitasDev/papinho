@@ -17,5 +17,8 @@ No sandbox de nuvem usado nas passadas:
   Guarde o PID em arquivo ao iniciar processos em segundo plano.
 - Recompilar `backend/target/papinho.jar` com uma instância rodando a partir dele quebra essa instância.
 - `curl` passa pelo proxy do agente: use `--noproxy '*'` para `localhost`/`papinho.lan`.
+- O Maven Central (`repo.maven.apache.org` e `repo1`) responde 429: o `mvnw` não baixa nem a distribuição do Maven.
+  Use `MVNW_REPOURL=https://maven-central.storage-download.googleapis.com/maven2` e o mesmo endereço como
+  `<mirror>` de `central` em `~/.m2/settings.xml` (passadas 4 a 6).
 
 **Evidência:** ocorrências nas passadas 1 a 3 (2026-10-15).

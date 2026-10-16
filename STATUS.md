@@ -188,6 +188,8 @@ durante a primeira busca da conversa (falhou o e2e de privacidade nos dois proje
 
 ## Dúvidas registradas para o dono
 
-1. **groupId/pacote Java.** O `PROMPT.md` traz o marcador `io.github.SEU_USUARIO`. Foi usado
-   `io.github.labdev2025cmd` (dono do repositório no GitHub, sem hífen, que não é válido em pacote Java).
-   Confirmar ou indicar outro antes que haja muito código (renomear é mecânico, mas toca todos os arquivos).
+Nenhuma dúvida aberta.
+
+Respondidas:
+1. **groupId/pacote Java** — `io.github.labdev2025cmd` (o marcador `io.github.SEU_USUARIO` do `PROMPT.md` com o dono
+   do repositório sem hífen) confirmado pelo dono em 2026-10-16.

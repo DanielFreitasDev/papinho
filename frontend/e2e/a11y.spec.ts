@@ -6,7 +6,14 @@ import {
   expectNoSeriousA11yViolations,
   test,
 } from "./fixtures"
-import { ADMIN, PASSWORD, RUN, ensureAdmin, twoFriends } from "./support"
+import {
+  ADMIN,
+  PASSWORD,
+  RUN,
+  ensureAdmin,
+  openMenuItem,
+  twoFriends,
+} from "./support"
 
 /** Telas principais, com a conta admin dos testes (que tem conversas, configurações e o painel). */
 const SCREENS = [
@@ -58,6 +65,35 @@ test("320 px sem rolagem horizontal", async ({ browser, pageErrors }) => {
     await visit(page, path)
     await expectNoHorizontalScroll(page)
   }
+  await context.close()
+})
+
+/**
+ * Celular deitado (RESPONSIVENESS §63): pouca altura. As telas principais não rolam para o lado e, na conversa, o campo
+ * de mensagem continua à vista.
+ */
+test("celular deitado: sem rolagem horizontal e com o campo de mensagem à vista", async ({
+  browser,
+  pageErrors,
+}) => {
+  test.skip(
+    !test.info().project.name.startsWith("mobile"),
+    "a orientação é do celular"
+  )
+  test.slow()
+  const { context, page } = await ensureAdmin(browser, pageErrors)
+  await page.setViewportSize({ width: 915, height: 412 })
+  for (const path of SCREENS) {
+    await visit(page, path)
+    await expectNoHorizontalScroll(page)
+  }
+  await page.goto("/")
+  await openMenuItem(page, "Mensagens salvas")
+  await expect(
+    page.getByRole("heading", { name: "Mensagens salvas" })
+  ).toBeVisible()
+  await expect(page.getByRole("textbox", { name: "Mensagem" })).toBeInViewport()
+  await expectNoHorizontalScroll(page)
   await context.close()
 })
 

@@ -84,6 +84,34 @@ class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return ResponseEntity.badRequest().body(problem);
     }
 
+    /**
+     * Demais erros do próprio Spring MVC (JSON ilegível, id que não é UUID, método ou tipo de mídia não aceitos,
+     * corpo grande demais...): troca os textos padrão em inglês pelos dos bundles e dá um tipo próprio.
+     */
+    @Override
+    protected @Nullable ResponseEntity<Object> handleExceptionInternal(Exception exception, @Nullable Object body,
+            HttpHeaders headers, HttpStatusCode statusCode, WebRequest request) {
+        if (body == null && exception instanceof org.springframework.web.ErrorResponse error) {
+            body = error.getBody();
+        }
+        if (body instanceof ProblemDetail problem && !(exception instanceof MethodArgumentNotValidException)) {
+            String slug = switch (statusCode.value()) {
+                case 400 -> "bad-request";
+                case 404 -> "not-found";
+                case 405 -> "method-not-allowed";
+                case 406 -> "not-acceptable";
+                case 413 -> "payload-too-large";
+                case 415 -> "unsupported-media-type";
+                default -> statusCode.is4xxClientError() ? "request-failed" : "internal";
+            };
+            Locale locale = LocaleContextHolder.getLocale();
+            problem.setTitle(messageSource.getMessage("problem." + slug + ".title", null, locale));
+            problem.setDetail(messageSource.getMessage("problem." + slug + ".detail", null, locale));
+            problem.setType(URI.create("urn:papinho:problem:" + slug));
+        }
+        return super.handleExceptionInternal(exception, body, headers, statusCode, request);
+    }
+
     /** Campo inválido devolvido no Problem Details de validação. */
     record FieldViolation(String field, String message) {
     }

@@ -17,7 +17,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.event.TransactionalEventListener;
+import org.springframework.modulith.events.ApplicationModuleListener;
 
 import io.github.labdev2025cmd.papinho.messaging.ConversationService;
 import io.github.labdev2025cmd.papinho.privacy.PrivacyEvents;
@@ -96,7 +96,7 @@ public class PresenceService {
     }
 
     /** Mudou quem vê a presença: reenvia o estado filtrado para cada par (PV-04, PV-05). */
-    @TransactionalEventListener
+    @ApplicationModuleListener
     void on(PrivacyEvents.PresenceVisibilityChanged event) {
         UUID userId = event.userId();
         boolean now = isOnline(userId);

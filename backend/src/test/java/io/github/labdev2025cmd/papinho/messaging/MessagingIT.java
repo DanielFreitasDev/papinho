@@ -26,6 +26,9 @@ class MessagingIT {
     @Autowired
     private ApiClients clients;
 
+    @Autowired
+    private MessageService messageService;
+
     private ApiClient ana;
     private ApiClient bruno;
     private String anaId;
@@ -64,6 +67,29 @@ class MessagingIT {
         String other = open(ana, "carla", true);
         assertThat(ana.post(messages(other), Map.of("clientMessageId", first, "body", "outra")))
                 .as("clientMessageId de outra conversa").hasStatus(409);
+    }
+
+    @Test
+    @DisplayName("muitos envios ao mesmo tempo na mesma conversa não esgotam o pool de conexões")
+    void shouldSendConcurrentlyWithoutExhaustingConnections() throws Exception {
+        String conversation = open(ana, "bruno");
+        UUID me = UUID.fromString(anaId);
+        UUID id = UUID.fromString(conversation);
+        int senders = 30;
+        try (var executor = java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor()) {
+            List<java.util.concurrent.Future<MessageService.SendResult>> results = new java.util.ArrayList<>();
+            for (int i = 0; i < senders; i++) {
+                int n = i;
+                results.add(executor.submit(() -> messageService.send(me, id, UUID.randomUUID(), "rajada " + n,
+                        null, null, new MessageService.SendOptions(false, false, null))));
+            }
+            for (var result : results) {
+                // Antes da correção cada envio esperava 30 s por uma segunda conexão e falhava.
+                assertThat(result.get(20, java.util.concurrent.TimeUnit.SECONDS).created()).isTrue();
+            }
+        }
+        JsonNode all = bruno.json(bruno.get(messages(conversation) + "?afterSeq=0&limit=100"));
+        assertThat(seqs(all.get("messages"))).hasSize(senders).doesNotHaveDuplicates();
     }
 
     @Test

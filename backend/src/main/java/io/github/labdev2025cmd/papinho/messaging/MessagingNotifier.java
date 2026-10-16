@@ -3,9 +3,11 @@ package io.github.labdev2025cmd.papinho.messaging;
 import java.util.Set;
 import java.util.UUID;
 
+import org.springframework.context.event.EventListener;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.event.TransactionalEventListener;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /**
  * Leva os eventos do módulo às filas dos usuários ({@code /user/queue/events}) depois do commit. O aviso é
@@ -22,35 +24,57 @@ class MessagingNotifier {
         this.broker = broker;
     }
 
-    @TransactionalEventListener
+    @EventListener
     void on(MessagingEvents.MessagesChanged event) {
-        send(event.recipients(), new MessagesEvent("messages", event.conversationId(), event.lastSeq()));
+        afterCommit(() -> send(event.recipients(),
+                new MessagesEvent("messages", event.conversationId(), event.lastSeq())));
     }
 
-    @TransactionalEventListener
+    @EventListener
     void on(MessagingEvents.ReceiptsChanged event) {
-        send(event.recipients(), new ReceiptsEvent("receipts", event.conversationId(), event.userId(),
-                event.deliveredSeq(), event.readSeq()));
+        afterCommit(() -> send(event.recipients(), new ReceiptsEvent("receipts", event.conversationId(),
+                event.userId(), event.deliveredSeq(), event.readSeq())));
     }
 
-    @TransactionalEventListener
+    @EventListener
     void on(MessagingEvents.ConversationUpdated event) {
-        send(event.recipients(), new ConversationEvent("conversation", event.conversationId()));
+        afterCommit(() -> send(event.recipients(),
+                new ConversationEvent("conversation", event.conversationId())));
     }
 
-    @TransactionalEventListener
+    @EventListener
     void on(MessagingEvents.MessagesHidden event) {
-        send(Set.of(event.userId()), new HiddenEvent("hidden", event.conversationId(), event.messageIds()));
+        afterCommit(() -> send(Set.of(event.userId()),
+                new HiddenEvent("hidden", event.conversationId(), event.messageIds())));
     }
 
-    @TransactionalEventListener
+    @EventListener
     void on(MessagingEvents.ConversationCleared event) {
-        send(Set.of(event.userId()), new ConversationEvent("cleared", event.conversationId()));
+        afterCommit(() -> send(Set.of(event.userId()),
+                new ConversationEvent("cleared", event.conversationId())));
     }
 
-    @TransactionalEventListener
+    @EventListener
     void on(MessagingEvents.FoldersChanged event) {
-        send(Set.of(event.userId()), new FoldersEvent("folders"));
+        afterCommit(() -> send(Set.of(event.userId()), new FoldersEvent("folders")));
+    }
+
+    /**
+     * Manda depois do commit, sem passar pelo registro de eventos do Modulith: o aviso é efêmero (o cliente
+     * sincroniza pela API) e um @TransactionalEventListener faria cada envio pedir uma segunda conexão ao banco
+     * para registrar a publicação, o que esgotava o pool com muitos envios ao mesmo tempo.
+     */
+    private static void afterCommit(Runnable action) {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    action.run();
+                }
+            });
+        } else {
+            action.run();
+        }
     }
 
     void send(Set<UUID> recipients, Object payload) {

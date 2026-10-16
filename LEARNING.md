@@ -9,6 +9,7 @@ Leia as entradas relacionadas à tarefa. Os detalhes ficam em `docs/learning/`.
 - [Rotas do SPA com ponto ou /login davam 404/403](docs/learning/bug-spa-rotas-com-ponto-e-login.md) — só extensões conhecidas são arquivo; prefixos exatos.
 - [Aviso durante uma sincronização se perdia](docs/learning/bug-sync-perdia-aviso-durante-sincronizacao.md) — deduplicar a busca, mas agendar mais uma rodada.
 - [Ternário com Long nulo dá NPE](docs/learning/bug-ternario-com-long-nulo.md) — `cond ? long : null` desembrulha o null; use if/else.
+- [Pool esgotado por @TransactionalEventListener](docs/learning/bug-pool-esgotado-por-transactional-event-listener.md) — o registro do Modulith pede uma 2ª conexão; use afterCommit ou @ApplicationModuleListener.
 - [Aviso perdido antes da primeira conexão do WebSocket](docs/learning/bug-websocket-primeira-conexao-sem-sync.md) — sincronize em toda conexão, não só na reconexão.
 
 ## Pegadinhas de ambiente, dependências e bibliotecas

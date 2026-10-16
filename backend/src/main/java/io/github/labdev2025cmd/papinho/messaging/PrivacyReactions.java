@@ -6,7 +6,7 @@ import java.util.UUID;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.event.TransactionalEventListener;
+import org.springframework.modulith.events.ApplicationModuleListener;
 
 import io.github.labdev2025cmd.papinho.privacy.PrivacyEvents;
 
@@ -25,7 +25,7 @@ class PrivacyReactions {
         this.notifier = notifier;
     }
 
-    @TransactionalEventListener
+    @ApplicationModuleListener
     void on(PrivacyEvents.ReadReceiptsChanged event) {
         jdbc.query("""
                 select c.id, m.user_id from conversation_members me

@@ -9,6 +9,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.IntStream;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -244,6 +250,39 @@ class MediaIT {
                     .hasStatus(204);
             assertThat(ana.perform(tusCreate(400_000, "b.bin", null))).hasStatus(201);
         } finally {
+            updateQuota(current, (int) (current.userQuotaBytes() / (1024 * 1024)));
+        }
+    }
+
+    @Test
+    @DisplayName("cota não estoura com uploads da mesma pessoa criados ao mesmo tempo")
+    void shouldEnforceQuotaUnderConcurrentCreates() throws Exception {
+        var current = settings.current();
+        updateQuota(current, 1);
+        ExecutorService executor = Executors.newFixedThreadPool(4);
+        try {
+            List<ApiClient> devices = IntStream.range(0, 4).mapToObj(index -> {
+                ApiClient device = clients.create().bootstrap();
+                assertThat(device.post("/api/v1/auth/login", Map.of("username", "ana", "password",
+                        Accounts.PASSWORD))).hasStatusOk();
+                return device;
+            }).toList();
+            CountDownLatch start = new CountDownLatch(1);
+            List<CompletableFuture<Integer>> creates = devices.stream()
+                    .map(device -> CompletableFuture.supplyAsync(() -> {
+                        try {
+                            start.await(10, TimeUnit.SECONDS);
+                        } catch (InterruptedException interrupted) {
+                            Thread.currentThread().interrupt();
+                        }
+                        return device.perform(tusCreate(400_000, "x.bin", null)).getResponse().getStatus();
+                    }, executor)).toList();
+            start.countDown();
+            List<Integer> statuses = creates.stream().map(CompletableFuture::join).toList();
+            assertThat(statuses).as("1 MB de cota cabe dois de 400 KB").containsOnly(201, 413)
+                    .filteredOn(status -> status == 201).hasSize(2);
+        } finally {
+            executor.shutdownNow();
             updateQuota(current, (int) (current.userQuotaBytes() / (1024 * 1024)));
         }
     }

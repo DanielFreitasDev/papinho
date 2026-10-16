@@ -25,6 +25,7 @@ import org.apache.tika.io.TikaInputStream;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -47,6 +48,8 @@ public class UploadService {
     private static final Logger log = LoggerFactory.getLogger(UploadService.class);
     /** Imagens maiores que isso viram documento: o tratamento é feito em memória. */
     private static final long MAX_PROCESSED_IMAGE = 50L * 1024 * 1024;
+    /** Espaço do advisory lock que serializa a conta da cota de cada pessoa ("cota"). */
+    private static final int QUOTA_LOCK = 0x636F7461;
 
     private final MediaUploadRepository uploads;
     private final MediaFileRepository files;
@@ -55,6 +58,7 @@ public class UploadService {
     private final InstanceSettingsService settings;
     private final RateLimiter rateLimiter;
     private final TransactionTemplate transactions;
+    private final JdbcTemplate jdbc;
     private final MediaProperties properties;
     private final Clock clock;
     private final Path stagingDir;
@@ -63,7 +67,8 @@ public class UploadService {
 
     UploadService(MediaUploadRepository uploads, MediaFileRepository files, FileStorage storage,
             MalwareScanner scanner, InstanceSettingsService settings, RateLimiter rateLimiter,
-            TransactionTemplate transactions, MediaProperties properties, Clock clock) throws IOException {
+            TransactionTemplate transactions, JdbcTemplate jdbc, MediaProperties properties, Clock clock)
+            throws IOException {
         this.uploads = uploads;
         this.files = files;
         this.storage = storage;
@@ -71,6 +76,7 @@ public class UploadService {
         this.settings = settings;
         this.rateLimiter = rateLimiter;
         this.transactions = transactions;
+        this.jdbc = jdbc;
         this.properties = properties;
         this.clock = clock;
         this.stagingDir = properties.uploadDir().toAbsolutePath().normalize();
@@ -90,6 +96,8 @@ public class UploadService {
         UUID id = UUID.randomUUID();
         Instant now = clock.instant();
         MediaUpload upload = transactions.execute(status -> {
+            // Dois uploads da mesma pessoa ao mesmo tempo leriam o mesmo uso e passariam os dois da cota.
+            jdbc.queryForObject("select pg_advisory_xact_lock(?, ?)", Object.class, QUOTA_LOCK, owner.hashCode());
             long used = files.usedBy(owner) + uploads.reservedBy(owner);
             if (used + length > quota) {
                 throw new MediaExceptions.QuotaExceededException(Math.max(0, quota - used));

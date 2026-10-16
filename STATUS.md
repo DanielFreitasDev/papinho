@@ -1,7 +1,7 @@
 # STATUS — progresso do Papinho
 
 Fonte de verdade do progresso (PROMPT.md §3.1). `feito` exige evidência **executada**; código sem
-verificação é `em andamento`. Última auditoria: 2026-10-16 (passada 5, Fase 6).
+verificação é `em andamento`. Última auditoria: 2026-10-16 (passada 5, Fases 6 e 7).
 
 Ambiente da passada 1: sandbox de nuvem com JDK 25.0.4 (Temurin, baixado), Node 24.22.0, pnpm 10.34.6,
 Docker 29 (daemon iniciado manualmente), Chromium do Playwright em `/opt/pw-browsers`, sem aparelhos reais.
@@ -37,6 +37,16 @@ offline com Dexie (NT-05), ADR 0014. Fim da Fase 6: backend **78 unitários + 10
 Vitest** com lint, typecheck e format, e2e **49 verdes** (desktop e celular; 4 de `/setup` só no CI) na suíte
 completa contra instância nova. Correção: os runs 45 e 46 do CI falharam no `format:check` de um spec e2e, corrigido
 em `76020f2`.
+
+Fase 7 na mesma passada: exportar conversa (BK-01), dados da conta e exclusão (BK-02, módulo `backup`), scripts de
+backup e restauração testados (BK-03), uso de disco e convite no painel (AD-01), tema escuro, 320 px e teclado com
+axe (AR-01..03), aparência (UI-02) e medição com 2000 mensagens (UI-04). Correções encontradas na passada: o run 51 do
+CI falhou no ArchUnit (`StorageUsage` sem sufixo `Controller`, `5e698b9`); envios simultâneos esgotavam o pool de
+conexões porque o registro de eventos do Modulith rastreava o `@TransactionalEventListener` do aviso por WebSocket
+(`774e101`, teste com 100 envios em paralelo); a presença gravava "visto por último" de conta já excluída (erro de
+FK nos logs do CI, `a456787`); o run 52 falhou no e2e de notificações porque o headless shell do Playwright nega
+`Notification.permission` (`88de604`, passa a usar o Chromium completo); a sincronização perdia a mensagem avisada
+durante a primeira busca da conversa (falhou o e2e de privacidade nos dois projetos, `ffdf737`, com teste Vitest).
 
 ## Fase 0 — Fundação
 
@@ -152,15 +162,15 @@ em `76020f2`.
 
 | ID | Descrição curta | Status | Evidência | Observações |
 |---|---|---|---|---|
-| BK-01 | Exportar conversa em ZIP | pendente | | |
-| BK-02 | Exportar dados da conta e excluir conta | pendente | | |
-| BK-03 | Backup e restauração da instância | pendente | | |
-| AD-01 | Painel do admin | em andamento | `/admin`: configurações da instância, usuários (desativar), fila de denúncias (`ModerationIT`, e2e) e provedores de transcrição (`TranscriptionIT`, e2e); `IdentityIT` desativação derruba sessões | faltam uso de disco e gerar convite pela lista de usuários |
-| AD-02 | Configurações da instância no banco | em andamento | `instance_settings` com modo de cadastro, cooldown, janelas, cota, senha vazada; `IdentityIT.shouldApplyRegistrationModes` | novas chaves entram com as fases |
-| AR-01 | WCAG 2.2 AA; RESPONSIVENESS.md aplicado | em andamento | e2e com axe nas telas existentes (inclui painel, visualizador, galeria, gravação, admin); `muted-foreground` escurecido para 4,5:1 sobre fundos cinza; fechar de toasts empilhados fora da ordem de foco | revisar a cada tela nova; tema escuro sem axe |
-| AR-02 | 320 px, alvos de 44 px, safe areas, teclado virtual | em andamento | e2e 320 px em `/`, `/login`, `/register` e `/setup`; alvos de 44 px em `pointer: coarse` (`index.css`) | teclado virtual só em aparelho real |
-| AR-03 | Fluxo só com teclado; axe sem críticas/sérias | em andamento | axe sem críticas/sérias em `/setup`, cadastro, admin com contatos e segurança | fluxo só com teclado não automatizado |
-| QA-03 | E2E dos fluxos críticos | feito | 49 verdes + 4 de `/setup` (desktop e celular) na suíte completa contra instância nova (passada 5): cadastro por convite, conversa em dois contextos, grupo, upload, apagar para todos, privacidade recíproca, conversa trancada, bloqueio de tela, organização e busca, PWA offline e notificações, todos com axe | a Fase 7 amplia a cobertura (admin, backup); o teste de inatividade com passkey falhou uma vez no celular sob carga e passou 3/3 isolado e na rodada completa seguinte |
+| BK-01 | Exportar conversa em ZIP | feito | `ExportIT` (2: formato `dd/MM/aaaa HH:mm - Nome: texto` no fuso de negócio com os nomes de quem exporta, apagada para todos como aviso, sem o que a pessoa escondeu, mídia no ZIP só quando pedida, IDOR 404, trancada sem token 403); e2e `data.spec.ts` baixa o ZIP pelo menu da conversa | escrito em streaming (`StreamingResponseBody`), 10 exportações por hora por pessoa; visualização única e vencidas ficam de fora |
+| BK-02 | Exportar dados da conta e excluir conta | feito | `AccountDataIT` (3: ZIP com `dados.json` de cada módulo e os arquivos, sem hash de senha, TOTP, códigos ou chaves; excluir exige senha, último admin 409, sessões caem, mensagens ficam sem dono e a conversa como "Conta apagada" sem envio, admin do grupo passa adiante; promover outro admin antes de sair); `PresenceIT` (conexão que cai depois da exclusão não grava nada); e2e `data.spec.ts` (baixar dados, senha errada avisa, exclusão leva ao login, o outro lado vê "Conta apagada") | cada módulo contribui com sua seção (`PersonalDataSection`); evento `AccountDeleting` para os módulos limparem antes |
+| BK-03 | Backup e restauração da instância | feito | `scripts/backup.sh` (pg_dump em formato custom + arquivos + manifesto com SHA-256), `scripts/restore.sh` e `scripts/verify-backup.sh`, executado ponta a ponta nesta passada: instância com dados, backup, restauração em banco e pasta novos e conferência de contas, mensagens e arquivos; README seção Backup | `PAPINHO_PG_CONTAINER` usa o `pg_dump` 18 do contêiner quando o do host é mais antigo |
+| AD-01 | Painel do admin | feito | `/admin`: modo de cadastro, cotas e janelas de edição/exclusão (`IdentityIT.shouldApplyRegistrationModes`), usuários com desativar (derruba sessões), redefinir senha (`IdentityIT`), gerar convite e tornar/tirar admin (`AccountDataIT`), fila de denúncias (`ModerationIT`), provedores de transcrição (`TranscriptionIT`), uso de disco só para admin (`MediaIT`); e2e `data.spec.ts` (convite, admin, disco, axe) e `moderation.spec.ts` | |
+| AD-02 | Configurações da instância no banco | feito | `instance_settings` (Flyway) com padrões seguros: cadastro só por convite, cooldown, janelas, cota, checagem de senha vazada; `IdentityIT.shouldApplyRegistrationModes` altera e aplica; provedores de transcrição em tabela própria com chave cifrada (`TranscriptionIT`) | |
+| AR-01 | WCAG 2.2 AA; RESPONSIVENESS.md aplicado | feito | e2e com axe em todas as telas com fluxo (painel, visualizador, galeria, gravação, admin, exportar, excluir conta); `a11y.spec.ts` passa o axe no tema escuro em 9 telas principais e com papel de parede nos dois temas; `muted-foreground` com 4,5:1 | WCAG é referência: leitor de tela real não testado |
+| AR-02 | 320 px, alvos de 44 px, safe areas, teclado virtual | em andamento | e2e 320 px em `/`, `/login`, `/register`, `/setup` e nas 9 telas principais (`a11y.spec.ts`); alvos de 44 px em `pointer: coarse` (`index.css`); `viewport-fit=cover`, `h-dvh` e `env(safe-area-inset-*)` no shell, cabeçalho e aviso de conexão | teclado virtual e safe areas só em aparelho real |
+| AR-03 | Fluxo só com teclado; axe sem críticas/sérias | feito | `a11y.spec.ts` "fluxo completo só com o teclado": entrar com Tab/Enter, Ctrl+K abre a conversa, enviar com Enter, menu com setas e Esc devolvendo o foco, indicador de foco visível; axe sem críticas/sérias em todos os specs | |
+| QA-03 | E2E dos fluxos críticos | feito | suíte completa contra instância nova no fim da passada 5: 58 verdes e 2 falhas (privacidade nos dois projetos, corrida corrigida em `ffdf737`); depois da correção, `privacy`, `chat` e `pwa` 13/13 contra instância nova; cobre cadastro por convite, conversa em dois contextos, grupo, upload, apagar para todos, privacidade, trancada, bloqueio de tela, organização e busca, PWA offline, notificações, exportar, excluir conta, painel do admin, tema escuro, 320 px e teclado, todos com axe; 4 de `/setup` rodam no CI | o teste de inatividade com passkey falhou uma vez no celular sob carga e passou 3/3 isolado; `perf.spec.ts` é opcional |
 
 ## Requisitos transversais
 
@@ -168,10 +178,10 @@ em `76020f2`.
 |---|---|---|---|---|
 | SG-01 | IDOR, Problem Details, sem segredos em logs | em andamento | Problem Details em 401/403/400/500 (`SecurityIT`); IDOR de conversa, mensagem, reação e encaminhar (`MessagingIT`), denúncia (`ModerationIT`), upload, mídia e galeria (`MediaIT`), transcrição (`TranscriptionIT`, inclusive chave fora dos logs); WebSocket só assina a própria fila (`WebSocketSecurityConfig`) | IDOR a cada endpoint novo |
 | SG-02 | CSP estrita, cabeçalhos, HSTS em produção | feito | `SecurityIT.shouldServeSpaShellWithSecurityHeaders`; e2e falha em qualquer violação de CSP | HSTS por `PAPINHO_HSTS=true` |
-| SG-03 | Rate limit em login, convites, desbloqueio, envio, upload | em andamento | `RateLimiter` (Bucket4j) em login por IP e conta, cadastro, recuperação, convites e links de grupo (60/h), ações sensíveis, criação de upload (200/h), denúncias, prévias de link, transcrição, GIFs, envio de mensagens/enquetes (120/min, `MessagingIT.shouldRateLimitSending`) e códigos de desbloqueio de tela e de conversas (10/15 min, `PrivacyIT` 429); `IdentityIT` 429 com Retry-After; "digitando" limitado por frequência | falta teste do limite de upload; `rate-limit-multiplier` só para e2e |
-| UI-02 | Temas, papel de parede, fonte, densidade | em andamento | Configurações > Aparência (claro/escuro/sistema) | papel de parede, fonte e densidade pendentes |
+| SG-03 | Rate limit em login, convites, desbloqueio, envio, upload | em andamento | `RateLimiter` (Bucket4j) em login por IP e conta, cadastro, recuperação, convites e links de grupo (60/h), ações sensíveis, criação de upload (200/h), exportações (10/h), denúncias, prévias de link, transcrição, GIFs, envio de mensagens/enquetes (120/min, `MessagingIT.shouldRateLimitSending`) e códigos de desbloqueio de tela e de conversas (10/15 min, `PrivacyIT` 429); `IdentityIT` 429 com Retry-After; "digitando" limitado por frequência | falta teste do limite de upload; `rate-limit-multiplier` só para e2e |
+| UI-02 | Temas, papel de parede, fonte, densidade | feito | Configurações > Aparência: tema claro/escuro/sistema, papel de parede (nenhum, pontos, grade, ondas, tom), fonte (pequena a muito grande) e densidade, guardados no aparelho e aplicados por atributos no `<html>` (CSP sem estilo injetado); `display-prefs.test.ts`; e2e `a11y.spec.ts` confere atributos, 18 px, papel de parede depois de recarregar e axe nos dois temas | preferência por aparelho, não sincronizada entre aparelhos |
 | UI-03 | Estados carregando, vazio, erro, offline, sem permissão | em andamento | contatos com carregando/vazio/erro; não encontrado (e2e `smoke.spec.ts`); offline e reconectando com aviso e conversas do IndexedDB (e2e `pwa.spec.ts`) | sem permissão de notificação explicado em Configurações > Notificações |
-| UI-04 | Lista de mensagens performática | em andamento | `message-scroller` do shadcn com `content-visibility`, páginas de 50 e paginação para trás (`beforeSeq`) | sem medição com milhares de mensagens |
+| UI-04 | Lista de mensagens performática | feito | `message-scroller` do shadcn com `content-visibility`, páginas de 50, paginação para trás automática ao chegar no topo e linhas memorizadas; `perf.spec.ts` com 2000 mensagens: abrir em ~0,6 s, subir até a primeira em ~24 s, maior tarefa longa 1,15 s (era 2,7 s antes da memorização), ~38 mil nós no DOM | se conversas maiores pesarem em aparelho fraco, o próximo passo é virtualizar |
 | IN-01 | Textos externalizados; pt-BR completo, pronto para en | em andamento | `i18n.test.ts` garante as mesmas chaves em pt-BR e en; backend com `messages*.properties` | |
 | QA-01 | Backend: unitários, slice, integração, ArchUnit, Modulith, `./mvnw verify` | em andamento | `./mvnw -B -pl backend verify`: 78 unitários + 109 de integração verdes na passada 5 (com `ChatListIT`, `SearchIT`, `NotificationIT`, `WebPushCryptoTest` e `ModularityTests` incluindo o módulo `notification`) | cresce a cada fase |
 | QA-02 | Frontend: lint, typecheck, Vitest | feito | `pnpm lint`, `pnpm typecheck`, `pnpm format:check`, `pnpm test` (38), `pnpm build` locais na passada 5; job frontend do CI | o `tsc -b` do build inclui os specs e2e |

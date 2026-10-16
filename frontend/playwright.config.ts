@@ -16,6 +16,9 @@ export default defineConfig({
   reporter: process.env.CI ? [["list"], ["html", { open: "never" }]] : "list",
   use: {
     baseURL,
+    // Chromium completo no modo headless novo: o headless shell padrão nega notificações mesmo com a permissão
+    // concedida (Notification.permission fica "denied").
+    ...(executablePath ? {} : { channel: "chromium" }),
     locale: "pt-BR",
     timezoneId: "America/Fortaleza",
     trace: "retain-on-failure",

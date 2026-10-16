@@ -14,6 +14,10 @@ const EXPECTED_CLIENT_ERROR =
 const EXPECTED_OFFLINE = /net::ERR_INTERNET_DISCONNECTED/
 // Contextos do Playwright são anônimos e o Chrome não tem Push API neles; ele avisa no console ao assinar.
 const EXPECTED_NO_PUSH = /does not support the Push API in incognito mode/
+// O Safari ignora a chave interactive-widget da meta viewport (só o Chromium a usa, para o teclado virtual) e
+// avisa no console como erro.
+const EXPECTED_VIEWPORT_KEY =
+  /Viewport argument key "interactive-widget" not recognized/
 
 /** Coleta erros de console e violações de CSP de uma página (também das abertas em outros contextos). */
 export async function watchErrors(page: Page, errors: string[]) {
@@ -22,7 +26,8 @@ export async function watchErrors(page: Page, errors: string[]) {
       message.type() === "error" &&
       !EXPECTED_CLIENT_ERROR.test(message.text()) &&
       !EXPECTED_OFFLINE.test(message.text()) &&
-      !EXPECTED_NO_PUSH.test(message.text())
+      !EXPECTED_NO_PUSH.test(message.text()) &&
+      !EXPECTED_VIEWPORT_KEY.test(message.text())
     ) {
       errors.push(`console: ${message.text()}`)
     }
@@ -30,7 +35,10 @@ export async function watchErrors(page: Page, errors: string[]) {
   page.on("pageerror", (error) => errors.push(`pageerror: ${error.message}`))
   await page.addInitScript(() => {
     document.addEventListener("securitypolicyviolation", (event) => {
-      console.error(`CSP: ${event.violatedDirective} ${event.blockedURI}`)
+      // Origem (arquivo:linha) e o começo do trecho bloqueado ajudam a achar quem injetou o conteúdo.
+      console.error(
+        `CSP: ${event.violatedDirective} ${event.blockedURI} ${event.sourceFile}:${event.lineNumber} ${event.sample.slice(0, 60)}`
+      )
     })
   })
 }

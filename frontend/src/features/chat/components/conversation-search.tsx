@@ -1,15 +1,11 @@
 import { useEffect, useRef, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
-import { ChevronDownIcon, ChevronUpIcon, SearchIcon, XIcon } from "lucide-react"
+import { ChevronDownIcon, ChevronUpIcon, XIcon } from "lucide-react"
 
+import { SearchInput } from "@/components/search-input"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupInput,
-} from "@/components/ui/input-group"
 import {
   Select,
   SelectContent,
@@ -118,25 +114,20 @@ export function ConversationSearch({
       }}
     >
       <div className="flex items-center gap-1">
-        <InputGroup className="flex-1">
-          <InputGroupAddon>
-            <SearchIcon aria-hidden="true" />
-          </InputGroupAddon>
-          <InputGroupInput
-            ref={inputRef}
-            type="search"
-            value={query}
-            aria-label={t("search.inConversation")}
-            placeholder={t("search.inConversationPlaceholder")}
-            onChange={(event) => setQuery(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                event.preventDefault()
-                go(event.shiftKey ? -1 : 1)
-              }
-            }}
-          />
-        </InputGroup>
+        <SearchInput
+          ref={inputRef}
+          className="flex-1"
+          value={query}
+          aria-label={t("search.inConversation")}
+          placeholder={t("search.inConversationPlaceholder")}
+          onValueChange={setQuery}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault()
+              go(event.shiftKey ? -1 : 1)
+            }
+          }}
+        />
         <Button
           variant="ghost"
           size="icon"

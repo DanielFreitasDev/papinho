@@ -22,7 +22,8 @@
     "saved": "Alterações salvas",
     "offline": "Sem conexão com o servidor",
     "genericError": "Não foi possível concluir a ação. Tente de novo.",
-    "closeNotification": "Fechar notificação"
+    "closeNotification": "Fechar notificação",
+    "clearSearch": "Limpar a busca"
   },
   "errors": {
     "notFoundTitle": "Página não encontrada",

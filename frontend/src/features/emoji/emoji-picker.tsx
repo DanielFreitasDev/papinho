@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
 import { cn } from "cn"
 
-import { Input } from "@/components/ui/input"
+import { SearchInput } from "@/components/search-input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { authQueries } from "@/features/auth"
 import {
@@ -94,12 +94,11 @@ export function EmojiPicker({
 
   return (
     <div className="flex w-[min(20rem,calc(100vw-2rem))] flex-col gap-2">
-      <Input
-        type="search"
+      <SearchInput
         aria-label={t("emoji.search")}
         placeholder={t("emoji.search")}
         value={query}
-        onChange={(event) => setQuery(event.target.value)}
+        onValueChange={setQuery}
         autoFocus
       />
       {query.trim() === "" ? (

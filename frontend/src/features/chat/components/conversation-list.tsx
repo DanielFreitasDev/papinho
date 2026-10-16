@@ -9,18 +9,13 @@ import {
   LockKeyholeIcon,
   MessagesSquareIcon,
   PinIcon,
-  SearchIcon,
 } from "lucide-react"
 import { cn } from "cn"
 
+import { SearchInput } from "@/components/search-input"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupInput,
-} from "@/components/ui/input-group"
 import {
   Empty,
   EmptyDescription,
@@ -429,24 +424,18 @@ function SearchBox({
   const { t } = useTranslation()
   return (
     <div role="search" className="px-1">
-      <InputGroup>
-        <InputGroupAddon>
-          <SearchIcon aria-hidden="true" />
-        </InputGroupAddon>
-        <InputGroupInput
-          type="search"
-          value={query}
-          aria-label={t("search.global")}
-          placeholder={t("search.globalPlaceholder")}
-          onChange={(event) => onChange(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Escape" && query) {
-              event.preventDefault()
-              onChange("")
-            }
-          }}
-        />
-      </InputGroup>
+      <SearchInput
+        value={query}
+        aria-label={t("search.global")}
+        placeholder={t("search.globalPlaceholder")}
+        onValueChange={onChange}
+        onKeyDown={(event) => {
+          if (event.key === "Escape" && query) {
+            event.preventDefault()
+            onChange("")
+          }
+        }}
+      />
     </div>
   )
 }

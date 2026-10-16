@@ -2,7 +2,7 @@ import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
 
-import { Input } from "@/components/ui/input"
+import { SearchInput } from "@/components/search-input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useDebouncedValue } from "@/hooks/use-debounced-value"
 import { stickerQueries, type GifResult } from "./api"
@@ -15,12 +15,11 @@ export function GifPanel({ onSelect }: { onSelect: (gif: GifResult) => void }) {
   const gifs = useQuery(stickerQueries.gifs(term))
   return (
     <div className="flex h-72 w-[min(20rem,calc(100vw-2rem))] flex-col gap-2">
-      <Input
-        type="search"
+      <SearchInput
         aria-label={t("gif.search")}
         placeholder={t("gif.search")}
         value={query}
-        onChange={(event) => setQuery(event.target.value)}
+        onValueChange={setQuery}
       />
       {gifs.isPending ? (
         <Skeleton className="flex-1" />

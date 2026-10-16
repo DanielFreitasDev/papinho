@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next"
 
 import { UserAvatar } from "@/components/user-avatar"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Input } from "@/components/ui/input"
+import { SearchInput } from "@/components/search-input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { contactQueries } from "@/features/contact"
 
@@ -34,12 +34,11 @@ export function ContactPicker({
 
   return (
     <div className="flex min-h-0 flex-col gap-2">
-      <Input
-        type="search"
+      <SearchInput
         aria-label={t("groups.searchContacts")}
         placeholder={t("groups.searchContacts")}
         value={filter}
-        onChange={(event) => setFilter(event.target.value)}
+        onValueChange={setFilter}
       />
       <fieldset className="flex max-h-64 flex-col gap-1 overflow-y-auto">
         <legend className="sr-only">{t("groups.chooseMembers")}</legend>

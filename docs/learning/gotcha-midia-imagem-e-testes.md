@@ -20,3 +20,8 @@ date: 2026-10-15
 
 **Evidência:** falhas e correções em `MediaHelpersTest`, `media.spec.ts`, `LinkPreviewIT`, `TranscriptionIT` e no
 `pnpm build`, 2026-10-15.
+
+Passada 6 (2026-10-16): o `TRUNCATE ... CASCADE` do `DatabaseCleaner` pode ser vítima de deadlock com um ouvinte
+assíncrono (`@ApplicationModuleListener`) do teste anterior que ainda está em transação
+(`PessimisticLockingFailureException`, "deadlock detected" no `MessagingIT`). O cleaner repete com espera
+crescente; não trate como teste instável.

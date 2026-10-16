@@ -20,7 +20,7 @@ Leia as entradas relacionadas à tarefa. Os detalhes ficam em `docs/learning/`.
 - [E2E: rate limit em memória e corrida do primeiro admin](docs/learning/gotcha-e2e-rate-limit-primeiro-admin.md) — instância nova por rodada; projeto de setup; `PAPINHO_RATE_LIMIT_MULTIPLIER` no e2e.
 - [STOMP com Spring Security 7](docs/learning/gotcha-stomp-spring-security-csrf-e-heartbeat.md) — CSRF cru no CONNECT, agendador do heartbeat, WebSocket fecha com a sessão HTTP.
 - [E2E do chat](docs/learning/gotcha-e2e-chat-seletores-e-presenca.md) — hasText é substring, opacidade é visível, presença antes de aceitar.
-- [Mídia: ImageIO, Uppy, MockMvc, TRUNCATE, onnxruntime](docs/learning/gotcha-midia-imagem-e-testes.md) — EXIF por segmentos, sem destroy no sucesso, URL crua no MockMvc.
+- [Mídia: ImageIO, Uppy, MockMvc, TRUNCATE, onnxruntime](docs/learning/gotcha-midia-imagem-e-testes.md) — EXIF por segmentos, sem destroy no sucesso, URL crua no MockMvc, TRUNCATE que dá deadlock com ouvinte assíncrono.
 - [E2E: Chromium preinstalado, toasts e contraste](docs/learning/gotcha-e2e-chromium-preinstalado-e-a11y.md) — nome de download, headless shell sem notificações, toast é dialog, muted 0.5, axe em animação, tag por spec, Spinner/Item do shadcn, erros forçados só 4xx.
 - [PWA, Web Push, busca e e2e offline](docs/learning/gotcha-pwa-push-e-busca.md) — stemmer pt, ponto EC sem checagem no JDK, MIME do manifesto, tsc -b com e2e.
 - [E-mail de recuperação: executor, ArchUnit e SMTP nos testes](docs/learning/gotcha-email-recuperacao-executor-e-testes.md) — sem applicationTaskExecutor com WebSocket, nada de token no outbox, GreenMail/Mailpit.

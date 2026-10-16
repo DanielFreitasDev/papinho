@@ -55,6 +55,9 @@
                         </goals>
                         <configuration>
                             <arguments>run build</arguments>
+                            <!-- O proxy do settings.xml viraria argumento do script (vite recusa a opção
+                                 desconhecida); o build não baixa nada, só o install precisa dele. -->
+                            <pnpmInheritsProxyConfigFromMaven>false</pnpmInheritsProxyConfigFromMaven>
                         </configuration>
                     </execution>
                 </executions>

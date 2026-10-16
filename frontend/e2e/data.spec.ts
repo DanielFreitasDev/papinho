@@ -69,11 +69,15 @@ test("exportar conversa e dados e excluir a conta", async ({
   const confirm = hana.page.getByRole("dialog", {
     name: "Excluir sua conta para sempre?",
   })
-  await confirm.getByLabel("Senha").fill("senha errada qualquer")
+  await confirm
+    .getByLabel("Senha", { exact: true })
+    .fill("senha errada qualquer")
   await confirm.getByRole("button", { name: "Excluir conta" }).click()
   await expect(confirm.getByRole("alert")).toBeVisible()
   await expectNoSeriousA11yViolations(hana.page)
-  await confirm.getByLabel("Senha").fill("senha muito segura 123")
+  await confirm
+    .getByLabel("Senha", { exact: true })
+    .fill("senha muito segura 123")
   await confirm.getByRole("button", { name: "Excluir conta" }).click()
   await expect(hana.page).toHaveURL(/\/login/)
 

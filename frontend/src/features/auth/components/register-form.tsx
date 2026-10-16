@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next"
 import { CheckIcon, XIcon } from "lucide-react"
 
 import { FormFieldError } from "@/components/form-error"
+import { PasswordInput } from "@/components/password-input"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import {
@@ -179,9 +180,8 @@ export function RegisterForm({
             <FieldLabel htmlFor="register-password">
               {t("auth.password")}
             </FieldLabel>
-            <Input
+            <PasswordInput
               id="register-password"
-              type="password"
               autoComplete="new-password"
               enterKeyHint="next"
               aria-invalid={!!form.formState.errors.password}
@@ -194,9 +194,8 @@ export function RegisterForm({
             <FieldLabel htmlFor="register-confirm">
               {t("auth.confirmPassword")}
             </FieldLabel>
-            <Input
+            <PasswordInput
               id="register-confirm"
-              type="password"
               autoComplete="new-password"
               enterKeyHint="go"
               aria-invalid={!!form.formState.errors.confirmPassword}

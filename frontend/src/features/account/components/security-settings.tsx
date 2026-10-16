@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next"
 import { KeyRoundIcon, TrashIcon } from "lucide-react"
 
 import { ConfirmDialog } from "@/components/confirm-dialog"
+import { PasswordInput } from "@/components/password-input"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -111,9 +112,8 @@ function PasswordSection() {
             <FieldLabel htmlFor="security-current">
               {t("security.currentPassword")}
             </FieldLabel>
-            <Input
+            <PasswordInput
               id="security-current"
-              type="password"
               autoComplete="current-password"
               value={current}
               onChange={(event) => setCurrent(event.target.value)}
@@ -123,9 +123,8 @@ function PasswordSection() {
             <FieldLabel htmlFor="security-new">
               {t("auth.newPassword")}
             </FieldLabel>
-            <Input
+            <PasswordInput
               id="security-new"
-              type="password"
               autoComplete="new-password"
               value={next}
               onChange={(event) => setNext(event.target.value)}
@@ -371,9 +370,8 @@ function TotpSection() {
           <FieldLabel htmlFor="totp-disable-password">
             {t("security.currentPassword")}
           </FieldLabel>
-          <Input
+          <PasswordInput
             id="totp-disable-password"
-            type="password"
             autoComplete="current-password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
@@ -424,9 +422,8 @@ function RecoveryCodesSection() {
           <FieldLabel htmlFor="recovery-password">
             {t("security.currentPassword")}
           </FieldLabel>
-          <Input
+          <PasswordInput
             id="recovery-password"
-            type="password"
             autoComplete="current-password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
@@ -535,9 +532,8 @@ function EmailSection() {
               <FieldLabel htmlFor="security-email-password">
                 {t("security.currentPassword")}
               </FieldLabel>
-              <Input
+              <PasswordInput
                 id="security-email-password"
-                type="password"
                 autoComplete="current-password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
@@ -578,9 +574,8 @@ function EmailSection() {
           <FieldLabel htmlFor="email-remove-password">
             {t("security.currentPassword")}
           </FieldLabel>
-          <Input
+          <PasswordInput
             id="email-remove-password"
-            type="password"
             autoComplete="current-password"
             value={removePassword}
             onChange={(event) => setRemovePassword(event.target.value)}

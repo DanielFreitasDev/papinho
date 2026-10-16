@@ -7,6 +7,7 @@ import { KeyRoundIcon } from "lucide-react"
 import { useQueryClient } from "@tanstack/react-query"
 
 import { FormFieldError } from "@/components/form-error"
+import { PasswordInput } from "@/components/password-input"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import {
@@ -104,9 +105,8 @@ export function LoginForm({
         </Field>
         <Field data-invalid={!!form.formState.errors.password}>
           <FieldLabel htmlFor="login-password">{t("auth.password")}</FieldLabel>
-          <Input
+          <PasswordInput
             id="login-password"
-            type="password"
             autoComplete="current-password"
             enterKeyHint="go"
             aria-invalid={!!form.formState.errors.password}

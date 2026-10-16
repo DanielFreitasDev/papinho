@@ -81,7 +81,7 @@ test("fluxo completo só com o teclado", async ({ page }) => {
   await expect(username).toBeFocused()
   await page.keyboard.type(ADMIN)
   await page.keyboard.press("Tab")
-  await expect(page.getByLabel("Senha")).toBeFocused()
+  await expect(page.getByLabel("Senha", { exact: true })).toBeFocused()
   await page.keyboard.type(PASSWORD)
   await page.keyboard.press("Enter")
   await expect(

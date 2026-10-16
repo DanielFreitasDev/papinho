@@ -4,9 +4,9 @@ import { useQuery } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
 import { FingerprintIcon, LockIcon } from "lucide-react"
 
+import { PasswordInput } from "@/components/password-input"
 import { Button } from "@/components/ui/button"
 import { Field, FieldError, FieldLabel } from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
 import { apiFetch, errorMessage } from "@/lib/api-client"
 import { loginWithPasskey, passkeysSupported } from "@/lib/webauthn"
 import { privacyQueries, unlockScreen } from "./api"
@@ -304,10 +304,9 @@ function LockScreen({
               ? t("privacy.screenLock.pinLabel")
               : t("privacy.screenLock.passwordLabel")}
           </FieldLabel>
-          <Input
+          <PasswordInput
             ref={input}
             id="screen-lock-secret"
-            type="password"
             inputMode={pin ? "numeric" : undefined}
             autoComplete="off"
             value={secret}

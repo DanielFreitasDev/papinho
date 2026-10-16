@@ -5,6 +5,7 @@ import { Link } from "@tanstack/react-router"
 import { useTranslation } from "react-i18next"
 
 import { FormFieldError } from "@/components/form-error"
+import { PasswordInput } from "@/components/password-input"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
@@ -75,9 +76,8 @@ export function RecoverForm({ onDone }: { onDone: () => void }) {
           <FieldLabel htmlFor="recover-password">
             {t("auth.newPassword")}
           </FieldLabel>
-          <Input
+          <PasswordInput
             id="recover-password"
-            type="password"
             autoComplete="new-password"
             aria-invalid={!!form.formState.errors.newPassword}
             {...form.register("newPassword")}

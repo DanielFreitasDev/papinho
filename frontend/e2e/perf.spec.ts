@@ -16,7 +16,7 @@ test("lista com milhares de mensagens", async ({ page }) => {
   // Semeia pela API com a sessão da página: "Mensagens salvas" do admin, em lotes paralelos.
   await page.goto("/login")
   await page.getByLabel("@usuario").fill(ADMIN)
-  await page.getByLabel("Senha").fill(PASSWORD)
+  await page.getByLabel("Senha", { exact: true }).fill(PASSWORD)
   await page.getByRole("button", { name: "Entrar", exact: true }).click()
   await expect(
     page.getByRole("complementary", { name: "Conversas e contatos" })

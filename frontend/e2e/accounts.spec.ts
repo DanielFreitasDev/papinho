@@ -191,7 +191,7 @@ test.describe.serial("contas e contatos", () => {
     await expectNoHorizontalScroll(page)
     await expectNoSeriousA11yViolations(page)
     await page.getByLabel("@usuario").fill(brunoName())
-    await page.getByLabel("Senha").fill(PASSWORD)
+    await page.getByLabel("Senha", { exact: true }).fill(PASSWORD)
     await page.goto("/register")
     await expectNoHorizontalScroll(page)
     await context.close()

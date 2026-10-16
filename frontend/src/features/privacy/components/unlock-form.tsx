@@ -2,9 +2,9 @@ import { useState, type FormEvent } from "react"
 import { useTranslation } from "react-i18next"
 import { LockKeyholeIcon } from "lucide-react"
 
+import { PasswordInput } from "@/components/password-input"
 import { Button } from "@/components/ui/button"
 import { Field, FieldError, FieldLabel } from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
 import { errorMessage } from "@/lib/api-client"
 import { useUnlockConversations } from "../api"
 
@@ -47,9 +47,8 @@ export function UnlockForm({
         <FieldLabel htmlFor="unlock-code">
           {t("privacy.locked.code")}
         </FieldLabel>
-        <Input
+        <PasswordInput
           id="unlock-code"
-          type="password"
           autoComplete="off"
           autoFocus
           value={code}

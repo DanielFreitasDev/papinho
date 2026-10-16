@@ -23,7 +23,9 @@
     "offline": "No connection to the server",
     "genericError": "The action could not be completed. Try again.",
     "closeNotification": "Close notification",
-    "clearSearch": "Clear search"
+    "clearSearch": "Clear search",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password"
   },
   "errors": {
     "notFoundTitle": "Page not found",

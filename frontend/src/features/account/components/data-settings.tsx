@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
 import { DownloadIcon, Trash2Icon } from "lucide-react"
 
+import { PasswordInput } from "@/components/password-input"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -16,7 +17,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Field, FieldLabel } from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Spinner } from "@/components/ui/spinner"
 import { toast } from "@/components/ui/toast"
@@ -127,9 +127,8 @@ function DeleteAccountDialog({ onClose }: { onClose: () => void }) {
             <FieldLabel htmlFor="delete-password">
               {t("account.delete.password")}
             </FieldLabel>
-            <Input
+            <PasswordInput
               id="delete-password"
-              type="password"
               autoComplete="current-password"
               required
               value={password}

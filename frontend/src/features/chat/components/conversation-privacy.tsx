@@ -3,6 +3,7 @@ import { useNavigate } from "@tanstack/react-router"
 import { useTranslation } from "react-i18next"
 import { LockIcon, LockOpenIcon } from "lucide-react"
 
+import { PasswordInput } from "@/components/password-input"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -19,7 +20,6 @@ import {
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
 import {
   Select,
   SelectContent,
@@ -210,9 +210,8 @@ function LockDialog({
               <FieldLabel htmlFor="lock-code">
                 {t("privacy.locked.code")}
               </FieldLabel>
-              <Input
+              <PasswordInput
                 id="lock-code"
-                type="password"
                 autoComplete="new-password"
                 minLength={4}
                 maxLength={64}
@@ -227,9 +226,8 @@ function LockDialog({
               <FieldLabel htmlFor="lock-code-confirm">
                 {t("privacy.locked.confirm")}
               </FieldLabel>
-              <Input
+              <PasswordInput
                 id="lock-code-confirm"
-                type="password"
                 autoComplete="new-password"
                 value={confirm}
                 aria-invalid={error ? true : undefined}

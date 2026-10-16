@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
 
 import { QueryState } from "@/components/query-state"
+import { PasswordInput } from "@/components/password-input"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -219,9 +220,8 @@ function ProviderForm({ provider }: { provider: AdminProvider }) {
             <FieldLabel htmlFor={id("key")}>
               {t("transcription.apiKey")}
             </FieldLabel>
-            <Input
+            <PasswordInput
               id={id("key")}
-              type="password"
               autoComplete="off"
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}

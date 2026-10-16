@@ -5,6 +5,7 @@ import { Link } from "@tanstack/react-router"
 import { useTranslation } from "react-i18next"
 
 import { FormFieldError } from "@/components/form-error"
+import { PasswordInput } from "@/components/password-input"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import {
@@ -13,7 +14,6 @@ import {
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
 import { Spinner } from "@/components/ui/spinner"
 import { errorMessage } from "@/lib/api-client"
 import { useConfirmPasswordReset } from "../api"
@@ -57,9 +57,8 @@ export function ResetPasswordForm({
           <FieldLabel htmlFor="reset-password">
             {t("auth.newPassword")}
           </FieldLabel>
-          <Input
+          <PasswordInput
             id="reset-password"
-            type="password"
             autoComplete="new-password"
             aria-invalid={!!form.formState.errors.newPassword}
             {...form.register("newPassword")}
@@ -71,9 +70,8 @@ export function ResetPasswordForm({
           <FieldLabel htmlFor="reset-confirm">
             {t("auth.confirmPassword")}
           </FieldLabel>
-          <Input
+          <PasswordInput
             id="reset-confirm"
-            type="password"
             autoComplete="new-password"
             aria-invalid={!!form.formState.errors.confirmPassword}
             {...form.register("confirmPassword")}

@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
 import { LockIcon } from "lucide-react"
 
+import { PasswordInput } from "@/components/password-input"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import {
@@ -12,7 +13,6 @@ import {
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
 import {
   Select,
   SelectContent,
@@ -256,9 +256,8 @@ function SecretInput({
   return (
     <Field>
       <FieldLabel htmlFor={id}>{label}</FieldLabel>
-      <Input
+      <PasswordInput
         id={id}
-        type="password"
         autoComplete="new-password"
         inputMode={kind === "PIN" ? "numeric" : undefined}
         className="sm:w-64"

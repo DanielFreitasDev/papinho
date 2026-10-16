@@ -152,7 +152,12 @@ test("editar, apagar, temporárias, rascunho, silenciosa e agendada", async ({
   await gil.page.getByRole("button", { name: "Mais opções de envio" }).click()
   await gil.page.getByRole("menuitem", { name: "Agendar envio" }).click()
   const schedule = gil.page.getByRole("dialog", { name: "Agendar mensagem" })
-  await expect(schedule.getByLabel("Enviar em")).not.toHaveValue("")
+  // Seletor próprio de data e hora (UI-05): já vem com o dia e a hora preenchidos.
+  const when = schedule.getByRole("group", { name: "Enviar em" })
+  await expect(when.getByRole("button", { name: /^Data: \d/ })).toBeVisible()
+  await expect(when.getByRole("combobox", { name: "Hora" })).not.toHaveText(
+    "--"
+  )
   await expectNoSeriousA11yViolations(gil.page)
   await schedule.getByRole("button", { name: "Agendar envio" }).click()
   await expect(schedule).toBeHidden()

@@ -2,6 +2,7 @@ import { useState } from "react"
 import { useNavigate } from "@tanstack/react-router"
 import { useTranslation } from "react-i18next"
 
+import { DateTimePicker, toLocalDateTime } from "@/components/date-picker"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -22,13 +23,7 @@ import { ContactPicker } from "./contact-picker"
 import { DisappearingSelect } from "./disappearing-select"
 
 function toLocalInput(value: string | null) {
-  if (!value) {
-    return ""
-  }
-  const date = new Date(value)
-  return new Date(date.getTime() - date.getTimezoneOffset() * 60_000)
-    .toISOString()
-    .slice(0, 16)
+  return value ? toLocalDateTime(new Date(value)) : ""
 }
 
 /**
@@ -114,11 +109,13 @@ export function BroadcastDialog({
             <FieldLabel htmlFor="broadcast-expires">
               {t("broadcast.expiresAt")}
             </FieldLabel>
-            <Input
+            <DateTimePicker
               id="broadcast-expires"
-              type="datetime-local"
+              label={t("broadcast.expiresAt")}
               value={expiresAt}
-              onChange={(event) => setExpiresAt(event.target.value)}
+              min={toLocalDateTime(new Date())}
+              clearable
+              onChange={setExpiresAt}
             />
           </Field>
           <Field>

@@ -1044,5 +1044,13 @@
     "offlineTitle": "Sem conexão com o servidor",
     "offlineDescription": "Confira a internet ou a rede local e tente de novo.",
     "errorTitle": "Não foi possível carregar"
+  },
+  "dateTime": {
+    "chooseDate": "Escolher data",
+    "date": "Data",
+    "hour": "Hora",
+    "minute": "Minuto",
+    "clear": "Limpar data e hora",
+    "clearDate": "Limpar data"
   }
 }

@@ -1044,5 +1044,13 @@
     "offlineTitle": "No connection to the server",
     "offlineDescription": "Check the internet or the local network and try again.",
     "errorTitle": "Could not load"
+  },
+  "dateTime": {
+    "chooseDate": "Choose a date",
+    "date": "Date",
+    "hour": "Hour",
+    "minute": "Minute",
+    "clear": "Clear date and time",
+    "clearDate": "Clear date"
   }
 }

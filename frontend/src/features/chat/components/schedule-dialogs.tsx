@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
 import { BellOffIcon, TriangleAlertIcon } from "lucide-react"
 
+import { DateTimePicker, toLocalDateTime } from "@/components/date-picker"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -13,7 +14,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Field, FieldLabel } from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { toast } from "@/components/ui/toast"
 import { errorMessage } from "@/lib/api-client"
@@ -21,10 +21,10 @@ import { formatDateTime } from "@/lib/format"
 import { chatQueries, useScheduleAction } from "../api"
 import { plainText } from "../format/parse"
 
-/** Valor de um input datetime-local (hora local) a partir de uma data. */
-function toLocalInput(date: Date) {
-  const offset = date.getTimezoneOffset() * 60_000
-  return new Date(date.getTime() - offset).toISOString().slice(0, 16)
+/** Daqui a uma hora, arredondado para os próximos 5 minutos (o passo do seletor de hora). */
+function defaultSendAt() {
+  const step = 5 * 60_000
+  return new Date(Math.ceil((Date.now() + 60 * 60_000) / step) * step)
 }
 
 /** Escolhe quando enviar o texto do campo (MS-11). */
@@ -39,9 +39,7 @@ export function ScheduleDialog({
 }) {
   const { t } = useTranslation()
   const action = useScheduleAction(conversationId)
-  const [when, setWhen] = useState(() =>
-    toLocalInput(new Date(Date.now() + 60 * 60_000))
-  )
+  const [when, setWhen] = useState(() => toLocalDateTime(defaultSendAt()))
   const [silent, setSilent] = useState(false)
   return (
     <Dialog
@@ -85,13 +83,12 @@ export function ScheduleDialog({
             <FieldLabel htmlFor="schedule-when">
               {t("chat.scheduleWhen")}
             </FieldLabel>
-            <Input
+            <DateTimePicker
               id="schedule-when"
-              type="datetime-local"
-              required
+              label={t("chat.scheduleWhen")}
               value={when}
-              min={toLocalInput(new Date())}
-              onChange={(event) => setWhen(event.target.value)}
+              min={toLocalDateTime(new Date())}
+              onChange={setWhen}
             />
           </Field>
           <Field orientation="horizontal">
@@ -112,7 +109,7 @@ export function ScheduleDialog({
           <Button
             type="submit"
             form="schedule-message"
-            disabled={action.isPending}
+            disabled={!when || action.isPending}
           >
             {t("chat.schedule")}
           </Button>

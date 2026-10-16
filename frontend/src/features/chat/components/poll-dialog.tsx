@@ -2,6 +2,7 @@ import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import { PlusIcon, XIcon } from "lucide-react"
 
+import { DateTimePicker, toLocalDateTime } from "@/components/date-picker"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -167,11 +168,13 @@ export function PollDialog({
           </Field>
           <Field>
             <FieldLabel htmlFor="poll-closes">{t("poll.closesAt")}</FieldLabel>
-            <Input
+            <DateTimePicker
               id="poll-closes"
-              type="datetime-local"
+              label={t("poll.closesAt")}
               value={closesAt}
-              onChange={(event) => setClosesAt(event.target.value)}
+              min={toLocalDateTime(new Date())}
+              clearable
+              onChange={setClosesAt}
             />
           </Field>
         </form>

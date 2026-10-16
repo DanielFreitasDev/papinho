@@ -3,9 +3,9 @@ import { useQuery } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
 import { ChevronDownIcon, ChevronUpIcon, XIcon } from "lucide-react"
 
+import { DatePicker } from "@/components/date-picker"
 import { SearchInput } from "@/components/search-input"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import {
   Select,
   SelectContent,
@@ -208,12 +208,12 @@ export function ConversationSearch({
             </SelectGroup>
           </SelectContent>
         </Select>
-        <Input
-          type="date"
-          aria-label={t("search.date")}
-          className="h-8 w-auto"
-          value={date ?? ""}
-          onChange={(event) => setDate(event.target.value || null)}
+        <DatePicker
+          label={t("search.date")}
+          size="sm"
+          clearable
+          value={date}
+          onChange={setDate}
         />
         <p
           role="status"

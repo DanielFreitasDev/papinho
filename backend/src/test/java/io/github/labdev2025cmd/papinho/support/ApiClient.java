@@ -114,6 +114,11 @@ public final class ApiClient {
             builder.contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsBytes(body));
         }
         MvcTestResult result = mvc.perform(builder);
+        if (result.getMvcResult().getRequest().isAsyncStarted()) {
+            // Resposta em fluxo (StreamingResponseBody, como o ZIP da exportação): espera e despacha.
+            result.getMvcResult().getAsyncResult(30_000);
+            result = mvc.perform(MockMvcRequestBuilders.asyncDispatch(result.getMvcResult()));
+        }
         for (Cookie cookie : result.getResponse().getCookies()) {
             if (cookie.getMaxAge() == 0 || cookie.getValue() == null || cookie.getValue().isEmpty()) {
                 cookies.remove(cookie.getName());

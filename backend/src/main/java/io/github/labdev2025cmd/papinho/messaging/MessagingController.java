@@ -36,12 +36,28 @@ class MessagingController {
     private final ConversationService conversations;
     private final MessageService messages;
     private final ScheduledMessageService scheduled;
+    private final ConversationExport export;
 
     MessagingController(ConversationService conversations, MessageService messages,
-            ScheduledMessageService scheduled) {
+            ScheduledMessageService scheduled, ConversationExport export) {
         this.conversations = conversations;
         this.messages = messages;
         this.scheduled = scheduled;
+        this.export = export;
+    }
+
+    /** Exporta a conversa em ZIP (BK-01): texto no formato do WhatsApp e, com {@code media=true}, os arquivos. */
+    @GetMapping("/conversations/{conversationId}/export")
+    ResponseEntity<org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody> export(
+            @PathVariable UUID conversationId, @RequestParam(defaultValue = "false") boolean media) {
+        java.util.UUID me = CurrentUser.id();
+        String name = export.prepare(me, conversationId);
+        return ResponseEntity.ok().contentType(org.springframework.http.MediaType.parseMediaType("application/zip"))
+                .cacheControl(org.springframework.http.CacheControl.noStore())
+                .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION,
+                        org.springframework.http.ContentDisposition.attachment()
+                                .filename(name + ".zip", java.nio.charset.StandardCharsets.UTF_8).build().toString())
+                .body(output -> export.write(me, conversationId, media, output));
     }
 
     /**

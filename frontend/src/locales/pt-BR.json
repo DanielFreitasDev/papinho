@@ -885,7 +885,11 @@
     "noFolders": "Nenhuma lista ainda",
     "keepArchivedTitle": "Conversas arquivadas",
     "keepArchived": "Manter arquivadas ao receber nova mensagem",
-    "keepArchivedDescription": "Sem esta opção, uma mensagem nova tira a conversa do arquivo."
+    "keepArchivedDescription": "Sem esta opção, uma mensagem nova tira a conversa do arquivo.",
+    "export": "Exportar conversa",
+    "exportTitle": "Exportar a conversa com {{name}}?",
+    "exportDescription": "Baixa um ZIP com as mensagens em texto, no formato do WhatsApp. As que você apagou para si e as de visualização única ficam de fora.",
+    "exportMedia": "Incluir fotos, vídeos, áudios e documentos"
   },
   "search": {
     "global": "Buscar conversas, contatos e mensagens",

@@ -885,7 +885,11 @@
     "noFolders": "No lists yet",
     "keepArchivedTitle": "Archived chats",
     "keepArchived": "Keep chats archived when a new message arrives",
-    "keepArchivedDescription": "Without this option, a new message takes the chat out of the archive."
+    "keepArchivedDescription": "Without this option, a new message takes the chat out of the archive.",
+    "export": "Export chat",
+    "exportTitle": "Export the chat with {{name}}?",
+    "exportDescription": "Downloads a ZIP with the messages as text, in WhatsApp format. Messages you deleted for yourself and view-once ones are left out.",
+    "exportMedia": "Include photos, videos, audio and documents"
   },
   "search": {
     "global": "Search chats, contacts and messages",

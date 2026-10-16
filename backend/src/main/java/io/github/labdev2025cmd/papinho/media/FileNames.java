@@ -6,7 +6,7 @@ import java.text.Normalizer;
  * Nomes de arquivo enviados pelo usuário (MD-01): só para exibir e para o download, nunca para o caminho no
  * disco. Remove diretórios, caracteres de controle e reservados, limita o tamanho e preserva a extensão.
  */
-final class FileNames {
+public final class FileNames {
 
     static final int MAX_LENGTH = 200;
     private static final String FALLBACK = "arquivo";
@@ -14,7 +14,7 @@ final class FileNames {
     private FileNames() {
     }
 
-    static String sanitize(String raw) {
+    public static String sanitize(String raw) {
         String name = Normalizer.normalize(raw, Normalizer.Form.NFC);
         int slash = Math.max(name.lastIndexOf('/'), name.lastIndexOf('\\'));
         name = name.substring(slash + 1);

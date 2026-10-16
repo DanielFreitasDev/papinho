@@ -6,6 +6,7 @@ import {
   ArchiveRestoreIcon,
   BellIcon,
   BellOffIcon,
+  DownloadIcon,
   EllipsisVerticalIcon,
   EraserIcon,
   FolderIcon,
@@ -75,6 +76,8 @@ export function ConversationMenu({
   const [clearOpen, setClearOpen] = useState(false)
   const [removeOpen, setRemoveOpen] = useState(false)
   const [keepStarred, setKeepStarred] = useState(true)
+  const [exportOpen, setExportOpen] = useState(false)
+  const [withMedia, setWithMedia] = useState(false)
   const { archived, pinnedAt, favorite, folderIds } = conversation.organization
   const muted = isMuted(conversation)
   const unread = conversation.unreadCount > 0 || conversation.markedUnread
@@ -185,6 +188,10 @@ export function ConversationMenu({
               {t("chat.markUnread")}
             </DropdownMenuItem>
           ) : null}
+          <DropdownMenuItem onClick={() => setExportOpen(true)}>
+            <DownloadIcon />
+            {t("organize.export")}
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => setClearOpen(true)}>
             <EraserIcon />
@@ -227,6 +234,29 @@ export function ConversationMenu({
             onCheckedChange={(checked) => setKeepStarred(checked)}
           />
           {t("organize.keepStarred")}
+        </Label>
+      </ConfirmDialog>
+      <ConfirmDialog
+        open={exportOpen}
+        onOpenChange={setExportOpen}
+        title={t("organize.exportTitle", { name: label })}
+        description={t("organize.exportDescription")}
+        confirmLabel={t("organize.export")}
+        destructive={false}
+        onConfirm={() => {
+          // Download direto do servidor (BK-01): o ZIP vem em fluxo, sem passar pela memória da página.
+          const link = document.createElement("a")
+          link.href = `/api/v1/conversations/${conversation.id}/export?media=${withMedia}`
+          link.download = ""
+          link.click()
+        }}
+      >
+        <Label className="flex items-center gap-2 text-sm font-normal">
+          <Checkbox
+            checked={withMedia}
+            onCheckedChange={(checked) => setWithMedia(checked)}
+          />
+          {t("organize.exportMedia")}
         </Label>
       </ConfirmDialog>
       <ConfirmDialog

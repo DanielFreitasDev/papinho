@@ -55,6 +55,22 @@ export const recoverSchema = z.object({
   newPassword: passwordSchema,
 })
 
+export const forgotPasswordSchema = z.object({
+  username: z.string().trim().min(1, "validation.required"),
+})
+
+export const resetPasswordSchema = z
+  .object({
+    newPassword: passwordSchema,
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    path: ["confirmPassword"],
+    message: "validation.passwordMismatch",
+  })
+
 export type LoginValues = z.input<typeof loginSchema>
 export type RegisterValues = z.input<typeof registerSchema>
 export type RecoverValues = z.input<typeof recoverSchema>
+export type ForgotPasswordValues = z.input<typeof forgotPasswordSchema>
+export type ResetPasswordValues = z.input<typeof resetPasswordSchema>

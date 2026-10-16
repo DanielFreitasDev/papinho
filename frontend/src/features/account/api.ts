@@ -152,6 +152,31 @@ export function useRegenerateRecoveryCodes() {
   })
 }
 
+/** E-mail de recuperação (ID-05): definir manda o link de confirmação ao novo endereço. */
+export function useChangeEmail() {
+  const refresh = useRefreshMe()
+  return useMutation({
+    mutationFn: (input: { email: string; password: string }) =>
+      apiFetch<Account>("/api/v1/account/email", {
+        method: "PUT",
+        json: input,
+      }),
+    onSuccess: refresh,
+  })
+}
+
+export function useRemoveEmail() {
+  const refresh = useRefreshMe()
+  return useMutation({
+    mutationFn: (password: string) =>
+      apiFetch<Account>("/api/v1/account/email", {
+        method: "DELETE",
+        json: { password },
+      }),
+    onSuccess: refresh,
+  })
+}
+
 export function useRevokeSession() {
   const queryClient = useQueryClient()
   return useMutation({

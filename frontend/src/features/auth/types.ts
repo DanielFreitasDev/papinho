@@ -10,6 +10,8 @@ export type Instance = {
   messageEditWindowMinutes: number
   /** Janela para apagar para todos (MS-06). */
   messageDeleteWindowMinutes: number
+  /** A instância envia links de recuperação por e-mail (ID-05). */
+  emailRecovery: boolean
 }
 
 export type Account = {
@@ -20,6 +22,9 @@ export type Account = {
   remainingRecoveryCodes: number
   createdAt: string
   nextUsernameChangeAt: string | null
+  /** E-mail de recuperação (ID-05), confirmado ou não. */
+  email: string | null
+  emailVerified: boolean
 }
 
 export type Profile = {

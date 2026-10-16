@@ -49,16 +49,18 @@ import {
 import {
   accountKeys,
   accountQueries,
+  useChangeEmail,
   useChangePassword,
   useConfirmTotp,
   useDisableTotp,
   useRegenerateRecoveryCodes,
+  useRemoveEmail,
   useStartTotp,
   type TotpEnrollment,
 } from "../api"
 import { SettingsSection } from "./settings-section"
 
-/** Senha, TOTP, passkeys e códigos de recuperação (ID-04, ID-05). */
+/** Senha, TOTP, passkeys, códigos e e-mail de recuperação (ID-04, ID-05). */
 export function SecuritySettings() {
   return (
     <div className="flex flex-col gap-4">
@@ -66,6 +68,7 @@ export function SecuritySettings() {
       <PasskeysSection />
       <TotpSection />
       <RecoveryCodesSection />
+      <EmailSection />
     </div>
   )
 }
@@ -435,6 +438,155 @@ function RecoveryCodesSection() {
         open={codes !== null}
         onAcknowledge={() => setCodes(null)}
       />
+    </SettingsSection>
+  )
+}
+
+/** E-mail opcional de recuperação (ID-05): só aparece quando a instância envia e-mails. */
+function EmailSection() {
+  const { t } = useTranslation()
+  const me = useQuery(authQueries.me())
+  const instance = useQuery(authQueries.instance())
+  const change = useChangeEmail()
+  const remove = useRemoveEmail()
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [removing, setRemoving] = useState(false)
+  const [removePassword, setRemovePassword] = useState("")
+  const [error, setError] = useState<string | null>(null)
+  const account = me.data?.account
+  if (!instance.data?.emailRecovery || !account) {
+    return null
+  }
+
+  async function submit(event: React.FormEvent) {
+    event.preventDefault()
+    setError(null)
+    try {
+      await change.mutateAsync({ email: email.trim(), password })
+      setEmail("")
+      setPassword("")
+      toast.add({ title: t("security.emailSent") })
+    } catch (caught) {
+      setError(errorMessage(caught, t("common.genericError")))
+    }
+  }
+
+  return (
+    <SettingsSection
+      title={t("security.email")}
+      description={t("security.emailDescription")}
+    >
+      <FieldGroup>
+        {account.email ? (
+          <ItemGroup>
+            <Item variant="outline" size="sm">
+              <ItemContent>
+                <ItemTitle className="break-all">{account.email}</ItemTitle>
+                <ItemDescription>
+                  {account.emailVerified
+                    ? t("security.emailVerified")
+                    : t("security.emailPending")}
+                </ItemDescription>
+              </ItemContent>
+              <ItemActions>
+                <Badge
+                  variant={account.emailVerified ? "secondary" : "outline"}
+                >
+                  {account.emailVerified
+                    ? t("security.emailVerifiedBadge")
+                    : t("security.emailPendingBadge")}
+                </Badge>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label={t("security.emailRemove")}
+                  onClick={() => setRemoving(true)}
+                >
+                  <TrashIcon />
+                </Button>
+              </ItemActions>
+            </Item>
+          </ItemGroup>
+        ) : null}
+        <form onSubmit={submit} noValidate>
+          <FieldGroup>
+            {error ? (
+              <Alert variant="destructive" role="alert">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            ) : null}
+            <Field>
+              <FieldLabel htmlFor="security-email">
+                {account.email
+                  ? t("security.emailNew")
+                  : t("security.emailAddress")}
+              </FieldLabel>
+              <Input
+                id="security-email"
+                type="email"
+                autoComplete="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+              />
+              <FieldDescription>{t("security.emailHint")}</FieldDescription>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="security-email-password">
+                {t("security.currentPassword")}
+              </FieldLabel>
+              <Input
+                id="security-email-password"
+                type="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+              />
+            </Field>
+            <Field orientation="horizontal">
+              <Button
+                type="submit"
+                disabled={change.isPending || !email.trim() || !password}
+              >
+                {change.isPending ? <Spinner data-icon="inline-start" /> : null}
+                {t("security.emailSave")}
+              </Button>
+            </Field>
+          </FieldGroup>
+        </form>
+      </FieldGroup>
+      <ConfirmDialog
+        open={removing}
+        onOpenChange={setRemoving}
+        title={t("security.emailRemove")}
+        description={t("security.emailRemoveDescription")}
+        confirmLabel={t("security.emailRemove")}
+        onConfirm={async () => {
+          try {
+            await remove.mutateAsync(removePassword)
+            toast.add({ title: t("security.emailRemoved") })
+          } catch (caught) {
+            toast.add({
+              title: errorMessage(caught, t("common.genericError")),
+              type: "error",
+            })
+          }
+          setRemovePassword("")
+        }}
+      >
+        <Field>
+          <FieldLabel htmlFor="email-remove-password">
+            {t("security.currentPassword")}
+          </FieldLabel>
+          <Input
+            id="email-remove-password"
+            type="password"
+            autoComplete="current-password"
+            value={removePassword}
+            onChange={(event) => setRemovePassword(event.target.value)}
+          />
+        </Field>
+      </ConfirmDialog>
     </SettingsSection>
   )
 }

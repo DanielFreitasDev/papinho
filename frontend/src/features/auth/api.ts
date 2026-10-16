@@ -97,6 +97,40 @@ export function useRecover() {
   })
 }
 
+/** Pede o link de redefinição por e-mail (ID-05); a resposta não diz se a conta existe. */
+export function useRequestPasswordReset() {
+  return useMutation({
+    mutationFn: (username: string) =>
+      apiFetch<void>("/api/v1/auth/password-reset", {
+        method: "POST",
+        json: { username },
+      }),
+  })
+}
+
+export function useConfirmPasswordReset() {
+  return useMutation({
+    mutationFn: (input: { token: string; newPassword: string }) =>
+      apiFetch<void>("/api/v1/auth/password-reset/confirm", {
+        method: "POST",
+        json: input,
+      }),
+  })
+}
+
+export function verifyEmail(token: string): Promise<void> {
+  return apiFetch<void>("/api/v1/auth/email/verify", {
+    method: "POST",
+    json: { token },
+  })
+}
+
+/** Token dos links enviados por e-mail: vem no fragmento (`#token=`), que nunca vai ao servidor. */
+export function tokenFromHash(hash: string): string | null {
+  const token = new URLSearchParams(hash.replace(/^#/, "")).get("token")
+  return token && /^[A-Za-z0-9_-]{16,128}$/.test(token) ? token : null
+}
+
 export function useLogout() {
   const queryClient = useQueryClient()
   return useMutation({

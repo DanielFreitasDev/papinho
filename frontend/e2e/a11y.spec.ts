@@ -6,7 +6,7 @@ import {
   expectNoSeriousA11yViolations,
   test,
 } from "./fixtures"
-import { ADMIN, PASSWORD, RUN, ensureAdmin } from "./support"
+import { ADMIN, PASSWORD, RUN, ensureAdmin, twoFriends } from "./support"
 
 /** Telas principais, com a conta admin dos testes (que tem conversas, configurações e o painel). */
 const SCREENS = [
@@ -194,4 +194,59 @@ test("aparência: papel de parede, fonte e densidade", async ({
   await choose("Tamanho da fonte", "Normal")
   await choose("Densidade", "Confortável")
   await context.close()
+})
+
+/**
+ * UI-01 nas bordas dos breakpoints (RESPONSIVENESS §62): 768 px separa a pilha do celular das duas colunas e
+ * 1280 px separa a gaveta de detalhes da terceira coluna. Em B−1, B e B+1, o layout certo e nada de rolagem
+ * horizontal.
+ */
+test("bordas dos breakpoints de colunas e do painel de detalhes", async ({
+  browser,
+  pageErrors,
+}) => {
+  test.skip(
+    test.info().project.name !== "desktop-chromium",
+    "o redimensionamento é o mesmo nos dois projetos"
+  )
+  test.slow()
+  const { gil, hana } = await twoFriends(
+    browser,
+    pageErrors,
+    `${RUN}b`,
+    "Borda"
+  )
+  const page = gil.page
+  const chat = page.url()
+  const sidebar = page.getByRole("complementary", {
+    name: "Conversas e contatos",
+  })
+  const main = page.getByRole("main")
+  for (const width of [767, 768, 769]) {
+    await page.setViewportSize({ width, height: 800 })
+    await page.goto("/")
+    await expect(sidebar).toBeVisible()
+    await (width < 768 ? expect(main).toBeHidden() : expect(main).toBeVisible())
+    await expectNoHorizontalScroll(page)
+    await page.goto(chat)
+    await expect(page.getByRole("heading", { name: hana.name })).toBeVisible()
+    await (width < 768
+      ? expect(sidebar).toBeHidden()
+      : expect(sidebar).toBeVisible())
+    await expectNoHorizontalScroll(page)
+  }
+  for (const width of [1279, 1280, 1281]) {
+    await page.setViewportSize({ width, height: 800 })
+    await page.getByRole("button", { name: /^Dados do contato/ }).click()
+    const panel =
+      width < 1280
+        ? page.getByRole("dialog", { name: "Dados do contato" })
+        : page.getByRole("complementary", { name: "Dados do contato" })
+    await expect(panel).toBeVisible()
+    await expectNoHorizontalScroll(page)
+    await page.keyboard.press("Escape")
+    await expect(panel).toBeHidden()
+  }
+  await gil.context.close()
+  await hana.context.close()
 })

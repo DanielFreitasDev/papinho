@@ -83,6 +83,11 @@ management:
   info:
     java:
       enabled: true
+  metrics:
+    web:
+      server:
+        # São ~190 rotas: com o limite padrão (100), o Micrometer descarta as que passam dele e avisa no log.
+        max-uri-tags: 300
 
 logging:
   level:

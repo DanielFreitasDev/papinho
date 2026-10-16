@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -39,17 +40,20 @@ public class PushSubscriptions {
         this.clock = clock;
     }
 
-    /** Guarda (ou move para esta pessoa, se o navegador trocou de conta) a assinatura. */
+    /**
+     * Guarda (ou move para esta pessoa, se o navegador trocou de conta) a assinatura, ligada à sessão que a fez
+     * ({@code sessionKey}, de {@link PushSessions}); o app confirma a assinatura a cada abertura.
+     */
     @Transactional
-    public void subscribe(UUID userId, String endpoint, String p256dh, String auth) {
+    public void subscribe(UUID userId, String endpoint, String p256dh, String auth, String sessionKey) {
         validate(endpoint, p256dh, auth);
         jdbc.update("""
-                insert into push_subscriptions (id, user_id, endpoint, p256dh, auth, created_at)
-                values (uuidv7(), :userId, :endpoint, :p256dh, :auth, :now)
+                insert into push_subscriptions (id, user_id, endpoint, p256dh, auth, created_at, session_key)
+                values (uuidv7(), :userId, :endpoint, :p256dh, :auth, :now, :sessionKey)
                 on conflict (endpoint) do update set user_id = excluded.user_id, p256dh = excluded.p256dh,
-                    auth = excluded.auth, created_at = excluded.created_at
+                    auth = excluded.auth, created_at = excluded.created_at, session_key = excluded.session_key
                 """, new MapSqlParameterSource("userId", userId).addValue("endpoint", endpoint)
-                .addValue("p256dh", p256dh).addValue("auth", auth)
+                .addValue("p256dh", p256dh).addValue("auth", auth).addValue("sessionKey", sessionKey)
                 .addValue("now", clock.instant().atOffset(ZoneOffset.UTC)));
         jdbc.update("""
                 delete from push_subscriptions where user_id = :userId and id not in (
@@ -78,10 +82,11 @@ public class PushSubscriptions {
 
     @Transactional(readOnly = true)
     public List<Subscription> of(UUID userId) {
-        return jdbc.query("select id, endpoint, p256dh, auth from push_subscriptions where user_id = :userId",
+        return jdbc.query(
+                "select id, endpoint, p256dh, auth, session_key from push_subscriptions where user_id = :userId",
                 new MapSqlParameterSource("userId", userId), (rs, index) -> new Subscription(
                         rs.getObject("id", UUID.class), rs.getString("endpoint"), rs.getString("p256dh"),
-                        rs.getString("auth")));
+                        rs.getString("auth"), rs.getString("session_key")));
     }
 
     private void validate(String endpoint, String p256dh, String auth) {
@@ -108,8 +113,12 @@ public class PushSubscriptions {
         }
     }
 
-    /** Assinatura de um navegador. */
-    public record Subscription(UUID id, String endpoint, String p256dh, String auth) {
+    /**
+     * Assinatura de um navegador.
+     *
+     * @param sessionKey chave da sessão que a criou; nula nas assinaturas de antes da ligação com a sessão
+     */
+    public record Subscription(UUID id, String endpoint, String p256dh, String auth, @Nullable String sessionKey) {
     }
 
     static class InvalidSubscriptionException extends ApiException {

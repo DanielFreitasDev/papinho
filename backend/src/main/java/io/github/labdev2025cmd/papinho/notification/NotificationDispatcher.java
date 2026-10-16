@@ -3,6 +3,7 @@ package io.github.labdev2025cmd.papinho.notification;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
 
 import org.jspecify.annotations.Nullable;
@@ -41,10 +42,11 @@ class NotificationDispatcher {
     private final SimpMessagingTemplate broker;
     private final MessageSource texts;
     private final JsonMapper json;
+    private final PushSessions pushSessions;
 
     NotificationDispatcher(NotificationRecipients recipients, NotificationPreferences preferences,
             PrivacyService privacy, PushSubscriptions subscriptions, PushGateway gateway, PushProperties properties,
-            SimpMessagingTemplate broker, MessageSource texts, JsonMapper json) {
+            SimpMessagingTemplate broker, MessageSource texts, JsonMapper json, PushSessions pushSessions) {
         this.recipients = recipients;
         this.preferences = preferences;
         this.privacy = privacy;
@@ -54,6 +56,7 @@ class NotificationDispatcher {
         this.broker = broker;
         this.texts = texts;
         this.json = json;
+        this.pushSessions = pushSessions;
     }
 
     @ApplicationModuleListener
@@ -100,7 +103,13 @@ class NotificationDispatcher {
         }
         byte[] payload = json.writeValueAsString(notification).getBytes(StandardCharsets.UTF_8);
         List<PushSubscriptions.Subscription> targets = subscriptions.of(userId);
+        Set<String> live = targets.isEmpty() ? Set.of() : pushSessions.liveKeys(userId);
         for (PushSubscriptions.Subscription subscription : targets) {
+            if (subscription.sessionKey() == null || !live.contains(subscription.sessionKey())) {
+                // A sessão que assinou acabou (revogada, senha trocada, conta desativada, expirada): sem push.
+                subscriptions.forget(subscription.id());
+                continue;
+            }
             switch (gateway.send(subscription, payload)) {
                 case GONE -> subscriptions.forget(subscription.id());
                 case DELIVERED -> subscriptions.markUsed(subscription.id());

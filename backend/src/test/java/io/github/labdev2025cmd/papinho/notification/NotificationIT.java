@@ -189,6 +189,35 @@ class NotificationIT {
     }
 
     @Test
+    @DisplayName("push só vai para assinaturas de sessões abertas: encerrar a sessão corta o navegador dela")
+    void shouldStopPushWhenSessionEnds() throws Exception {
+        String phonePush = "https://fcm.googleapis.com/fcm/send/bruno-celular";
+        subscribe(bruno, BRUNO_PUSH);
+        ApiClient phone = clients.create().bootstrap();
+        assertThat(phone.post("/api/v1/auth/login", Map.of("username", "bruno", "password", Accounts.PASSWORD)))
+                .hasStatusOk();
+        subscribe(phone, phonePush);
+        send(ana, "primeira", false);
+        await().atMost(Duration.ofSeconds(10)).until(() -> push.sent().size() == 2);
+
+        // Do celular, Bruno encerra as outras sessões (como ao trocar a senha): o notebook não recebe mais nada.
+        push.clear();
+        assertThat(phone.delete("/api/v1/sessions", null)).hasStatusOk();
+        send(ana, "segunda", false);
+        only(phonePush);
+        assertThat(jdbc.queryForList("select endpoint from push_subscriptions where user_id = (select id from "
+                + "user_accounts where username = 'bruno')", String.class)).containsExactly(phonePush);
+
+        // Assinatura sem sessão ligada (de antes da mudança) também cai.
+        push.clear();
+        jdbc.update("update push_subscriptions set session_key = null");
+        send(ana, "terceira", false);
+        settle();
+        assertThat(push.sent()).isEmpty();
+        assertThat(jdbc.queryForObject("select count(*) from push_subscriptions", Integer.class)).isZero();
+    }
+
+    @Test
     @DisplayName("assinatura vencida (410) é apagada")
     void shouldForgetGoneSubscriptions() throws Exception {
         subscribe(bruno, "https://fcm.googleapis.com/fcm/send/gone-1");

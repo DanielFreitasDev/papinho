@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import io.github.labdev2025cmd.papinho.shared.security.CurrentUser;
+import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -25,13 +26,15 @@ class NotificationController {
     private final PushSubscriptions subscriptions;
     private final VapidKeys vapid;
     private final PushProperties properties;
+    private final PushSessions pushSessions;
 
     NotificationController(NotificationPreferences preferences, PushSubscriptions subscriptions, VapidKeys vapid,
-            PushProperties properties) {
+            PushProperties properties, PushSessions pushSessions) {
         this.preferences = preferences;
         this.subscriptions = subscriptions;
         this.vapid = vapid;
         this.properties = properties;
+        this.pushSessions = pushSessions;
     }
 
     @GetMapping("/preferences")
@@ -52,8 +55,9 @@ class NotificationController {
 
     @PostMapping("/push/subscriptions")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    void subscribe(@Valid @RequestBody SubscribeRequest body) {
-        subscriptions.subscribe(CurrentUser.id(), body.endpoint(), body.keys().p256dh(), body.keys().auth());
+    void subscribe(@Valid @RequestBody SubscribeRequest body, HttpSession session) {
+        subscriptions.subscribe(CurrentUser.id(), body.endpoint(), body.keys().p256dh(), body.keys().auth(),
+                pushSessions.keyOf(session));
     }
 
     @DeleteMapping("/push/subscriptions")

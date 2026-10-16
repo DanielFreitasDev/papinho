@@ -137,8 +137,10 @@ public class PresenceService {
         @Nullable Instant lastSeen = null;
         if (!now) {
             lastSeen = clock.instant();
-            jdbc.update("insert into user_presence (user_id, last_seen_at) values (?, ?) on conflict (user_id) "
-                    + "do update set last_seen_at = excluded.last_seen_at", userId, lastSeen.atOffset(ZoneOffset.UTC));
+            // A conta pode ter sido excluída antes de a conexão cair: aí não há o que gravar (nem erro de FK).
+            jdbc.update("insert into user_presence (user_id, last_seen_at) select id, ? from user_accounts where id = ? "
+                    + "on conflict (user_id) do update set last_seen_at = excluded.last_seen_at",
+                    lastSeen.atOffset(ZoneOffset.UTC), userId);
         }
         @Nullable Instant changedAt = lastSeen;
         for (UUID peer : conversations.mutualPeers(userId)) {

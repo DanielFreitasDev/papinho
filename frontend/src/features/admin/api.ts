@@ -81,14 +81,19 @@ export function useUserAction() {
       action,
     }: {
       id: string
-      action: "disable" | "enable" | "reset-password"
+      action:
+        "disable" | "enable" | "reset-password" | "make-admin" | "remove-admin"
     }) =>
-      apiFetch<{ temporaryPassword?: string } | undefined>(
-        `/api/v1/admin/users/${id}/${action}`,
-        {
-          method: "POST",
-        }
-      ),
+      action === "make-admin" || action === "remove-admin"
+        ? apiFetch<undefined>(`/api/v1/admin/users/${id}/admin`, {
+            method: action === "make-admin" ? "PUT" : "DELETE",
+          })
+        : apiFetch<{ temporaryPassword?: string } | undefined>(
+            `/api/v1/admin/users/${id}/${action}`,
+            {
+              method: "POST",
+            }
+          ),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ["admin", "users"] }),
   })

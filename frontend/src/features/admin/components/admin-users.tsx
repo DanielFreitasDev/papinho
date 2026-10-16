@@ -1,10 +1,11 @@
 import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
-import { SearchIcon } from "lucide-react"
+import { SearchIcon, UserPlusIcon } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { toast } from "@/components/ui/toast"
 import {
   Dialog,
   DialogContent,
@@ -28,9 +29,10 @@ import {
 } from "@/components/ui/item"
 import { useDebouncedValue } from "@/hooks/use-debounced-value"
 import { authQueries } from "@/features/auth"
+import { InviteDialog } from "@/features/invite"
 import { adminQueries, useUserAction, type AdminUser } from "../api"
 
-/** Usuários da instância: desativar, reativar e redefinir senha (AD-01). */
+/** Usuários da instância: convidar, desativar, reativar, redefinir senha e tornar admin (AD-01). */
 export function AdminUsers() {
   const { t } = useTranslation()
   const me = useQuery(authQueries.me())
@@ -42,9 +44,15 @@ export function AdminUsers() {
     user: AdminUser
     value: string
   } | null>(null)
+  const [inviteOpen, setInviteOpen] = useState(false)
 
   return (
     <div className="flex flex-col gap-3">
+      <Button className="self-start" onClick={() => setInviteOpen(true)}>
+        <UserPlusIcon data-icon="inline-start" />
+        {t("admin.createInvite")}
+      </Button>
+      <InviteDialog open={inviteOpen} onOpenChange={setInviteOpen} />
       <InputGroup>
         <InputGroupAddon>
           <SearchIcon aria-hidden="true" />
@@ -102,6 +110,24 @@ export function AdminUsers() {
                     }}
                   >
                     {t("admin.resetPassword")}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() =>
+                      action.mutate(
+                        {
+                          id: user.id,
+                          action: user.admin ? "remove-admin" : "make-admin",
+                        },
+                        {
+                          onSuccess: () =>
+                            toast.add({ title: t("admin.roleChanged") }),
+                        }
+                      )
+                    }
+                  >
+                    {user.admin ? t("admin.removeAdmin") : t("admin.makeAdmin")}
                   </Button>
                 </ItemActions>
               ) : null}

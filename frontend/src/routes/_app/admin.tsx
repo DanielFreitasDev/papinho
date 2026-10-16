@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next"
 
 import { PageHeader } from "@/components/layout/page-header"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { AdminSettingsForm, AdminUsers } from "@/features/admin"
+import { AdminSettingsForm, AdminStorage, AdminUsers } from "@/features/admin"
 import { AdminReports } from "@/features/moderation"
 import { AdminTranscription } from "@/features/transcription"
 
@@ -31,6 +31,7 @@ function AdminPage() {
             <TabsTrigger value="transcription">
               {t("admin.transcription")}
             </TabsTrigger>
+            <TabsTrigger value="storage">{t("admin.storage.tab")}</TabsTrigger>
           </TabsList>
           <TabsContent value="settings" className="pt-3">
             <AdminSettingsForm />
@@ -43,6 +44,9 @@ function AdminPage() {
           </TabsContent>
           <TabsContent value="transcription" className="pt-3">
             <AdminTranscription />
+          </TabsContent>
+          <TabsContent value="storage" className="pt-3">
+            <AdminStorage />
           </TabsContent>
         </Tabs>
       </div>

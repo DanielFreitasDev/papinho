@@ -24,6 +24,7 @@ import { authQueries, useLogout, usernameSchema } from "@/features/auth"
 import { errorMessage } from "@/lib/api-client"
 import { formatDate } from "@/lib/format"
 import { useChangeUsername } from "../api"
+import { DataSettings } from "./data-settings"
 import { SettingsSection } from "./settings-section"
 
 /** Troca do @usuario com cooldown e reserva do nome antigo (ID-03). */
@@ -125,6 +126,7 @@ export function AccountSettings() {
           {t("auth.logout")}
         </Button>
       </SettingsSection>
+      <DataSettings />
     </div>
   )
 }

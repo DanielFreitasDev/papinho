@@ -171,7 +171,23 @@
     "changeUsername": "Change @username",
     "usernameCooldown": "You can change it again on {{date}}.",
     "usernameReservation": "Your old @username stays reserved for you for 30 days.",
-    "usernameChanged": "@username changed"
+    "usernameChanged": "@username changed",
+    "data": {
+      "title": "Your data",
+      "description": "Download a ZIP with everything that is yours on Papinho: account, profile, contacts, settings, the messages you sent and the list of your files (data portability).",
+      "withFiles": "Include the files you sent",
+      "export": "Download my data"
+    },
+    "delete": {
+      "title": "Delete account",
+      "description": "Deletes the account, profile, contacts and settings. Messages you sent stay with whoever received them, as \"Deleted account\". This cannot be undone.",
+      "action": "Delete my account",
+      "confirmTitle": "Delete your account forever?",
+      "confirmDescription": "Type your password to confirm. You leave all groups and every session is ended.",
+      "password": "Password",
+      "confirm": "Delete account",
+      "done": "Account deleted"
+    }
   },
   "security": {
     "password": "Password",
@@ -241,7 +257,24 @@
     "temporaryPasswordDescription": "Send it through a secure channel. It is shown only now; ask the person to change it after signing in.",
     "you": "you",
     "reports": "Reports",
-    "transcription": "Transcription"
+    "transcription": "Transcription",
+    "makeAdmin": "Make admin",
+    "removeAdmin": "Remove admin",
+    "roleChanged": "Role changed; it applies when the person signs in again",
+    "createInvite": "Create invite",
+    "storage": {
+      "tab": "Disk",
+      "title": "Disk usage",
+      "files_one": "{{count}} uploaded file",
+      "files_other": "{{count}} uploaded files",
+      "database": "Database",
+      "free": "Free on the files volume",
+      "ofTotal": "{{free}} of {{total}}",
+      "top": "Largest users",
+      "none": "No files uploaded yet",
+      "userFiles_one": "{{count}} file · {{size}}",
+      "userFiles_other": "{{count}} files · {{size}}"
+    }
   },
   "chat": {
     "conversations": "Chats",

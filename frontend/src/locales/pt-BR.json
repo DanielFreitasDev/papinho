@@ -171,7 +171,23 @@
     "changeUsername": "Trocar @usuario",
     "usernameCooldown": "Você poderá trocar de novo em {{date}}.",
     "usernameReservation": "O @usuario antigo fica reservado para você por 30 dias.",
-    "usernameChanged": "@usuario alterado"
+    "usernameChanged": "@usuario alterado",
+    "data": {
+      "title": "Seus dados",
+      "description": "Baixe um ZIP com tudo o que é seu no Papinho: conta, perfil, contatos, configurações, as mensagens que você mandou e a lista dos seus arquivos (portabilidade da LGPD).",
+      "withFiles": "Incluir os arquivos que você enviou",
+      "export": "Baixar meus dados"
+    },
+    "delete": {
+      "title": "Excluir conta",
+      "description": "Apaga a conta, o perfil, os contatos e as configurações. As mensagens que você mandou continuam com quem recebeu, como \"Conta apagada\". Não dá para desfazer.",
+      "action": "Excluir minha conta",
+      "confirmTitle": "Excluir sua conta para sempre?",
+      "confirmDescription": "Digite sua senha para confirmar. Você sai de todos os grupos e todas as sessões são encerradas.",
+      "password": "Senha",
+      "confirm": "Excluir conta",
+      "done": "Conta excluída"
+    }
   },
   "security": {
     "password": "Senha",
@@ -241,7 +257,24 @@
     "temporaryPasswordDescription": "Envie por um canal seguro. Ela aparece só agora; peça para a pessoa trocá-la ao entrar.",
     "you": "você",
     "reports": "Denúncias",
-    "transcription": "Transcrição"
+    "transcription": "Transcrição",
+    "makeAdmin": "Tornar admin",
+    "removeAdmin": "Tirar admin",
+    "roleChanged": "Papel alterado; a pessoa entra de novo para valer",
+    "createInvite": "Gerar convite",
+    "storage": {
+      "tab": "Disco",
+      "title": "Uso de disco",
+      "files_one": "{{count}} arquivo enviado",
+      "files_other": "{{count}} arquivos enviados",
+      "database": "Banco de dados",
+      "free": "Livre no volume dos arquivos",
+      "ofTotal": "{{free}} de {{total}}",
+      "top": "Quem mais ocupa",
+      "none": "Nenhum arquivo enviado ainda",
+      "userFiles_one": "{{count}} arquivo · {{size}}",
+      "userFiles_other": "{{count}} arquivos · {{size}}"
+    }
   },
   "chat": {
     "conversations": "Conversas",

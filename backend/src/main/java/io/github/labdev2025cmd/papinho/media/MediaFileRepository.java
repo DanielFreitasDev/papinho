@@ -9,4 +9,7 @@ interface MediaFileRepository extends JpaRepository<MediaFile, UUID> {
 
     @Query("select coalesce(sum(f.size), 0) from MediaFile f where f.ownerId = :ownerId")
     long usedBy(UUID ownerId);
+
+    @Query("select f from MediaFile f where f.ownerId = :ownerId order by f.createdAt")
+    java.util.List<MediaFile> findByOwner(UUID ownerId);
 }

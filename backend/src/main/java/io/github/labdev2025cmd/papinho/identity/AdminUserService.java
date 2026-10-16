@@ -18,7 +18,7 @@ import io.github.labdev2025cmd.papinho.profile.ProfileService;
 import io.github.labdev2025cmd.papinho.profile.ProfileView;
 import io.github.labdev2025cmd.papinho.shared.error.ApiException;
 
-/** Gestão de usuários pelo admin (AD-01): listar, desativar, reativar e redefinir senha. */
+/** Gestão de usuários pelo admin (AD-01): listar, desativar, reativar, redefinir senha e tornar admin. */
 @Service
 public class AdminUserService {
 
@@ -46,6 +46,20 @@ public class AdminUserService {
         return accounts.map(account -> new AdminUserView(account.id(), account.username().value(),
                 views.containsKey(account.id()) ? views.get(account.id()).displayName() : "",
                 account.role() == Role.ADMIN, account.enabled(), account.createdAt()));
+    }
+
+    /**
+     * Torna alguém admin da instância ou tira (AD-01). O admin não muda o próprio papel. As sessões da pessoa são
+     * encerradas para o papel novo valer no próximo login.
+     */
+    @Transactional
+    public void changeAdmin(UUID adminId, UUID userId, boolean admin) {
+        if (adminId.equals(userId)) {
+            throw new SelfActionException();
+        }
+        load(userId).changeRole(admin ? Role.ADMIN : Role.USER);
+        sessions.revokeAllExcept(userId, null);
+        log.info("User role changed by admin userId={} adminId={} admin={}", userId, adminId, admin);
     }
 
     /** Desativa a conta e encerra todas as sessões dela. O admin não pode desativar a si mesmo. */

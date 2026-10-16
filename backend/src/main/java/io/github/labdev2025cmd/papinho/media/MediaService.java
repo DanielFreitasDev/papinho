@@ -112,6 +112,16 @@ public class MediaService {
         return new Content(resource, file.contentType(), file.filename(), ContentTypes.inline(file.contentType()));
     }
 
+    /** Arquivos que a pessoa enviou, para a exportação dos dados dela (BK-02). */
+    @Transactional(readOnly = true)
+    public java.util.List<OwnedFile> ownedBy(UUID ownerId) {
+        return files.findByOwner(ownerId).stream().map(file -> new OwnedFile(file.id(), file.filename())).toList();
+    }
+
+    /** Arquivo de uma pessoa: id e nome original já limpo. */
+    public record OwnedFile(UUID id, String filename) {
+    }
+
     private MediaFile requireReadable(UUID viewer, UUID id) {
         MediaFile file = files.findById(id).orElseThrow(MediaExceptions.NotFoundException::new);
         if (policies.stream().anyMatch(p -> p.restricted(id))) {

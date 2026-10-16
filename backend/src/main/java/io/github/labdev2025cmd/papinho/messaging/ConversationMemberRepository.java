@@ -10,4 +10,8 @@ interface ConversationMemberRepository extends JpaRepository<ConversationMember,
 
     @Query("select m from ConversationMember m where m.key.conversationId = :conversationId")
     List<ConversationMember> findByConversation(UUID conversationId);
+
+    @Query("select m from ConversationMember m where m.key.userId = :userId "
+            + "and m.state = io.github.labdev2025cmd.papinho.messaging.MemberState.ACTIVE")
+    List<ConversationMember> findActiveByUser(UUID userId);
 }

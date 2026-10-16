@@ -265,6 +265,29 @@ public class GroupService {
         notifyMembers(groupId, Set.of(me));
     }
 
+    /**
+     * A conta vai ser apagada (BK-02): sai de todos os grupos como no "sair silenciosamente", passando o admin
+     * adiante quando era a única. A cascata do banco apaga a participação logo depois.
+     */
+    @org.springframework.context.event.EventListener
+    @Transactional
+    void on(io.github.labdev2025cmd.papinho.identity.AccountDeleting event) {
+        for (ConversationMember member : members.findActiveByUser(event.userId())) {
+            UUID groupId = member.conversationId();
+            boolean group = conversations.findById(groupId).map(c -> c.kind() == ConversationKind.GROUP)
+                    .orElse(false);
+            if (!group) {
+                continue;
+            }
+            sequences.lock(groupId);
+            member.changeState(MemberState.LEFT);
+            member.changeRole(MemberRole.MEMBER);
+            members.flush();
+            ensureAdmin(groupId);
+            notifyMembers(groupId, Set.of());
+        }
+    }
+
     /** Link de convite atual (criado na primeira vez); só admins (GR-02). */
     @Transactional
     public String inviteCode(UUID me, UUID groupId) {

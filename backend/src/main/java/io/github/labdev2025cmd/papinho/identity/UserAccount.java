@@ -131,6 +131,10 @@ class UserAccount {
         this.totpEnabled = false;
     }
 
+    void changeRole(Role role) {
+        this.role = role;
+    }
+
     void disable() {
         this.enabled = false;
     }

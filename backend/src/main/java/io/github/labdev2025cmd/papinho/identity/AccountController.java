@@ -17,17 +17,31 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
-/** Configurações da conta: {@code @usuario}, senha, TOTP e códigos de recuperação (ID-03 a ID-05). */
+/** Configurações da conta: {@code @usuario}, senha, TOTP, códigos de recuperação (ID-03 a ID-05) e exclusão (BK-02). */
 @RestController
 @RequestMapping("/api/v1/account")
 class AccountController {
 
     private final IdentityService identity;
     private final SessionService sessions;
+    private final AccountDeletionService deletion;
 
-    AccountController(IdentityService identity, SessionService sessions) {
+    AccountController(IdentityService identity, SessionService sessions, AccountDeletionService deletion) {
         this.identity = identity;
         this.sessions = sessions;
+        this.deletion = deletion;
+    }
+
+    /** Exclui a própria conta (BK-02) com a senha; encerra todas as sessões, inclusive esta. */
+    @DeleteMapping
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    void delete(@Valid @RequestBody PasswordRequest body, HttpServletRequest request) {
+        deletion.delete(CurrentUser.id(), body.password());
+        jakarta.servlet.http.HttpSession session = request.getSession(false);
+        if (session != null) {
+            session.invalidate();
+        }
+        org.springframework.security.core.context.SecurityContextHolder.clearContext();
     }
 
     @PutMapping("/username")

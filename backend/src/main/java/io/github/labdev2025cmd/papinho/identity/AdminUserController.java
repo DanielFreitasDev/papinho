@@ -6,9 +6,11 @@ import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -48,6 +50,18 @@ class AdminUserController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     void enable(@PathVariable UUID id) {
         service.enable(CurrentUser.id(), id);
+    }
+
+    @PutMapping("/{id}/admin")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    void promote(@PathVariable UUID id) {
+        service.changeAdmin(CurrentUser.id(), id, true);
+    }
+
+    @DeleteMapping("/{id}/admin")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    void demote(@PathVariable UUID id) {
+        service.changeAdmin(CurrentUser.id(), id, false);
     }
 
     @PostMapping("/{id}/reset-password")

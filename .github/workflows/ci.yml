@@ -76,6 +76,12 @@ jobs:
         options: >-
           --health-cmd "pg_isready -U papinho -d papinho"
           --health-interval 5s --health-timeout 3s --health-retries 10
+      # SMTP de teste para o e-mail de recuperação (ID-05); a API HTTP lê as mensagens no e2e.
+      mailpit:
+        image: axllent/mailpit:v1.31.3
+        ports:
+          - 1025:1025
+          - 8025:8025
     env:
       DATABASE_URL: jdbc:postgresql://localhost:5432/papinho
       DATABASE_USERNAME: papinho
@@ -99,6 +105,11 @@ jobs:
         env:
           # O e2e roda tudo de um IP só; os limites de tentativas reais são provados no IdentityIT.
           PAPINHO_RATE_LIMIT_MULTIPLIER: "10"
+          PAPINHO_MAIL_ENABLED: "true"
+          PAPINHO_MAIL_FROM: papinho@papinho.test
+          PAPINHO_PUBLIC_URL: http://localhost:8080
+          SPRING_MAIL_HOST: localhost
+          SPRING_MAIL_PORT: "1025"
         run: |
           java -jar backend/target/papinho.jar pki init --ip 127.0.0.1 --network 127.0.0.0/8
           nohup java -jar backend/target/papinho.jar --server.port=8080 > papinho.log 2>&1 &
@@ -121,6 +132,7 @@ jobs:
         env:
           PAPINHO_E2E_URL: http://localhost:8080
           PAPINHO_E2E_SETUP_URL: http://localhost:8081/setup
+          PAPINHO_E2E_MAILPIT_URL: http://localhost:8025
         run: pnpm e2e
       - name: Relatório do Playwright e logs
         if: failure()

@@ -52,6 +52,9 @@ java -jar backend/target/papinho.jar &                      # precisa do Postgre
 cd frontend && pnpm exec playwright install chromium && PAPINHO_E2E_URL=http://localhost:8080 pnpm e2e
 ```
 
+O e2e do e-mail de recuperação só roda com `PAPINHO_E2E_MAILPIT_URL` (por exemplo, um `axllent/mailpit` em
+`localhost:1025`/`8025` e o jar iniciado com as variáveis de e-mail abaixo), como no CI.
+
 ## Configuração
 
 | Variável | Padrão | Uso |
@@ -71,6 +74,14 @@ cd frontend && pnpm exec playwright install chromium && PAPINHO_E2E_URL=http://l
 | `PAPINHO_GIFS_PROVIDER` / `PAPINHO_GIFS_API_KEY` | `none` / vazio | GIFs pelo Tenor (`tenor` com a chave da API); a busca e os GIFs passam pelo servidor (ADR 0011) |
 | `PAPINHO_PUSH_ENABLED` | `true` | Web Push para os navegadores assinados (exige que o servidor acesse a internet) |
 | `PAPINHO_PUSH_SUBJECT` | URL do projeto | contato da instância no VAPID (`mailto:` ou `https:`); use o seu |
+| `PAPINHO_MAIL_ENABLED` | `false` | e-mail opcional de recuperação de senha; exige `PAPINHO_MAIL_FROM`, `PAPINHO_PUBLIC_URL` e o SMTP |
+| `PAPINHO_MAIL_FROM` / `PAPINHO_PUBLIC_URL` | vazio | remetente e endereço público usado nos links (nunca o `Host` da requisição) |
+| `SPRING_MAIL_HOST` / `SPRING_MAIL_PORT` / `SPRING_MAIL_USERNAME` / `SPRING_MAIL_PASSWORD` | vazio | servidor SMTP; STARTTLS com `SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE=true` |
+
+Com o e-mail ligado, cada pessoa pode cadastrar um e-mail de recuperação em Configurações > Segurança. Ele só
+vale depois de confirmado pelo link enviado; "Esqueci minha senha" passa a oferecer um link de redefinição (uso
+único, 1 hora), pedido pelo `@usuario` e sem revelar se a conta existe. Redefinir pelo e-mail encerra todas as
+sessões, mas não desliga a verificação em duas etapas: quem perdeu o app autenticador usa um código de recuperação.
 
 A cota por usuário (padrão 5 GB), as janelas de edição e exclusão e os provedores de transcrição ficam no
 painel do admin. Arquivos têm limite de 1 GB e sobem por upload retomável (tus): atrás de um proxy, libere

@@ -103,6 +103,8 @@ test.describe("e-mail de recuperação", () => {
     await forgot
       .getByRole("link", { name: "Receber um link por e-mail" })
       .click()
+    // A tela anterior também tem um campo "@usuario": preencher antes de a rota trocar perde o valor.
+    await forgot.waitForURL("**/forgot-password")
     await forgot.getByLabel("@usuario").fill(`@${username}`)
     await forgot.getByRole("button", { name: "Enviar link" }).click()
     await expect(forgot.getByText("Pedido recebido")).toBeVisible()

@@ -33,6 +33,8 @@ the product's own name-constrained CA) and may later deploy it on a VPS behind a
   be used with `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/path/to/chrome`. Run it against a freshly started jar with an
   empty database: the `primeiro-admin` project creates the first admin, and rate limits live in memory
   (start that jar with `PAPINHO_RATE_LIMIT_MULTIPLIER=10`, as CI does; never in production).
+  The UI-05 spec also runs in Firefox and WebKit (`playwright install chromium firefox webkit`); WebKit rejects
+  `Secure` cookies on http://localhost, so it needs `PAPINHO_E2E_HTTPS_URL` pointing to the `lan` instance (same DB).
 - LAN PKI: `java -jar backend/target/papinho.jar pki init|renew|status`; run with `--spring.profiles.active=lan`.
 - Install-script check: `scripts/verify-install-ca.sh` (Docker + a `lan` instance reachable as papinho.lan).
 
@@ -49,6 +51,9 @@ the product's own name-constrained CA) and may later deploy it on a VPS behind a
 - Identifiers in English, comments/JavaDoc and user-facing text in pt-BR; UI text only through i18next keys.
 - Use official shadcn components (`pnpm dlx shadcn@latest add ...`) before writing custom ones; Base UI API
   (`render=` instead of `asChild`).
+- UI-05: no control with the browser's native look (no exceptions for `NativeSelect` or native date inputs).
+  Use `SearchInput`, `PasswordInput`, `DatePicker`/`DateTimePicker`, `VideoPlayer`/`LocalAudioPlayer`, every
+  `<form>` gets `noValidate`; ESLint enforces it outside `src/components/ui/` (tested in `frontend/lint/`).
 - Never mark a STATUS item `feito` without executed evidence; blocked items need the concrete reason.
 
 ## Guides (root; read only the relevant section)

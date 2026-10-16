@@ -49,11 +49,16 @@ cd frontend && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && 
 # e2e contra um papinho.jar em execução
 ./mvnw -B install -DskipTests
 java -jar backend/target/papinho.jar &                      # precisa do PostgreSQL (variáveis abaixo)
-cd frontend && pnpm exec playwright install chromium && PAPINHO_E2E_URL=http://localhost:8080 pnpm e2e
+cd frontend && pnpm exec playwright install chromium firefox webkit && PAPINHO_E2E_URL=http://localhost:8080 pnpm e2e
 ```
 
 O e2e do e-mail de recuperação só roda com `PAPINHO_E2E_MAILPIT_URL` (por exemplo, um `axllent/mailpit` em
 `localhost:1025`/`8025` e o jar iniciado com as variáveis de e-mail abaixo), como no CI.
+
+O spec `native-controls.spec.ts` confere que nenhuma tela tem controles com a aparência do navegador (UI-05) e tira
+capturas em Chromium, Firefox e WebKit, nos temas claro e escuro (ficam em `frontend/test-results` e no relatório
+HTML do CI). O WebKit recusa cookies `Secure` em `http://localhost`, então roda contra uma instância HTTPS do perfil
+`lan` (a mesma base de dados): `PAPINHO_E2E_HTTPS_URL=https://127.0.0.1:8443`. Sem essa variável, o WebKit é pulado.
 
 ## Configuração
 

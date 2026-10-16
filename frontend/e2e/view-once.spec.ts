@@ -56,6 +56,31 @@ test("visualização única abre uma vez, com marca d'água e sem cache", async 
     viewer.getByTestId("view-once-watermark").locator("text")
   ).toHaveText(`@hana.${tag}`)
   await expectNoSeriousA11yViolations(hana.page)
+
+  // Desfoca quando a janela perde o foco ou a aba fica escondida, e volta ao normal quando retorna.
+  const content = viewer
+    .getByTestId("view-once-content")
+    .locator(":scope > div")
+    .first()
+  const filter = () =>
+    content.evaluate((element) => getComputedStyle(element).filter)
+  const setVisibility = (state: "hidden" | "visible") =>
+    hana.page.evaluate((value) => {
+      Object.defineProperty(document, "visibilityState", {
+        configurable: true,
+        get: () => value,
+      })
+      document.dispatchEvent(new Event("visibilitychange"))
+    }, state)
+  expect(await filter()).toBe("none")
+  await hana.page.evaluate(() => window.dispatchEvent(new Event("blur")))
+  await expect.poll(filter).toContain("blur")
+  await hana.page.evaluate(() => window.dispatchEvent(new Event("focus")))
+  await expect.poll(filter).toBe("none")
+  await setVisibility("hidden")
+  await expect.poll(filter).toContain("blur")
+  await setVisibility("visible")
+  await expect.poll(filter).toBe("none")
   await hana.page.keyboard.press("Escape")
   await expect(viewer).toBeHidden()
   await expect(

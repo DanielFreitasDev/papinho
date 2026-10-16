@@ -214,6 +214,15 @@ export function syncConversation(queryClient: QueryClient, id: string) {
         chatKeys.messages(id)
       )
       if (!cache) {
+        // Primeira busca da conversa ainda em andamento: ela pode ter saído antes da mudança avisada. Espera e
+        // continua do cursor que ela trouxer.
+        if (
+          queryClient.getQueryState(chatKeys.messages(id))?.fetchStatus ===
+          "fetching"
+        ) {
+          await fetchSettled(queryClient, chatKeys.messages(id))
+          continue
+        }
         return
       }
       const page = await apiFetch<MessagePage>(
@@ -230,6 +239,18 @@ export function syncConversation(queryClient: QueryClient, id: string) {
   })().finally(() => syncing.delete(id))
   syncing.set(id, task)
   return task
+}
+
+/** Resolve quando a consulta deixa de buscar (com sucesso ou erro). */
+function fetchSettled(queryClient: QueryClient, queryKey: readonly unknown[]) {
+  return new Promise<void>((resolve) => {
+    const unsubscribe = queryClient.getQueryCache().subscribe(() => {
+      if (queryClient.getQueryState(queryKey)?.fetchStatus !== "fetching") {
+        unsubscribe()
+        resolve()
+      }
+    })
+  })
 }
 
 export async function loadOlder(queryClient: QueryClient, id: string) {

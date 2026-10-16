@@ -77,5 +77,23 @@ test("grava, pré-escuta e envia voz; o outro lado toca em sequência e no mini-
   await mini.getByRole("button", { name: "Fechar o tocador" }).click()
   await expect(mini).toBeHidden()
 
+  // Transcrição automática (AU-03): ligada nas configurações, os áudios recebidos sem texto transcrevem
+  // sozinhos ao abrir a conversa, sem clicar em "Transcrever".
+  await hana.page.goto("/settings/transcription")
+  const auto = hana.page.getByRole("switch", {
+    name: "Transcrever automaticamente os áudios recebidos",
+  })
+  await auto.click()
+  await expect(auto).toBeChecked()
+  await hana.page.goto("/")
+  await hana.page
+    .getByRole("complementary", { name: "Conversas e contatos" })
+    .getByRole("link", { name: new RegExp(gil.name) })
+    .click()
+  await expect(hana.page.getByText("Oi, chego às oito")).toHaveCount(2)
+  await expect(
+    hana.page.getByRole("button", { name: "Transcrever" })
+  ).toHaveCount(0)
+
   await Promise.all([gil.context.close(), hana.context.close()])
 })

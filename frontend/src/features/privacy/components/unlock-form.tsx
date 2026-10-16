@@ -38,6 +38,7 @@ export function UnlockForm({
 
   return (
     <form
+      noValidate
       onSubmit={submit}
       className="mx-auto flex w-full max-w-xs flex-col items-center gap-4 p-6"
     >

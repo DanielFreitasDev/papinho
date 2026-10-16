@@ -60,6 +60,7 @@ export function StickerManager({
           </DialogDescription>
         </DialogHeader>
         <form
+          noValidate
           className="flex gap-2"
           onSubmit={(event) => {
             event.preventDefault()

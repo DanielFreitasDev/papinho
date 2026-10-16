@@ -62,6 +62,7 @@ export function PollDialog({
           <DialogDescription>{t("poll.newDescription")}</DialogDescription>
         </DialogHeader>
         <form
+          noValidate
           id="new-poll"
           className="flex max-h-[60dvh] flex-col gap-4 overflow-y-auto p-0.5"
           onSubmit={(event) => {

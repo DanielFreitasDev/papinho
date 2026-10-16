@@ -539,6 +539,7 @@ function EditInfoDialog({
           <DialogTitle>{t("groups.editInfo")}</DialogTitle>
         </DialogHeader>
         <form
+          noValidate
           id="group-info"
           className="flex flex-col gap-4"
           onSubmit={(event) => {

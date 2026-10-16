@@ -216,6 +216,7 @@ export function Composer({
 
   return (
     <form
+      noValidate
       className="flex flex-col gap-2 border-t bg-background px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]"
       onSubmit={(event) => {
         event.preventDefault()

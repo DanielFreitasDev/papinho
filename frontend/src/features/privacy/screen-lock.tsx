@@ -291,6 +291,7 @@ function LockScreen({
       className="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 p-4"
     >
       <form
+        noValidate
         onSubmit={(event) => void submit(event)}
         className="flex w-full max-w-xs flex-col items-center gap-4 rounded-xl border bg-card p-6 text-card-foreground shadow-lg"
       >

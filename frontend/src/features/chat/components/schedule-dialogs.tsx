@@ -54,6 +54,7 @@ export function ScheduleDialog({
           </DialogDescription>
         </DialogHeader>
         <form
+          noValidate
           id="schedule-message"
           className="flex flex-col gap-4"
           onSubmit={(event) => {

@@ -62,6 +62,7 @@ export function BroadcastDialog({
           <DialogDescription>{t("broadcast.description")}</DialogDescription>
         </DialogHeader>
         <form
+          noValidate
           id="broadcast-form"
           className="flex max-h-[60dvh] min-h-0 flex-col gap-4 overflow-y-auto p-0.5"
           onSubmit={(event) => {

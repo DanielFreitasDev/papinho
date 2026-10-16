@@ -98,7 +98,7 @@ function NewLock() {
     { value: "PASSWORD", label: t("privacy.screenLock.kind.PASSWORD") },
   ]
   return (
-    <form onSubmit={submit} className="flex flex-col gap-4">
+    <form noValidate onSubmit={submit} className="flex flex-col gap-4">
       <FieldGroup>
         <Field>
           <FieldLabel htmlFor="screen-lock-kind">
@@ -202,6 +202,7 @@ function EnabledLock({ lock }: { lock: ScreenLock }) {
         </Button>
       </div>
       <form
+        noValidate
         className="flex flex-col gap-3 border-t pt-4"
         onSubmit={(event) => {
           event.preventDefault()

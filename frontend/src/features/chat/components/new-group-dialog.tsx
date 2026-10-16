@@ -49,6 +49,7 @@ export function NewGroupDialog({
           </DialogDescription>
         </DialogHeader>
         <form
+          noValidate
           id="new-group"
           className="flex min-h-0 flex-col gap-4"
           onSubmit={async (event) => {

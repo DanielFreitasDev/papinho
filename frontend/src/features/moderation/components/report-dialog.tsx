@@ -43,6 +43,7 @@ export function ReportDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <form
+          noValidate
           className="flex flex-col gap-4"
           onSubmit={(event) => {
             event.preventDefault()

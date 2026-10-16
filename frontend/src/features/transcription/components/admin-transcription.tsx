@@ -130,6 +130,7 @@ function ProviderForm({ provider }: { provider: AdminProvider }) {
   return (
     <li className="rounded-xl border p-3">
       <form
+        noValidate
         className="flex flex-col gap-3"
         onSubmit={(event) => {
           event.preventDefault()

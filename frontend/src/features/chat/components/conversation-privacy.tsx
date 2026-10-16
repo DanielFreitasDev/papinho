@@ -198,7 +198,7 @@ function LockDialog({
   return (
     <Dialog open onOpenChange={(next) => (next ? undefined : onClose())}>
       <DialogContent>
-        <form onSubmit={submit} className="flex flex-col gap-4">
+        <form noValidate onSubmit={submit} className="flex flex-col gap-4">
           <DialogHeader>
             <DialogTitle>{t("privacy.locked.lockTitle")}</DialogTitle>
             <DialogDescription>

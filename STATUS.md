@@ -1,7 +1,7 @@
 # STATUS — progresso do Papinho
 
 Fonte de verdade do progresso (PROMPT.md §3.1). `feito` exige evidência **executada**; código sem
-verificação é `em andamento`. Última auditoria: 2026-10-15 (passada 3, Fase 4).
+verificação é `em andamento`. Última auditoria: 2026-10-16 (passada 4, Fase 5).
 
 Ambiente da passada 1: sandbox de nuvem com JDK 25.0.4 (Temurin, baixado), Node 24.22.0, pnpm 10.34.6,
 Docker 29 (daemon iniciado manualmente), Chromium do Playwright em `/opt/pw-browsers`, sem aparelhos reais.
@@ -22,6 +22,13 @@ silenciosas e rascunho, mensagens salvas e atalhos. Fim da passada: backend **74
 (`./mvnw -B -pl backend verify`), frontend **33 Vitest** com lint, typecheck e format, e2e **37 verdes** (desktop
 e celular, 4 de `/setup` só no CI) em duas rodadas seguidas contra instância nova.
 
+Passada 4 (mesmo tipo de ambiente; JDK 25.0.4.1 baixado, Maven Central pelo espelho do Google por 429,
+Postgres por `mirror.gcr.io`): auditoria no início com backend 74 + 87 e frontend 33 verdes, mas o **último run do
+CI da passada 3 (40) tinha falhado** no `RealtimeIT.shouldRequireSessionAndCsrf` (corrida no teste, corrigida). Fase 5
+inteira no servidor (módulo `privacy`, ADR 0013) e na interface. Fim da passada: backend **74 unitários + 95 de
+integração**, frontend **38 Vitest** com lint, typecheck e format, e2e **41 verdes** em duas rodadas seguidas contra instância
+nova e **43 verdes** na rodada final com o teste de inatividade e passkey (desktop e celular; 4 de `/setup` só no CI).
+
 ## Fase 0 — Fundação
 
 | ID | Descrição curta | Status | Evidência | Observações |
@@ -32,7 +39,7 @@ e celular, 4 de `/setup` só no CI) em duas rodadas seguidas contra instância n
 | F0-ADR | ADRs 0001–0010 | feito | `docs/adr/` | |
 | F0-COMPOSE | `compose.yaml` com PostgreSQL 18 | feito | `spring-boot:run` no perfil local subiu `papinho-postgres-1` e o health respondeu UP | |
 | F0-SEC | Segurança base (cadeias, denyAll, CSRF spa, CSP, Problem Details, Argon2) | feito | `SecurityIT` (12 testes) e `LanSetupIT.shouldIssueStrictCsrfCookieOverTls`; e2e sem violação de CSP | `__Host-SESSION` provado em `IdentityIT` |
-| QA-04 | CI no GitHub Actions: backend, frontend e e2e em jobs separados | feito | `.github/workflows/ci.yml`; runs 38757286112, 38769083331 e 38815227435 (passada 3, com os 41 e2e) verdes nos três jobs | e2e sobe instância padrão e perfil lan |
+| QA-04 | CI no GitHub Actions: backend, frontend e e2e em jobs separados | feito | `.github/workflows/ci.yml`; runs 38757286112, 38769083331 e 38815227435 verdes nos três jobs | e2e sobe instância padrão e perfil lan. Correção da passada 4: o run 40 (último da passada 3) falhou no backend por um teste instável do `RealtimeIT`, corrigido em `6a4c833` |
 | QA-05 | README pt-BR (dev, LAN, CA, backup, produção) | em andamento | `README.md` | backup depende de BK-03 (Fase 7) |
 | PK-01 | `pki init` com BouncyCastle: CA P-256 10 anos com Name Constraints; servidor ≤398 dias; chave 0600 | feito | `CertificateAuthorityTest` (7) e `PkiCommandTest` (5); `openssl verify` e `certutil -V` recusam domínio/IP de fora | PKIX do JDK ignora NC da âncora (LEARNING) |
 | PK-02 | TLS por SSL bundle com HTTP/2; porta HTTP só com `/setup/**` e redirecionamento | feito | `LanSetupIT` (HTTP/2 validado pela CA; 301 para HTTPS; POST recusado); `curl --http2` manual no perfil lan | |
@@ -67,7 +74,7 @@ e celular, 4 de `/setup` só no CI) em duas rodadas seguidas contra instância n
 | MS-03 | "digitando…" e "gravando áudio…" | feito | `RealtimeIT.shouldNotifyMessagesReceiptsAndTyping`; e2e `chat.spec.ts` ("digitando…") e `audio.spec.ts` ("gravando áudio…" no outro navegador durante a gravação) | |
 | MS-04 | Responder, encaminhar, reagir, mencionar, fixar, favoritar, selecionar | feito | `MessagingIT.shouldReactPinStarAndForward` (até 3 fixadas, selo após 5 saltos, favorita privada); e2e responder com salto, reagir (inclusive "Mais reações"), fixar, favoritar, selecionar duas e encaminhar; `@todos` em destaque sem link no grupo (`groups.spec.ts`) | notificar menções mesmo silenciado vem com GR-05/NT-03 |
 | MS-14 | Marcador de não lidas, ir para a primeira, marcar como não lida | feito | `MessagingIT.shouldTrackReceiptsAndUnread`; e2e contador na lista, marcador "2 mensagens não lidas", botão leva à primeira, marcar como não lida | |
-| RT-01 | `seq` monotônico por conversa e `afterSeq` | feito | `MessagingIT.shouldSyncBySeqAndDeduplicate`, `shouldPageHistoryBackwards`; `cache.test.ts` (6: cursor, merge, janela, pendentes); e2e reação e fixar chegam por afterSeq | seq atribuído com trava de linha (`SequenceAllocator`); reconexão real com rede caída não testada em e2e |
+| RT-01 | `seq` monotônico por conversa e `afterSeq` | feito | `MessagingIT.shouldSyncBySeqAndDeduplicate`, `shouldPageHistoryBackwards`; `cache.test.ts` (6: cursor, merge, janela, pendentes); e2e reação e fixar chegam por afterSeq | seq atribuído com trava de linha (`SequenceAllocator`); passada 4: o cliente agora sincroniza também na primeira conexão do WebSocket (aviso se perdia entre carregar e assinar); reconexão real com rede caída não testada em e2e |
 | RT-02 | `clientMessageId` idempotente | feito | `MessagingIT.shouldSyncBySeqAndDeduplicate` (reenvio devolve 200 com a mesma mensagem; outro chat dá 409); `cache.test.ts` pendente some ao confirmar | o botão "tentar de novo" reenvia com o mesmo id |
 | RT-03 | Presença com heartbeat; aba em segundo plano não conta | feito | `RealtimeIT.shouldTrackPresence` (aba oculta não conta, offline com visto por último, terceiro recebe 404); e2e "online" no cabeçalho | por enquanto só entre conversas aceitas pelos dois lados; PV-04/PV-05 na Fase 5 |
 | UI-01 | Duas colunas no desktop, pilha no celular | feito | lista + conversa no desktop e rota própria `/c/$id` com voltar no celular; painel "Dados do contato" como terceira coluna a partir de 1280 px e gaveta abaixo disso; e2e `moderation.spec.ts` e `media.spec.ts` usam o painel nos dois projetos (desktop 1280 px e Pixel 7) | |
@@ -110,15 +117,15 @@ e celular, 4 de `/setup` só no CI) em duas rodadas seguidas contra instância n
 
 | ID | Descrição curta | Status | Evidência | Observações |
 |---|---|---|---|---|
-| PV-01 | Desfoque configurável por item | pendente | | |
-| PV-02 | Bloqueio de tela | pendente | | |
-| PV-03 | Conversa trancada | pendente | | |
-| PV-04 | Visibilidade de visto por último, online, foto, recado | pendente | | |
-| PV-05 | Reciprocidade no servidor | pendente | | |
-| PV-06 | Confirmação de leitura global/por conversa | pendente | | |
-| PV-07 | Quem pode me adicionar a grupos | pendente | | |
-| PV-08 | Notificações sem conteúdo | pendente | | |
-| SG-04 | Regras PV-* no servidor com testes de integração | pendente | | |
+| PV-01 | Desfoque configurável por item | feito | e2e `privacy.spec.ts` (Alt+Shift+P liga e desliga `data-blur`, mensagem com `filter: blur`, foco do teclado revela e sair desfoca); `privacy.test.ts` (itens e atrasos); `PrivacyIT` guarda as escolhas | desfoque em CSS sem estilo inline (CSP); `prefers-reduced-motion` respeitado; revelar com atraso do mouse e toque longo sem teste automatizado |
+| PV-02 | Bloqueio de tela | feito | `PrivacyIT.shouldManageScreenLock` (Argon2, PIN só com dígitos, troca exige o atual, hash nunca vai ao cliente, 403 uniforme, 429); e2e `privacy.spec.ts` (bloquear pelo botão e pelo atalho, PIN errado, sobrevive a recarregar, bloqueia ao esconder a aba, inatividade de 1 min com relógio controlado, desbloqueio por passkey com autenticador virtual, fundo `inert`, axe); README documenta a proteção visual | tudo desligado por padrão; passkey reutiliza o login (ADR 0013) |
+| PV-03 | Conversa trancada | em andamento | `PrivacyIT.shouldLockConversations` (sai da lista, 403 em conversa/mensagens/sync/galeria, pasta só com token, token de outra pessoa não vale, código compartilhado, destrancar exige token, fechar a pasta invalida, 429, IDOR 404); e2e (trancar pelo painel, recarregar pede o código, código errado, some da lista) | falta "notificações sem conteúdo" (não há notificações até NT-01); anexos seguem por id para membros (ADR 0013); NT-05 não pode guardar trancadas no IndexedDB |
+| PV-04 | Visibilidade de visto por último, online, foto, recado | feito | `PrivacyIT` (foto e recado com todos/contatos/exceto/ninguém, exceção só entre contatos 400; visto por último nas quatro opções); `RealtimeIT.shouldHideOnlineByPrivacy`; e2e online escondido some no outro navegador |  |
+| PV-05 | Reciprocidade no servidor | feito | `PrivacyIT.shouldApplyPresenceReciprocity` e `shouldApplyReadReceiptRules`; `RealtimeIT.shouldHideOnlineByPrivacy`; e2e (online e leitura recíprocos entre dois navegadores) | reciprocidade por par (ADR 0013) |
+| PV-06 | Confirmação de leitura global/por conversa | feito | `PrivacyIT.shouldApplyReadReceiptRules` (global, sobreposição por conversa, padrão do grupo ligado, quem desliga no grupo sai do "todos" e não vê, Dados da mensagem, IDOR 404); e2e ficam no "Entregue"; seleção por conversa nos painéis |  |
+| PV-07 | Quem pode me adicionar a grupos | feito | `PrivacyIT.shouldRespectWhoCanAddToGroups` (criar e adicionar recusados com `group-add-not-allowed`, permitido depois de virar contato, link de convite segue disponível) | a UI mostra o detalhe do erro sugerindo o link |
+| PV-08 | Notificações sem conteúdo | em andamento | `PrivacyIT` guarda "ocultar conteúdo"; interruptor em Configurações > Privacidade | quem aplica são as notificações (NT-01/NT-03, Fase 6) |
+| SG-04 | Regras PV-* no servidor com testes de integração | em andamento | `PrivacyIT` (7) e `RealtimeIT.shouldHideOnlineByPrivacy` cobrem PV-02..PV-07 no servidor | falta PV-08 aplicado às notificações (Fase 6) |
 
 ## Fase 6 — Organização, busca, notificações e PWA
 
@@ -144,7 +151,7 @@ e celular, 4 de `/setup` só no CI) em duas rodadas seguidas contra instância n
 | AR-01 | WCAG 2.2 AA; RESPONSIVENESS.md aplicado | em andamento | e2e com axe nas telas existentes (inclui painel, visualizador, galeria, gravação, admin); `muted-foreground` escurecido para 4,5:1 sobre fundos cinza; fechar de toasts empilhados fora da ordem de foco | revisar a cada tela nova; tema escuro sem axe |
 | AR-02 | 320 px, alvos de 44 px, safe areas, teclado virtual | em andamento | e2e 320 px em `/`, `/login`, `/register` e `/setup`; alvos de 44 px em `pointer: coarse` (`index.css`) | teclado virtual só em aparelho real |
 | AR-03 | Fluxo só com teclado; axe sem críticas/sérias | em andamento | axe sem críticas/sérias em `/setup`, cadastro, admin com contatos e segurança | fluxo só com teclado não automatizado |
-| QA-03 | E2E dos fluxos críticos | em andamento | 37 verdes + 4 de `/setup` (desktop e celular), duas rodadas seguidas: além dos anteriores, grupo (`groups.spec.ts`), apagar para todos e para mim (`messages.spec.ts`), visualização única, atalhos | faltam privacidade recíproca, conversa trancada e bloqueio de tela (Fase 5) |
+| QA-03 | E2E dos fluxos críticos | em andamento | 43 verdes + 4 de `/setup` (desktop e celular), duas rodadas seguidas na passada 4: todos os fluxos da lista têm spec com axe, inclusive privacidade recíproca, conversa trancada e bloqueio de tela (`privacy.spec.ts`) | falta confirmar a suíte com `privacy.spec.ts` no CI; a Fase 7 amplia |
 
 ## Requisitos transversais
 
@@ -152,13 +159,13 @@ e celular, 4 de `/setup` só no CI) em duas rodadas seguidas contra instância n
 |---|---|---|---|---|
 | SG-01 | IDOR, Problem Details, sem segredos em logs | em andamento | Problem Details em 401/403/400/500 (`SecurityIT`); IDOR de conversa, mensagem, reação e encaminhar (`MessagingIT`), denúncia (`ModerationIT`), upload, mídia e galeria (`MediaIT`), transcrição (`TranscriptionIT`, inclusive chave fora dos logs); WebSocket só assina a própria fila (`WebSocketSecurityConfig`) | IDOR a cada endpoint novo |
 | SG-02 | CSP estrita, cabeçalhos, HSTS em produção | feito | `SecurityIT.shouldServeSpaShellWithSecurityHeaders`; e2e falha em qualquer violação de CSP | HSTS por `PAPINHO_HSTS=true` |
-| SG-03 | Rate limit em login, convites, desbloqueio, envio, upload | em andamento | `RateLimiter` (Bucket4j) em login por IP e conta, cadastro, recuperação, convites e links de grupo (60/h), ações sensíveis, criação de upload (200/h), denúncias, prévias de link, transcrição, GIFs e envio de mensagens/enquetes (120/min, `MessagingIT.shouldRateLimitSending`); `IdentityIT` 429 com Retry-After; "digitando" limitado por frequência | falta o limite de desbloqueio (PV-02/PV-03, Fase 5); `rate-limit-multiplier` só para e2e |
+| SG-03 | Rate limit em login, convites, desbloqueio, envio, upload | em andamento | `RateLimiter` (Bucket4j) em login por IP e conta, cadastro, recuperação, convites e links de grupo (60/h), ações sensíveis, criação de upload (200/h), denúncias, prévias de link, transcrição, GIFs, envio de mensagens/enquetes (120/min, `MessagingIT.shouldRateLimitSending`) e códigos de desbloqueio de tela e de conversas (10/15 min, `PrivacyIT` 429); `IdentityIT` 429 com Retry-After; "digitando" limitado por frequência | falta teste do limite de upload; `rate-limit-multiplier` só para e2e |
 | UI-02 | Temas, papel de parede, fonte, densidade | em andamento | Configurações > Aparência (claro/escuro/sistema) | papel de parede, fonte e densidade pendentes |
 | UI-03 | Estados carregando, vazio, erro, offline, sem permissão | em andamento | contatos com carregando/vazio/erro; não encontrado (e2e `smoke.spec.ts`) | offline vem com NT-05 |
 | UI-04 | Lista de mensagens performática | em andamento | `message-scroller` do shadcn com `content-visibility`, páginas de 50 e paginação para trás (`beforeSeq`) | sem medição com milhares de mensagens |
 | IN-01 | Textos externalizados; pt-BR completo, pronto para en | em andamento | `i18n.test.ts` garante as mesmas chaves em pt-BR e en; backend com `messages*.properties` | |
-| QA-01 | Backend: unitários, slice, integração, ArchUnit, Modulith, `./mvnw verify` | em andamento | `./mvnw -B -pl backend verify`: 74 unitários + 86 de integração verdes na passada 3 (com `GroupIT`, `BroadcastIT`, `DisappearingIT`, `ViewOnceIT`, `PollIT`, `ScheduledIT`, `StickerIT`, `GifIT`, `ModularityTests`); depois, `MessagingIT` com o limite de envio (9) verde | cresce a cada fase |
-| QA-02 | Frontend: lint, typecheck, Vitest | feito | `pnpm lint`, `pnpm typecheck`, `pnpm format:check`, `pnpm test` (33), `pnpm build` locais e no job frontend do CI (run 38815227435) | |
+| QA-01 | Backend: unitários, slice, integração, ArchUnit, Modulith, `./mvnw verify` | em andamento | `./mvnw -B -pl backend verify`: 74 unitários + 95 de integração verdes na passada 4 (com `PrivacyIT` e `ModularityTests` incluindo o módulo `privacy`) | cresce a cada fase |
+| QA-02 | Frontend: lint, typecheck, Vitest | feito | `pnpm lint`, `pnpm typecheck`, `pnpm format:check`, `pnpm test` (38), `pnpm build` locais; job frontend do CI (run 38815227435 e o 40) | |
 
 ## Dúvidas registradas para o dono
 

@@ -438,7 +438,8 @@
     "scheduleFailed": "Não pôde ser enviada na hora marcada",
     "silent": "Enviada sem notificação",
     "remove": "Remover",
-    "draftPreview": "Rascunho: {{text}}"
+    "draftPreview": "Rascunho: {{text}}",
+    "accountDeleted": "Conta apagada"
   },
   "moderation": {
     "report": "Denunciar",

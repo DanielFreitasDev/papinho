@@ -438,7 +438,8 @@
     "scheduleFailed": "Could not be sent at the set time",
     "silent": "Sent without notification",
     "remove": "Remove",
-    "draftPreview": "Draft: {{text}}"
+    "draftPreview": "Draft: {{text}}",
+    "accountDeleted": "Deleted account"
   },
   "moderation": {
     "report": "Report",

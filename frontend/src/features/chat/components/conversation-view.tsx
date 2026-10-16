@@ -780,7 +780,7 @@ function LoadedConversation({
             </AlertDescription>
           </Alert>
         ) : null}
-        <MessageScroller className="min-h-0 flex-1">
+        <MessageScroller className="chat-wallpaper min-h-0 flex-1">
           <MessageScrollerViewport
             aria-label={t("chat.messages")}
             preserveScrollOnPrepend

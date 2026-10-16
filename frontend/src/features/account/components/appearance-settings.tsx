@@ -10,6 +10,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  DENSITIES,
+  FONT_SIZES,
+  WALLPAPERS,
+  setDisplayPrefs,
+  useDisplayPrefs,
+} from "@/lib/display-prefs"
 import i18n, { SUPPORTED_LANGUAGES, type Language } from "@/lib/i18n"
 import { SettingsSection } from "./settings-section"
 
@@ -18,10 +25,14 @@ const LANGUAGE_NAMES: Record<Language, string> = {
   en: "English",
 }
 
-/** Tema claro, escuro ou do sistema e idioma da interface (UI-02, IN-01). */
+/**
+ * Tema claro, escuro ou do sistema, idioma (IN-01), papel de parede, tamanho da fonte e densidade (UI-02); as três
+ * últimas valem para este aparelho.
+ */
 export function AppearanceSettings() {
   const { t } = useTranslation()
   const { theme, setTheme } = useTheme()
+  const display = useDisplayPrefs()
   const themes = [
     { value: "system", label: t("appearance.system") },
     { value: "light", label: t("appearance.light") },
@@ -84,7 +95,76 @@ export function AppearanceSettings() {
             </SelectContent>
           </Select>
         </Field>
+        <ChoiceField
+          id="appearance-wallpaper"
+          label={t("appearance.wallpaper")}
+          value={display.wallpaper}
+          options={WALLPAPERS.map((value) => ({
+            value,
+            label: t(`appearance.wallpapers.${value}`),
+          }))}
+          onChange={(wallpaper) => setDisplayPrefs({ wallpaper })}
+        />
+        <ChoiceField
+          id="appearance-font-size"
+          label={t("appearance.fontSize")}
+          value={display.fontSize}
+          options={FONT_SIZES.map((value) => ({
+            value,
+            label: t(`appearance.fontSizes.${value}`),
+          }))}
+          onChange={(fontSize) => setDisplayPrefs({ fontSize })}
+        />
+        <ChoiceField
+          id="appearance-density"
+          label={t("appearance.density")}
+          value={display.density}
+          options={DENSITIES.map((value) => ({
+            value,
+            label: t(`appearance.densities.${value}`),
+          }))}
+          onChange={(density) => setDisplayPrefs({ density })}
+        />
       </FieldGroup>
     </SettingsSection>
+  )
+}
+
+/** Uma escolha entre opções fixas, no mesmo formato das outras da tela. */
+function ChoiceField<T extends string>({
+  id,
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  id: string
+  label: string
+  value: T
+  options: { value: T; label: string }[]
+  onChange: (value: T) => void
+}) {
+  return (
+    <Field>
+      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+      <Select
+        items={options}
+        value={value}
+        onValueChange={(next) => onChange(next as T)}
+      >
+        <SelectTrigger id={id} className="w-full sm:w-64">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectGroup>
+            {options.map((item) => (
+              <SelectItem key={item.value} value={item.value}>
+                {item.label}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        </SelectContent>
+      </Select>
+    </Field>
   )
 }

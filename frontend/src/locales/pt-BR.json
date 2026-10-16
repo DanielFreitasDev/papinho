@@ -233,7 +233,27 @@
     "light": "Claro",
     "dark": "Escuro",
     "system": "Do sistema",
-    "language": "Idioma"
+    "language": "Idioma",
+    "wallpaper": "Papel de parede da conversa",
+    "wallpapers": {
+      "none": "Nenhum",
+      "dots": "Pontos",
+      "grid": "Quadriculado",
+      "waves": "Listras",
+      "tint": "Cor do tema"
+    },
+    "fontSize": "Tamanho da fonte",
+    "fontSizes": {
+      "small": "Pequena",
+      "normal": "Normal",
+      "large": "Grande",
+      "xlarge": "Muito grande"
+    },
+    "density": "Densidade",
+    "densities": {
+      "comfortable": "Confortável",
+      "compact": "Compacta"
+    }
   },
   "admin": {
     "title": "Administração",

@@ -249,3 +249,44 @@
     user-select: none;
   }
 }
+
+/* Preferências de exibição (UI-02), aplicadas por atributos no <html> (lib/display-prefs.ts). */
+html[data-font-size="small"] {
+  font-size: 87.5%;
+}
+html[data-font-size="large"] {
+  font-size: 112.5%;
+}
+html[data-font-size="xlarge"] {
+  font-size: 125%;
+}
+html[data-density="compact"] [data-slot="message-scroller-content"] {
+  gap: 0;
+}
+html[data-density="compact"] [data-slot="bubble-content"] {
+  padding-block: 0.25rem;
+}
+/* Papel de parede da conversa: padrões leves com as cores do tema, legíveis nos dois temas. */
+html[data-wallpaper="dots"] .chat-wallpaper {
+  background-image: radial-gradient(
+    color-mix(in oklch, var(--foreground) 9%, transparent) 1px,
+    transparent 1.5px
+  );
+  background-size: 18px 18px;
+}
+html[data-wallpaper="grid"] .chat-wallpaper {
+  background-image:
+    linear-gradient(color-mix(in oklch, var(--foreground) 6%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in oklch, var(--foreground) 6%, transparent) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+html[data-wallpaper="waves"] .chat-wallpaper {
+  background-image: repeating-linear-gradient(
+    135deg,
+    color-mix(in oklch, var(--primary) 7%, transparent) 0 12px,
+    transparent 12px 24px
+  );
+}
+html[data-wallpaper="tint"] .chat-wallpaper {
+  background-color: color-mix(in oklch, var(--primary) 8%, var(--background));
+}

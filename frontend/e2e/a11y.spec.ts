@@ -134,3 +134,49 @@ test("fluxo completo só com o teclado", async ({ page }) => {
   })
   expect(visibleFocus).toBe(true)
 })
+
+/** Fase 7: papel de parede, tamanho da fonte e densidade guardados no aparelho (UI-02), com axe. */
+test("aparência: papel de parede, fonte e densidade", async ({
+  browser,
+  pageErrors,
+}) => {
+  const { context, page } = await ensureAdmin(browser, pageErrors)
+  await page.goto("/settings/appearance")
+  const choose = async (label: string, option: string) => {
+    await page.getByRole("combobox", { name: label }).click()
+    await page.getByRole("option", { name: option, exact: true }).click()
+  }
+  await choose("Papel de parede da conversa", "Pontos")
+  await choose("Tamanho da fonte", "Grande")
+  await choose("Densidade", "Compacta")
+  const html = page.locator("html")
+  await expect(html).toHaveAttribute("data-wallpaper", "dots")
+  await expect(html).toHaveAttribute("data-font-size", "large")
+  await expect(html).toHaveAttribute("data-density", "compact")
+  expect(
+    await html.evaluate((element) => getComputedStyle(element).fontSize)
+  ).toBe("18px")
+
+  // Vale depois de recarregar e aparece na conversa, sem violações do axe nos dois temas.
+  await page.keyboard.press("Control+k")
+  await page.keyboard.type("salvas")
+  await page.keyboard.press("Enter")
+  await page.reload()
+  await expect(html).toHaveAttribute("data-wallpaper", "dots")
+  const wallpaper = page.locator(".chat-wallpaper")
+  await expect(wallpaper).toBeVisible()
+  expect(
+    await wallpaper.evaluate(
+      (element) => getComputedStyle(element).backgroundImage
+    )
+  ).toContain("radial-gradient")
+  await expectNoSeriousA11yViolations(page)
+  await page.emulateMedia({ colorScheme: "dark" })
+  await expectNoSeriousA11yViolations(page)
+
+  await page.goto("/settings/appearance")
+  await choose("Papel de parede da conversa", "Nenhum")
+  await choose("Tamanho da fonte", "Normal")
+  await choose("Densidade", "Confortável")
+  await context.close()
+})

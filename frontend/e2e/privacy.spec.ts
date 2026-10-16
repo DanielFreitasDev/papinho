@@ -136,6 +136,12 @@ test("online e leitura recíprocos e modo privado", async ({
     await expect(bubble).toHaveCSS("filter", /blur/)
   }
 
+  // Movimento reduzido (prefers-reduced-motion): desfoca e revela sem transição.
+  await expect(bubble).not.toHaveCSS("transition-duration", "0s")
+  await gil.page.emulateMedia({ reducedMotion: "reduce" })
+  await expect(bubble).toHaveCSS("transition-duration", "0s")
+  await gil.page.emulateMedia({ reducedMotion: null })
+
   await gil.page.keyboard.press("Alt+Shift+P")
   await expect(gil.page.locator("html")).not.toHaveAttribute("data-blur", /.+/)
   await expect(bubble).toHaveCSS("filter", "none")

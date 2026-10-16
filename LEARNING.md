@@ -28,10 +28,11 @@ Leia as entradas relacionadas à tarefa. Os detalhes ficam em `docs/learning/`.
 - [PWA, Web Push, busca e e2e offline](docs/learning/gotcha-pwa-push-e-busca.md) — stemmer pt, ponto EC sem checagem no JDK, MIME do manifesto, tsc -b com e2e, testar a troca de service worker.
 - [E-mail de recuperação: executor, ArchUnit e SMTP nos testes](docs/learning/gotcha-email-recuperacao-executor-e-testes.md) — sem applicationTaskExecutor com WebSocket, nada de token no outbox, GreenMail/Mailpit.
 - [E2E em Firefox e WebKit](docs/learning/gotcha-e2e-firefox-e-webkit.md) — cookie Secure em localhost, colorScheme, CSP das capturas, proxy do desktop, pendências do WebKit.
+- [IP do cliente atrás de proxy](docs/learning/gotcha-ip-do-cliente-atras-de-proxy.md) — framework confia no X-Forwarded-For do cliente; use native (RemoteIpValve).
 - [Máquina local: proxy no Maven, portas e /tmp](docs/learning/gotcha-ambiente-local-com-proxy.md) — proxy virava argumento do vite, e2e em portas altas, gh sem push, jcmd, internet só pelo proxy, 12 workers.
 
 ## Decisões de arquitetura
-- As decisões vivem em `docs/adr/` (0001–0014).
+- As decisões vivem em `docs/adr/` (0001–0015).
 - [Fase 4: grupos, transmissão, temporárias, visualização única, figurinhas](docs/learning/decisao-fase4-mensagens-avancadas.md) — limites e escolhas que o código não diz.
 - [Fase 5: privacidade](docs/learning/decisao-fase5-privacidade.md) — reciprocidade por par, leitura no grupo, token das trancadas, cache offline.
 - [Fase 6: lista, busca, notificações e offline](docs/learning/decisao-fase6-organizacao-notificacoes.md) — arquivo calculado, apagar com removed_seq, push decidido no servidor, Dexie por conta.

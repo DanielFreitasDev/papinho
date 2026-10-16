@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test"
 
 import { expect, expectNoSeriousA11yViolations, test } from "./fixtures"
-import { RUN, twoFriends } from "./support"
+import { ensureAdmin, RUN, twoFriends } from "./support"
 
 function row(page: Page, text: string) {
   return page
@@ -115,6 +115,51 @@ test("PWA instalável, offline com conversas recentes e fila de texto", async ({
 
   await gil.context.close()
   await hana.context.close()
+})
+
+/**
+ * NT-04: uma versão nova do service worker instala, mas espera. A página avisa "Nova versão" e só troca quando a
+ * pessoa clica em "Atualizar" (sem skipWaiting cego); aí o novo assume e a página recarrega.
+ */
+test("versão nova do app espera o Atualizar para assumir", async ({
+  browser,
+  pageErrors,
+}) => {
+  const { context, page } = await ensureAdmin(browser, pageErrors)
+  await controlled(page)
+  const registration = () =>
+    page.evaluate(async () => {
+      const current = await navigator.serviceWorker.getRegistration()
+      return {
+        waiting: current?.waiting?.state ?? null,
+        active: current?.active?.state ?? null,
+      }
+    })
+
+  // Chega uma versão nova. O route do Playwright não alcança a busca que o navegador faz para atualizar o
+  // service worker, então a versão nova vem por outro endereço do mesmo script: para o navegador, é um worker novo
+  // na mesma registration, instalado e esperando, como depois de um deploy.
+  await page.evaluate(async () => {
+    await navigator.serviceWorker.register("/sw.js?versao=nova", { scope: "/" })
+  })
+  await expect(page.getByText("Nova versão do Papinho")).toBeVisible()
+  // Nada troca sozinho: o novo fica esperando enquanto a pessoa não escolhe.
+  await expect.poll(registration).toEqual({
+    waiting: "installed",
+    active: "activated",
+  })
+  await expectNoSeriousA11yViolations(page)
+
+  const reloaded = page.waitForEvent("load")
+  await page.getByRole("button", { name: "Atualizar" }).click()
+  await reloaded
+  await expect
+    .poll(registration)
+    .toEqual({ waiting: null, active: "activated" })
+  await expect(
+    page.getByRole("complementary", { name: "Conversas e contatos" })
+  ).toBeVisible()
+  await context.close()
 })
 
 /** Fase 6: notificações com o app aberto (NT-01) e configurações por tipo e som (NT-03), com avisos (NT-02). */

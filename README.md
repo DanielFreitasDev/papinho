@@ -80,7 +80,7 @@ PAPINHO_E2E_WHISPER=1 PAPINHO_E2E_URL=http://localhost:8080 pnpm e2e whisper.spe
 | `PAPINHO_HTTPS_PORT` / `PAPINHO_HTTP_PORT` | `8443` / `8080` | portas de escuta no perfil `lan` |
 | `PAPINHO_PUBLIC_HTTPS_PORT` / `PAPINHO_PUBLIC_HTTP_PORT` | iguais às de escuta | portas que os amigos usam (80/443 com redirecionamento) |
 | `PAPINHO_HSTS` | `false` | liga HSTS (produção) |
-| `PAPINHO_FORWARD_HEADERS` | `none` | `framework` atrás de proxy reverso |
+| `PAPINHO_FORWARD_HEADERS` | `none` | `native` atrás de proxy reverso (veja Produção) |
 | `PAPINHO_DATA_DIR` | `~/.papinho` | base de `files/` (arquivos enviados), `uploads/` (uploads em andamento) e da chave de cifra |
 | `PAPINHO_STORAGE_DIR` / `PAPINHO_UPLOAD_DIR` | dentro de `PAPINHO_DATA_DIR` | troca cada um desses diretórios |
 | `PAPINHO_CLAMAV_ENABLED` | `false` | analisa cada arquivo com o ClamAV (`PAPINHO_CLAMAV_HOST`, `PAPINHO_CLAMAV_PORT`, padrão `localhost:3310`) |
@@ -223,8 +223,14 @@ curl -fsSL http://papinho.lan:8080/setup/install-ca.sh | sh -s -- --uninstall
 
 - Rode **sem** o perfil `lan`: a PKI fica desligada e `/setup` não existe. O TLS vem do proxy reverso
   (Caddy, nginx, Traefik) ou de uma CA pública.
-- Atrás do proxy: `PAPINHO_FORWARD_HEADERS=framework`, `PAPINHO_HSTS=true`; o proxy precisa repassar
-  WebSocket em `/ws`.
+- Atrás do proxy: `PAPINHO_FORWARD_HEADERS=native`, `PAPINHO_HSTS=true`; o proxy precisa repassar
+  WebSocket em `/ws`, o cabeçalho `Host` original e `X-Forwarded-For`/`X-Forwarded-Proto`.
+  - Com `native`, o Tomcat lê o `X-Forwarded-For` de trás para a frente e só confia em proxies de endereço interno
+    (loopback, 10/8, 172.16/12, 192.168/16…): o IP que um cliente inventa no começo do cabeçalho é ignorado e não
+    burla os limites de tentativas. Se o proxy está em outra máquina com IP público, diga qual é em
+    `SERVER_TOMCAT_REMOTEIP_INTERNAL_PROXIES` (expressão regular).
+  - Não use `framework`: ele confia no primeiro valor do `X-Forwarded-For` ou do `Forwarded`, que o próprio cliente
+    escolhe quando o proxy só acrescenta o dele (o padrão do nginx com `$proxy_add_x_forwarded_for`).
 - PostgreSQL gerenciado ou em contêiner com volume e backup.
 - O proxy precisa aceitar corpos de até 50 MB em `PATCH /api/v1/uploads/**` (pedaços do upload retomável).
 

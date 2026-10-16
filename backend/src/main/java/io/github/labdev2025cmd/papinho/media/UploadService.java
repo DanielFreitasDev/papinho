@@ -15,10 +15,9 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.HexFormat;
-import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.tika.Tika;
 import org.apache.tika.io.TikaInputStream;
@@ -39,7 +38,7 @@ import io.github.labdev2025cmd.papinho.shared.security.RateLimiter;
  * cancelamento. Ao completar, o tipo é detectado pelo conteúdo (Tika), imagens são tratadas (MD-02), o
  * antivírus opcional analisa (MD-06) e o arquivo vai para a porta de armazenamento.
  *
- * <p>Os pedaços ficam num diretório local até completar; um pedaço por vez por upload (trava em memória:
+ * <p>Os pedaços ficam num diretório local até completar; um pedaço por vez por upload (marca em memória:
  * instância única, ADR 0004).</p>
  */
 @Service
@@ -63,7 +62,11 @@ public class UploadService {
     private final Clock clock;
     private final Path stagingDir;
     private final Tika tika = new Tika();
-    private final Map<UUID, ReentrantLock> locks = new ConcurrentHashMap<>();
+    /**
+     * Uploads com um PATCH em andamento. A entrada no conjunto é atômica: o segundo PATCH do mesmo upload recebe
+     * "ocupado" (um mapa de travas removidas depois do unlock deixava dois PATCH passarem juntos).
+     */
+    private final Set<UUID> busy = ConcurrentHashMap.newKeySet();
 
     UploadService(MediaUploadRepository uploads, MediaFileRepository files, FileStorage storage,
             MalwareScanner scanner, InstanceSettingsService settings, RateLimiter rateLimiter,
@@ -140,8 +143,7 @@ public class UploadService {
      */
     public UploadStatus append(UUID owner, UUID id, long offset, InputStream body) throws IOException {
         MediaUpload upload = require(owner, id);
-        ReentrantLock lock = locks.computeIfAbsent(id, ignored -> new ReentrantLock());
-        if (!lock.tryLock()) {
+        if (!busy.add(id)) {
             throw new MediaExceptions.UploadBusyException();
         }
         try {
@@ -166,8 +168,7 @@ public class UploadService {
             }
             return new UploadStatus(id, received, upload.length(), upload.expiresAt(), complete(upload, file));
         } finally {
-            lock.unlock();
-            locks.remove(id, lock);
+            busy.remove(id);
         }
     }
 

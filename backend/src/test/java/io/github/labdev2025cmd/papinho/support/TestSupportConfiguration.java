@@ -15,6 +15,13 @@ public class TestSupportConfiguration {
         return () -> new ApiClient(mvc, json);
     }
 
+    /** Nenhum teste faz push de verdade: o que seria enviado fica guardado para conferir. */
+    @Bean
+    @org.springframework.context.annotation.Primary
+    RecordingPushGateway recordingPushGateway() {
+        return new RecordingPushGateway();
+    }
+
     /** Cria "navegadores" independentes, cada um com seus cookies e seu IP. */
     @FunctionalInterface
     public interface ApiClients {

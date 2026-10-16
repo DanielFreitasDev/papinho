@@ -41,6 +41,8 @@ spring:
   modulith:
     events:
       republish-outstanding-events-on-restart: true
+      # Publicação concluída sai da tabela: o registro só guarda o que ainda falta entregar.
+      completion-mode: delete
   lifecycle:
     timeout-per-shutdown-phase: 30s
   docker:
@@ -116,6 +118,10 @@ app:
   link-preview:
     enabled: ${PAPINHO_LINK_PREVIEW:true}
     cache-ttl: 24h
+  # Web Push (NT-01): o servidor fala com os serviços de push dos navegadores (exige internet).
+  push:
+    enabled: ${PAPINHO_PUSH_ENABLED:true}
+    subject: ${PAPINHO_PUSH_SUBJECT:https://github.com/labdev2025-cmd/papinho}
   identity:
     webauthn:
       rp-id: ${PAPINHO_RP_ID:localhost}

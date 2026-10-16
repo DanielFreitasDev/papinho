@@ -809,6 +809,9 @@ public class MessageService {
         // Quem envia já "leu" a própria mensagem: o marcador de não lidas começa depois dela.
         conversations.requireMember(me, conversationId).advanceRead(seq);
         notifyChanged(conversationId);
+        if (kind != MessageKind.SYSTEM) {
+            events.publishEvent(new MessagePosted(saved.id(), conversationId));
+        }
         return saved;
     }
 

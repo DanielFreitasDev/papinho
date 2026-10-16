@@ -17,8 +17,12 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 import io.github.labdev2025cmd.papinho.messaging.ConversationService;
+import io.github.labdev2025cmd.papinho.privacy.PrivacyEvents;
+import io.github.labdev2025cmd.papinho.privacy.PrivacyItem;
+import io.github.labdev2025cmd.papinho.privacy.PrivacyService;
 import io.github.labdev2025cmd.papinho.shared.error.ApiException;
 
 /**
@@ -35,13 +39,15 @@ public class PresenceService {
     private final Map<UUID, Map<String, Beat>> connections = new ConcurrentHashMap<>();
     private final Map<UUID, Boolean> online = new ConcurrentHashMap<>();
     private final ConversationService conversations;
+    private final PrivacyService privacy;
     private final SimpMessagingTemplate broker;
     private final JdbcTemplate jdbc;
     private final Clock clock;
 
-    PresenceService(ConversationService conversations, SimpMessagingTemplate broker, JdbcTemplate jdbc,
-            Clock clock) {
+    PresenceService(ConversationService conversations, PrivacyService privacy, SimpMessagingTemplate broker,
+            JdbcTemplate jdbc, Clock clock) {
         this.conversations = conversations;
+        this.privacy = privacy;
         this.broker = broker;
         this.jdbc = jdbc;
         this.clock = clock;
@@ -77,12 +83,39 @@ public class PresenceService {
         Set.copyOf(online.keySet()).forEach(this::refresh);
     }
 
-    /** Presença de {@code userId} vista por {@code viewer}; só para quem tem conversa aceita com ele. */
+    /**
+     * Presença de {@code userId} vista por {@code viewer}; só para quem tem conversa aceita com ele. Online e visto
+     * por último seguem a visibilidade de cada um, com reciprocidade (PV-04, PV-05): o que não pode ser visto volta
+     * como offline e sem horário, igual a quem nunca ficou online.
+     */
     public PresenceView view(UUID viewer, UUID userId) {
         if (!viewer.equals(userId) && !conversations.mutualPeers(viewer).contains(userId)) {
             throw new NotVisibleException();
         }
-        return new PresenceView(userId, isOnline(userId), lastSeen(userId).orElse(null));
+        return filtered(viewer, userId, isOnline(userId), lastSeen(userId).orElse(null));
+    }
+
+    /** Mudou quem vê a presença: reenvia o estado filtrado para cada par (PV-04, PV-05). */
+    @TransactionalEventListener
+    void on(PrivacyEvents.PresenceVisibilityChanged event) {
+        UUID userId = event.userId();
+        boolean now = isOnline(userId);
+        @Nullable Instant lastSeen = lastSeen(userId).orElse(null);
+        for (UUID peer : conversations.mutualPeers(userId)) {
+            PresenceView view = filtered(peer, userId, now, lastSeen);
+            broker.convertAndSendToUser(peer.toString(), DESTINATION,
+                    new PresenceEvent("presence", userId, view.online(), view.lastSeenAt()));
+            // Pela reciprocidade, o que a própria pessoa vê dos pares também mudou.
+            PresenceView back = filtered(userId, peer, isOnline(peer), lastSeen(peer).orElse(null));
+            broker.convertAndSendToUser(userId.toString(), DESTINATION,
+                    new PresenceEvent("presence", peer, back.online(), back.lastSeenAt()));
+        }
+    }
+
+    private PresenceView filtered(UUID viewer, UUID userId, boolean online, @Nullable Instant lastSeen) {
+        boolean seeOnline = privacy.canSeePresence(viewer, userId, PrivacyItem.ONLINE);
+        boolean seeLastSeen = privacy.canSeePresence(viewer, userId, PrivacyItem.LAST_SEEN);
+        return new PresenceView(userId, seeOnline && online, seeLastSeen ? lastSeen : null);
     }
 
     boolean isOnline(UUID userId) {
@@ -107,9 +140,12 @@ public class PresenceService {
             jdbc.update("insert into user_presence (user_id, last_seen_at) values (?, ?) on conflict (user_id) "
                     + "do update set last_seen_at = excluded.last_seen_at", userId, lastSeen.atOffset(ZoneOffset.UTC));
         }
-        PresenceEvent event = new PresenceEvent("presence", userId, now, lastSeen);
-        conversations.mutualPeers(userId)
-                .forEach(peer -> broker.convertAndSendToUser(peer.toString(), DESTINATION, event));
+        @Nullable Instant changedAt = lastSeen;
+        for (UUID peer : conversations.mutualPeers(userId)) {
+            PresenceView view = filtered(peer, userId, now, changedAt);
+            broker.convertAndSendToUser(peer.toString(), DESTINATION,
+                    new PresenceEvent("presence", userId, view.online(), view.lastSeenAt()));
+        }
     }
 
     private Optional<Instant> lastSeen(UUID userId) {

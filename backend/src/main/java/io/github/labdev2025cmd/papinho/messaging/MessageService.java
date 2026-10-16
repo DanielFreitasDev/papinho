@@ -307,7 +307,7 @@ public class MessageService {
     /** Alterações depois de {@code afterSeq}, em ordem de alteração (RT-01). */
     @Transactional(readOnly = true)
     public SyncResponse sync(UUID me, UUID conversationId, long afterSeq, int limit) {
-        conversations.requireMember(me, conversationId);
+        conversations.requireReadable(me, conversationId);
         int size = Math.clamp(limit, 1, MAX_SYNC);
         List<Message> found = messages.findChangedAfter(conversationId, Math.max(0, afterSeq), Limit.of(size + 1));
         boolean hasMore = found.size() > size;
@@ -319,7 +319,7 @@ public class MessageService {
     /** Página de histórico antes de {@code beforeSeq}, devolvida em ordem crescente de {@code seq}. */
     @Transactional(readOnly = true)
     public HistoryResponse history(UUID me, UUID conversationId, @Nullable Long beforeSeq, int limit) {
-        conversations.requireMember(me, conversationId);
+        conversations.requireReadable(me, conversationId);
         int size = Math.clamp(limit, 1, MAX_PAGE);
         long before = beforeSeq == null ? Long.MAX_VALUE : beforeSeq;
         List<Message> found = messages.findBefore(conversationId, before, Limit.of(size + 1));
@@ -339,7 +339,7 @@ public class MessageService {
         List<Message> sources = new ArrayList<>();
         for (UUID id : new LinkedHashSet<>(messageIds)) {
             Message message = messages.findById(id).orElseThrow(NotFoundException::new);
-            conversations.requireMember(me, message.conversationId());
+            conversations.requireReadable(me, message.conversationId());
             if (message.deleted() || message.kind() != MessageKind.USER || message.viewOnce()) {
                 throw new InvalidMessageException("cannot forward");
             }
@@ -418,7 +418,7 @@ public class MessageService {
 
     @Transactional(readOnly = true)
     public List<MessageView> pinned(UUID me, UUID conversationId) {
-        conversations.requireMember(me, conversationId);
+        conversations.requireReadable(me, conversationId);
         return toViews(me, withoutHidden(me, messages.findPinned(conversationId)));
     }
 
@@ -429,7 +429,7 @@ public class MessageService {
     @Transactional(readOnly = true)
     public HistoryResponse gallery(UUID me, UUID conversationId, GalleryTab tab, @Nullable Long beforeSeq,
             int limit) {
-        conversations.requireMember(me, conversationId);
+        conversations.requireReadable(me, conversationId);
         int size = Math.clamp(limit, 1, MAX_PAGE);
         long before = beforeSeq == null ? Long.MAX_VALUE : beforeSeq;
         List<Message> found = switch (tab) {
@@ -492,11 +492,15 @@ public class MessageService {
         Map<UUID, UserSummary> summaries = users.findAllById(ids).stream()
                 .collect(Collectors.toMap(UserSummary::id, Function.identity()));
         Map<UUID, ProfileView> views = profiles.viewAll(me, ids);
+        // PV-06: só vê leituras quem compartilha a própria, e só de quem também compartilha.
+        Set<UUID> sharers = conversations.receiptSharers(message.conversationId());
+        boolean iShare = sharers.contains(me);
         List<RecipientInfo> recipients = others.stream().filter(m -> summaries.containsKey(m.userId()))
                 .map(m -> {
                     ProfileView view = views.get(m.userId());
                     // CT-02: leitura escondida enquanto a outra pessoa não aceitou a conversa.
-                    @Nullable Instant readAt = m.state() == MemberState.ACTIVE ? read.get(m.userId()) : null;
+                    @Nullable Instant readAt = m.state() == MemberState.ACTIVE && iShare
+                            && sharers.contains(m.userId()) ? read.get(m.userId()) : null;
                     return new RecipientInfo(m.userId(), summaries.get(m.userId()).username(),
                             view == null ? summaries.get(m.userId()).username() : view.displayName(),
                             delivered.get(m.userId()), readAt);
@@ -513,6 +517,7 @@ public class MessageService {
         if (conversations.requireConversation(me, conversationId).kind() != ConversationKind.DIRECT) {
             throw new NotFoundException();
         }
+        conversations.requireReadable(me, conversationId);
         UUID peer = conversations.membersOf(conversationId).stream().map(ConversationMember::userId)
                 .filter(id -> !id.equals(me)).findFirst().orElseThrow(NotFoundException::new);
         List<Message> latest = new ArrayList<>(messages.findBefore(conversationId, Long.MAX_VALUE,
@@ -802,15 +807,15 @@ public class MessageService {
 
     private Message requireVisible(UUID me, UUID messageId) {
         Message message = messages.findById(messageId).orElseThrow(NotFoundException::new);
-        conversations.requireMember(me, message.conversationId());
+        conversations.requireReadable(me, message.conversationId());
         return message;
     }
 
     private boolean isVisible(UUID me, UUID conversationId) {
         try {
-            conversations.requireMember(me, conversationId);
+            conversations.requireReadable(me, conversationId);
             return true;
-        } catch (NotFoundException hidden) {
+        } catch (NotFoundException | MessagingExceptions.ConversationLockedException hidden) {
             return false;
         }
     }

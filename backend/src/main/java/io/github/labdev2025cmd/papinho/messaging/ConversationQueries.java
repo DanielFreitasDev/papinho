@@ -23,8 +23,9 @@ class ConversationQueries {
 
     private static final String LIST = """
             select c.id, c.kind, c.last_seq, c.updated_at, c.created_by, c.disappearing_seconds,
-                   me.state, me.role, me.read_seq, me.marked_unread,
-                   peer.user_id as peer_id, peer.state as peer_state,
+                   me.state, me.role, me.read_seq, me.marked_unread, me.read_receipts as my_read_receipts,
+                   peer.user_id as peer_id, peer.state as peer_state, peer.read_receipts as peer_read_receipts,
+                   coalesce(grp.sharing, 0) as group_sharing,
                    case when c.kind = 'GROUP' then grp.delivered else peer.delivered_seq end as peer_delivered_seq,
                    case when c.kind = 'GROUP' then grp.read else peer.read_seq end as peer_read_seq,
                    coalesce(grp.members, 0) + 1 as member_count,
@@ -42,7 +43,10 @@ class ConversationQueries {
               left join conversation_members peer
                      on c.kind = 'DIRECT' and peer.conversation_id = c.id and peer.user_id <> me.user_id
               left join lateral (select count(*) as members, coalesce(min(o.delivered_seq), 0) as delivered,
-                                        coalesce(min(o.read_seq), 0) as read
+                                        -- PV-06: quem desligou a confirmação de leitura no grupo fica de fora.
+                                        coalesce(min(o.read_seq) filter (where o.read_receipts is not false), 0)
+                                            as read,
+                                        count(*) filter (where o.read_receipts is not false) as sharing
                                    from conversation_members o
                                   where c.kind = 'GROUP' and o.conversation_id = c.id and o.user_id <> me.user_id
                                     and o.state = 'ACTIVE') grp on true
@@ -100,7 +104,9 @@ class ConversationQueries {
                 rs.getLong("read_seq"), rs.getBoolean("marked_unread"), rs.getObject("peer_id", UUID.class),
                 rs.getString("peer_state") == null ? null : MemberState.valueOf(rs.getString("peer_state")),
                 rs.getLong("peer_delivered_seq"), rs.getLong("peer_read_seq"), rs.getLong("unread_count"),
-                firstUnread == 0 ? null : firstUnread, last, rs.getString("draft"));
+                firstUnread == 0 ? null : firstUnread, last, rs.getString("draft"),
+                rs.getObject("my_read_receipts", Boolean.class), rs.getObject("peer_read_receipts", Boolean.class),
+                rs.getLong("group_sharing"));
     }
 
     private static Instant instant(@Nullable OffsetDateTime timestamp) {
@@ -112,7 +118,8 @@ class ConversationQueries {
             @Nullable Integer disappearingSeconds, MemberState state, MemberRole role, long memberCount, long readSeq, boolean markedUnread,
             @Nullable UUID peerId,
             @Nullable MemberState peerState, long peerDeliveredSeq, long peerReadSeq, long unreadCount,
-            @Nullable Long firstUnreadSeq, @Nullable LastMessage last, @Nullable String draft) {
+            @Nullable Long firstUnreadSeq, @Nullable LastMessage last, @Nullable String draft,
+            @Nullable Boolean myReadReceipts, @Nullable Boolean peerReadReceipts, long groupSharing) {
     }
 
     record LastMessage(UUID id, long seq, @Nullable UUID senderId, String body, Instant createdAt,

@@ -4,6 +4,8 @@ import java.io.Serializable;
 import java.time.Instant;
 import java.util.UUID;
 
+import org.jspecify.annotations.Nullable;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
 import jakarta.persistence.EmbeddedId;
@@ -39,6 +41,9 @@ class ConversationMember {
 
     @Column(nullable = false)
     private Instant joinedAt;
+
+    /** Confirmação de leitura nesta conversa (PV-06); nulo segue o padrão (global na individual, ligada no grupo). */
+    private @Nullable Boolean readReceipts;
 
     protected ConversationMember() {
         this.key = new Key(new UUID(0, 0), new UUID(0, 0));
@@ -76,6 +81,14 @@ class ConversationMember {
 
     boolean admin() {
         return role == MemberRole.ADMIN;
+    }
+
+    @Nullable Boolean readReceipts() {
+        return readReceipts;
+    }
+
+    void changeReadReceipts(@Nullable Boolean enabled) {
+        this.readReceipts = enabled;
     }
 
     Instant joinedAt() {

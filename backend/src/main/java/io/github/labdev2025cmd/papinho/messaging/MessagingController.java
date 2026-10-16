@@ -44,10 +44,21 @@ class MessagingController {
         this.scheduled = scheduled;
     }
 
-    /** Conversas; com {@code requests=true}, as solicitações de mensagem pendentes. */
+    /**
+     * Conversas; com {@code requests=true}, as solicitações de mensagem pendentes; com {@code locked=true}, a pasta
+     * das trancadas que o token de desbloqueio abre (PV-03).
+     */
     @GetMapping("/conversations")
-    List<ConversationService.ConversationView> list(@RequestParam(defaultValue = "false") boolean requests) {
-        return conversations.list(CurrentUser.id(), requests);
+    List<ConversationService.ConversationView> list(@RequestParam(defaultValue = "false") boolean requests,
+            @RequestParam(defaultValue = "false") boolean locked) {
+        return locked ? conversations.listLocked(CurrentUser.id()) : conversations.list(CurrentUser.id(), requests);
+    }
+
+    /** Confirmação de leitura nesta conversa (PV-06): verdadeiro, falso ou nulo para seguir o padrão. */
+    @PutMapping("/conversations/{conversationId}/read-receipts")
+    ConversationService.ConversationView readReceipts(@PathVariable UUID conversationId,
+            @RequestBody ReadReceiptsRequest body) {
+        return conversations.changeReadReceipts(CurrentUser.id(), conversationId, body.enabled());
     }
 
     /** Abre (ou devolve) a conversa individual com alguém. */
@@ -297,6 +308,9 @@ class MessagingController {
 
     record ScheduleRequest(@NotBlank @Size(max = Message.MAX_BODY_LENGTH) String body,
             java.time.@NotNull Instant sendAt, @Nullable Boolean silent) {
+    }
+
+    record ReadReceiptsRequest(@Nullable Boolean enabled) {
     }
 
     record DisappearingRequest(@Nullable Integer seconds) {

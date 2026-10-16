@@ -31,6 +31,7 @@ import io.github.labdev2025cmd.papinho.messaging.MessagingExceptions.InvalidGrou
 import io.github.labdev2025cmd.papinho.messaging.MessagingExceptions.InviteNotFoundException;
 import io.github.labdev2025cmd.papinho.messaging.MessagingExceptions.NotFoundException;
 import io.github.labdev2025cmd.papinho.messaging.MessagingExceptions.OnlyAdminsException;
+import io.github.labdev2025cmd.papinho.privacy.PrivacyService;
 import io.github.labdev2025cmd.papinho.profile.ProfileService;
 import io.github.labdev2025cmd.papinho.profile.ProfileView;
 import io.github.labdev2025cmd.papinho.shared.security.RateLimiter;
@@ -57,6 +58,7 @@ public class GroupService {
     private final ContactQueries contacts;
     private final MediaService media;
     private final MessagingPreferences preferences;
+    private final PrivacyService privacy;
     private final RateLimiter rateLimiter;
     private final ApplicationEventPublisher events;
     private final Clock clock;
@@ -66,7 +68,7 @@ public class GroupService {
             GroupDetailsRepository groups, ConversationService conversationService, MessageService messages,
             MessageRepository messageRepository, SequenceAllocator sequences, UserDirectory users,
             ProfileService profiles, ContactQueries contacts, MediaService media, MessagingPreferences preferences,
-            RateLimiter rateLimiter, ApplicationEventPublisher events, Clock clock) {
+            PrivacyService privacy, RateLimiter rateLimiter, ApplicationEventPublisher events, Clock clock) {
         this.conversations = conversations;
         this.members = members;
         this.groups = groups;
@@ -79,6 +81,7 @@ public class GroupService {
         this.contacts = contacts;
         this.media = media;
         this.preferences = preferences;
+        this.privacy = privacy;
         this.rateLimiter = rateLimiter;
         this.events = events;
         this.clock = clock;
@@ -397,6 +400,10 @@ public class GroupService {
         UserSummary user = users.findById(target).filter(UserSummary::active).orElseThrow(CannotAddException::new);
         if (!contacts.isContact(me, user.id()) || contacts.isBlockedEitherWay(me, user.id())) {
             throw new CannotAddException();
+        }
+        if (!privacy.canAddToGroups(me, user.id())) {
+            // PV-07: quem não deixa ser adicionado entra só pelo link de convite.
+            throw new MessagingExceptions.GroupAddNotAllowedException();
         }
     }
 

@@ -165,6 +165,36 @@ class RealtimeIT {
     }
 
     @Test
+    @DisplayName("online segue a visibilidade e a reciprocidade, e a mudança chega pelo WebSocket (PV-04, PV-05)")
+    void shouldHideOnlineByPrivacy() throws Exception {
+        Browser ana = Browser.register(base(), "ana", null);
+        Browser bruno = Browser.register(base(), "bruno", ana.invite());
+        bruno.post("/api/v1/contacts", Map.of("username", "ana"));
+        String conversation = ana.post("/api/v1/conversations/direct", Map.of("username", "bruno")).get("id")
+                .asString();
+        ana.post("/api/v1/conversations/" + conversation + "/messages",
+                Map.of("clientMessageId", UUID.randomUUID(), "body", "Oi"));
+        Connection anaWs = connect(ana);
+        Connection brunoWs = connect(bruno);
+        anaWs.session().send("/app/presence", Map.of("active", true));
+        brunoWs.session().send("/app/presence", Map.of("active", true));
+        assertThat(anaWs.next("presence").get("online").asBoolean()).isTrue();
+        assertThat(brunoWs.next("presence").get("online").asBoolean()).isTrue();
+
+        bruno.patch("/api/v1/privacy", Map.of("online", "NOBODY"));
+        JsonNode hidden = anaWs.next("presence");
+        assertThat(hidden.get("userId").asString()).isEqualTo(bruno.userId());
+        assertThat(hidden.get("online").asBoolean()).as("Bruno escondeu o online").isFalse();
+        assertThat(ana.get("/api/v1/presence/" + bruno.userId()).get("online").asBoolean()).isFalse();
+        assertThat(bruno.get("/api/v1/presence/" + ana.userId()).get("online").asBoolean())
+                .as("reciprocidade: Bruno também não vê o da Ana").isFalse();
+
+        bruno.patch("/api/v1/privacy", Map.of("online", "EVERYONE"));
+        assertThat(anaWs.next("presence").get("online").asBoolean()).isTrue();
+        assertThat(bruno.get("/api/v1/presence/" + ana.userId()).get("online").asBoolean()).isTrue();
+    }
+
+    @Test
     @DisplayName("logout derruba o WebSocket aberto com aquela sessão")
     void shouldCloseWebSocketAfterLogout() throws Exception {
         Browser ana = Browser.register(base(), "ana", null);
@@ -278,6 +308,10 @@ class RealtimeIT {
 
         JsonNode put(String path, @Nullable Object body) throws Exception {
             return write("PUT", path, body);
+        }
+
+        JsonNode patch(String path, @Nullable Object body) throws Exception {
+            return write("PATCH", path, body);
         }
 
         String cookieHeader() {

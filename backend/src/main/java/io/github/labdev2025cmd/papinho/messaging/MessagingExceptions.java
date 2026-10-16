@@ -121,4 +121,18 @@ final class MessagingExceptions {
             super(HttpStatus.BAD_GATEWAY, "gif-unavailable", "The GIF provider is unavailable");
         }
     }
+
+    /** Conversa trancada sem token de desbloqueio válido (PV-03). */
+    static class ConversationLockedException extends ApiException {
+        ConversationLockedException() {
+            super(HttpStatus.FORBIDDEN, "conversation-locked", "Conversation is locked");
+        }
+    }
+
+    /** A pessoa não deixa quem tenta adicioná-la a grupos (PV-07). */
+    static class GroupAddNotAllowedException extends ApiException {
+        GroupAddNotAllowedException() {
+            super(HttpStatus.FORBIDDEN, "group-add-not-allowed", "This person does not allow being added to groups");
+        }
+    }
 }

@@ -22,7 +22,10 @@ import org.springframework.transaction.annotation.Transactional;
 import io.github.labdev2025cmd.papinho.contact.ContactQueries;
 import io.github.labdev2025cmd.papinho.identity.UserDirectory;
 import io.github.labdev2025cmd.papinho.identity.UserDirectory.UserSummary;
+import io.github.labdev2025cmd.papinho.messaging.MessagingExceptions.ConversationLockedException;
 import io.github.labdev2025cmd.papinho.messaging.MessagingExceptions.NotFoundException;
+import io.github.labdev2025cmd.papinho.privacy.ConversationLocks;
+import io.github.labdev2025cmd.papinho.privacy.PrivacyService;
 import io.github.labdev2025cmd.papinho.profile.ProfileService;
 import io.github.labdev2025cmd.papinho.profile.ProfileView;
 
@@ -46,6 +49,8 @@ public class ConversationService {
     private final ProfileService profiles;
     private final ContactQueries contacts;
     private final MessagingPreferences preferences;
+    private final PrivacyService privacy;
+    private final ConversationLocks locks;
     private final NamedParameterJdbcTemplate jdbc;
     private final ApplicationEventPublisher events;
     private final Clock clock;
@@ -53,8 +58,8 @@ public class ConversationService {
     ConversationService(ConversationRepository conversations, ConversationMemberRepository members,
             GroupDetailsRepository groups, Broadcasts broadcasts, ConversationQueries queries, SequenceAllocator sequences,
             ReceiptLog receipts, UserDirectory users, ProfileService profiles, ContactQueries contacts,
-            MessagingPreferences preferences, NamedParameterJdbcTemplate jdbc, ApplicationEventPublisher events,
-            Clock clock) {
+            MessagingPreferences preferences, PrivacyService privacy, ConversationLocks locks,
+            NamedParameterJdbcTemplate jdbc, ApplicationEventPublisher events, Clock clock) {
         this.conversations = conversations;
         this.members = members;
         this.groups = groups;
@@ -66,6 +71,8 @@ public class ConversationService {
         this.profiles = profiles;
         this.contacts = contacts;
         this.preferences = preferences;
+        this.privacy = privacy;
+        this.locks = locks;
         this.jdbc = jdbc;
         this.events = events;
         this.clock = clock;
@@ -125,16 +132,53 @@ public class ConversationService {
         return view(me, conversation.id());
     }
 
-    /** Conversas normais ou, com {@code requests}, as solicitações de mensagem pendentes. */
+    /**
+     * Conversas normais ou, com {@code requests}, as solicitações de mensagem pendentes. As trancadas ficam de
+     * fora: aparecem só na pasta própria ({@link #listLocked}, PV-03).
+     */
     @Transactional(readOnly = true)
     public List<ConversationView> list(UUID me, boolean requests) {
-        return toViews(me, queries.list(me, EnumSet.of(requests ? MemberState.REQUEST : MemberState.ACTIVE), null));
+        Set<UUID> locked = locks.lockedConversations(me);
+        return toViews(me, queries.list(me, EnumSet.of(requests ? MemberState.REQUEST : MemberState.ACTIVE), null)
+                .stream().filter(row -> !locked.contains(row.id())).toList());
     }
 
+    /** Pasta das conversas trancadas: só as que o token de desbloqueio da requisição abre (PV-03). */
+    @Transactional(readOnly = true)
+    public List<ConversationView> listLocked(UUID me) {
+        Set<UUID> unlocked = locks.unlockedConversations(me);
+        if (unlocked.isEmpty()) {
+            return List.of();
+        }
+        return toViews(me, queries.list(me, VISIBLE, null).stream().filter(row -> unlocked.contains(row.id()))
+                .toList());
+    }
+
+    /** Uma conversa; trancada sem token de desbloqueio dá 403 (PV-03). */
     @Transactional(readOnly = true)
     public ConversationView view(UUID me, UUID conversationId) {
-        return toViews(me, queries.list(me, VISIBLE, conversationId)).stream().findFirst()
+        ConversationView view = toViews(me, queries.list(me, VISIBLE, conversationId)).stream().findFirst()
                 .orElseThrow(NotFoundException::new);
+        if (view.locked() && locks.hidden(me, conversationId)) {
+            throw new ConversationLockedException();
+        }
+        return view;
+    }
+
+    /**
+     * Liga, desliga ou volta ao padrão ({@code null}) a confirmação de leitura nesta conversa (PV-06). Quem
+     * desliga deixa de mostrar a própria leitura e de ver a dos outros nesta conversa.
+     */
+    @Transactional
+    public ConversationView changeReadReceipts(UUID me, UUID conversationId, @Nullable Boolean enabled) {
+        ConversationMember member = requireMember(me, conversationId);
+        member.changeReadReceipts(enabled);
+        members.flush();
+        publishReceipts(member);
+        Set<UUID> recipients = new HashSet<>(audience(conversationId));
+        recipients.add(me);
+        events.publishEvent(new MessagingEvents.ConversationUpdated(conversationId, recipients));
+        return view(me, conversationId);
     }
 
     @Transactional
@@ -187,6 +231,38 @@ public class ConversationService {
     public void markUnread(UUID me, UUID conversationId) {
         requireMember(me, conversationId).markUnread();
         events.publishEvent(new MessagingEvents.ConversationUpdated(conversationId, Set.of(me)));
+    }
+
+    /**
+     * Participação de quem vai ler o conteúdo: além de participar, uma conversa trancada exige o token de
+     * desbloqueio (PV-03).
+     */
+    ConversationMember requireReadable(UUID me, UUID conversationId) {
+        ConversationMember member = requireMember(me, conversationId);
+        if (locks.hidden(me, conversationId)) {
+            throw new ConversationLockedException();
+        }
+        return member;
+    }
+
+    /**
+     * Quem desta conversa compartilha a confirmação de leitura (PV-06): a escolha da conversa ou, sem ela, o
+     * padrão global na conversa individual e ligada no grupo.
+     */
+    Set<UUID> receiptSharers(UUID conversationId) {
+        Conversation conversation = find(conversationId);
+        List<ConversationMember> all = members.findByConversation(conversationId);
+        Map<UUID, Boolean> globals = conversation.kind() == ConversationKind.DIRECT
+                ? privacy.readReceipts(all.stream().map(ConversationMember::userId).toList()) : Map.of();
+        return all.stream().filter(m -> shares(m.readReceipts(), conversation.kind(), globals.get(m.userId())))
+                .map(ConversationMember::userId).collect(Collectors.toSet());
+    }
+
+    private static boolean shares(@Nullable Boolean override, ConversationKind kind, @Nullable Boolean global) {
+        if (override != null) {
+            return override;
+        }
+        return kind != ConversationKind.DIRECT || global == null || global;
     }
 
     /** Participação visível (ativa ou solicitação) de {@code me}; senão 404, sem revelar se a conversa existe. */
@@ -306,9 +382,20 @@ public class ConversationService {
     private void publishReceipts(ConversationMember member) {
         Set<UUID> others = new HashSet<>(audience(member.conversationId()));
         others.remove(member.userId());
-        long readSeq = member.state() == MemberState.ACTIVE ? member.readSeq() : 0;
-        events.publishEvent(new MessagingEvents.ReceiptsChanged(member.conversationId(), member.userId(),
-                member.deliveredSeq(), readSeq, others));
+        // PV-06: a leitura só vai para quem compartilha a própria, e só se quem leu compartilha a dele.
+        Set<UUID> sharers = receiptSharers(member.conversationId());
+        long readSeq = member.state() == MemberState.ACTIVE && sharers.contains(member.userId()) ? member.readSeq()
+                : 0;
+        Set<UUID> seeRead = others.stream().filter(sharers::contains).collect(Collectors.toSet());
+        Set<UUID> seeDelivered = others.stream().filter(id -> !sharers.contains(id)).collect(Collectors.toSet());
+        if (!seeRead.isEmpty()) {
+            events.publishEvent(new MessagingEvents.ReceiptsChanged(member.conversationId(), member.userId(),
+                    member.deliveredSeq(), readSeq, seeRead));
+        }
+        if (!seeDelivered.isEmpty()) {
+            events.publishEvent(new MessagingEvents.ReceiptsChanged(member.conversationId(), member.userId(),
+                    member.deliveredSeq(), 0, seeDelivered));
+        }
         events.publishEvent(new MessagingEvents.ConversationUpdated(member.conversationId(),
                 Set.of(member.userId())));
     }
@@ -327,7 +414,7 @@ public class ConversationService {
 
     /**
      * Pessoas com quem {@code userId} tem conversa individual aceita pelos dois lados e sem bloqueio: quem pode
-     * ver a presença dele por enquanto (RT-03; a visibilidade configurável entra com PV-04).
+     * ver a presença dele (RT-03), ainda filtrada pela visibilidade e pela reciprocidade (PV-04, PV-05).
      */
     @Transactional(readOnly = true)
     public Set<UUID> mutualPeers(UUID userId) {
@@ -362,6 +449,10 @@ public class ConversationService {
                 .map(last -> last.senderId()).filter(id -> !id.equals(me)).collect(Collectors.toSet());
         Map<UUID, String> senderLabels = labels(me, lastSenders);
         Map<UUID, Broadcasts.Details> broadcastDetails = broadcasts.details(broadcastIds);
+        Set<UUID> receiptUsers = new HashSet<>(peerIds);
+        receiptUsers.add(me);
+        Map<UUID, Boolean> globals = privacy.readReceipts(receiptUsers);
+        Set<UUID> locked = locks.lockedConversations(me);
         List<ConversationView> result = new ArrayList<>();
         Instant now = clock.instant();
         for (ConversationQueries.Row row : rows) {
@@ -373,27 +464,29 @@ public class ConversationService {
                     result.add(new ConversationView(row.id(), row.kind().name(), row.state(), null, null,
                             broadcast, row.lastSeq(), preview(row, Map.of()), 0, null, false, row.readSeq(),
                             row.lastSeq(), row.lastSeq(), row.updatedAt(), !broadcast.expired(), false, null,
-                            row.draft()));
+                            row.draft(), locked.contains(row.id()), row.myReadReceipts(), true));
                 }
                 continue;
             }
             if (row.kind() == ConversationKind.GROUP) {
                 GroupDetails group = details.get(row.id());
                 if (group != null) {
-                    result.add(toGroupView(row, group, senderLabels));
+                    result.add(toGroupView(row, group, senderLabels, locked.contains(row.id())));
                 }
                 continue;
             }
             UUID peerId = row.kind() == ConversationKind.SELF ? me : row.peerId();
             if (peerId != null && summaries.containsKey(peerId)) {
-                result.add(toView(me, row, summaries.get(peerId), views.get(peerId), nicknames));
+                result.add(toView(me, row, summaries.get(peerId), views.get(peerId), nicknames, globals,
+                        locked.contains(row.id())));
             }
         }
         return result;
     }
 
     private ConversationView toView(UUID me, ConversationQueries.Row row, UserSummary peer,
-            @Nullable ProfileView profile, Map<UUID, @Nullable String> nicknames) {
+            @Nullable ProfileView profile, Map<UUID, @Nullable String> nicknames, Map<UUID, Boolean> globals,
+            boolean locked) {
         String displayName = profile == null ? peer.username() : profile.displayName();
         String nickname = nicknames.get(peer.id());
         boolean contact = nicknames.containsKey(peer.id());
@@ -402,18 +495,21 @@ public class ConversationService {
                 profile == null ? Instant.EPOCH : profile.updatedAt(), peer.active(), contact);
         boolean self = row.kind() == ConversationKind.SELF;
         boolean blockedByMe = !self && contacts.hasBlocked(me, peer.id());
-        // CT-02: antes de a outra pessoa aceitar, quem enviou não vê a confirmação de leitura.
+        // CT-02: antes de a outra pessoa aceitar, quem enviou não vê a confirmação de leitura. PV-05/PV-06: nem
+        // quando um dos dois a desligou (reciprocidade).
+        boolean iShare = shares(row.myReadReceipts(), row.kind(), globals.get(me));
+        boolean peerShares = shares(row.peerReadReceipts(), row.kind(), globals.get(peer.id()));
         @Nullable Long peerReadSeq = null;
         if (self) {
             peerReadSeq = row.lastSeq();
-        } else if (row.peerState() == MemberState.ACTIVE) {
+        } else if (row.peerState() == MemberState.ACTIVE && iShare && peerShares) {
             peerReadSeq = row.peerReadSeq();
         }
         long peerDeliveredSeq = self ? row.lastSeq() : row.peerDeliveredSeq();
         return new ConversationView(row.id(), row.kind().name(), row.state(), peerView, null, null, row.lastSeq(),
                 preview(row, Map.of()), row.unreadCount(), row.firstUnreadSeq(), row.markedUnread(), row.readSeq(),
                 peerDeliveredSeq, peerReadSeq, row.updatedAt(), !blockedByMe && peer.active(), blockedByMe,
-                row.disappearingSeconds(), row.draft());
+                row.disappearingSeconds(), row.draft(), locked, row.myReadReceipts(), self || iShare);
     }
 
     /** Nome como {@code me} vê cada pessoa: apelido do contato, nome de exibição ou {@code @usuario}. */
@@ -433,17 +529,22 @@ public class ConversationService {
     }
 
     private ConversationView toGroupView(ConversationQueries.Row row, GroupDetails group,
-            Map<UUID, String> senderLabels) {
+            Map<UUID, String> senderLabels, boolean locked) {
         boolean admin = row.role() == MemberRole.ADMIN;
         GroupView groupView = new GroupView(group.name(), group.description(), group.photoMediaId(),
                 group.updatedAt(), row.memberCount(), row.role(), group.onlyAdminsSend(), group.onlyAdminsEditInfo(),
                 group.onlyAdminsAddMembers(), group.joinApproval(), !group.onlyAdminsEditInfo() || admin,
                 !group.onlyAdminsAddMembers() || admin);
         boolean canSend = row.state() == MemberState.ACTIVE && (!group.onlyAdminsSend() || admin);
+        // PV-06: no grupo a confirmação vale por padrão; quem a desliga não vê a dos outros, e quem a desligou fica
+        // fora do "lida por todos" (se ninguém mais compartilha, não há leitura para mostrar).
+        boolean iShare = shares(row.myReadReceipts(), row.kind(), null);
+        @Nullable Long peerReadSeq = iShare && (row.memberCount() <= 1 || row.groupSharing() > 0) ? row.peerReadSeq()
+                : null;
         return new ConversationView(row.id(), row.kind().name(), row.state(), null, groupView, null, row.lastSeq(),
                 preview(row, senderLabels), row.unreadCount(), row.firstUnreadSeq(), row.markedUnread(), row.readSeq(),
-                row.peerDeliveredSeq(), row.peerReadSeq(), row.updatedAt(), canSend, false,
-                row.disappearingSeconds(), row.draft());
+                row.peerDeliveredSeq(), peerReadSeq, row.updatedAt(), canSend, false,
+                row.disappearingSeconds(), row.draft(), locked, row.myReadReceipts(), iShare);
     }
 
     private static @Nullable MessagePreview preview(ConversationQueries.Row row, Map<UUID, String> senderLabels) {
@@ -469,12 +570,16 @@ public class ConversationService {
      * @param canSend posso escrever (não bloqueei, a conta dela está ativa; no grupo, as permissões)
      * @param disappearingSeconds timer das mensagens temporárias (MS-07); nulo = desligado
      * @param draft meu rascunho nesta conversa, sincronizado entre os meus dispositivos (MS-11)
+     * @param locked trancada por mim (PV-03): fica fora da lista e o conteúdo exige o token de desbloqueio
+     * @param readReceipts minha escolha de confirmação de leitura nesta conversa; nulo = padrão (PV-06)
+     * @param readReceiptsEnabled a confirmação de leitura vale para mim aqui (escolha ou padrão)
      */
     public record ConversationView(UUID id, String kind, MemberState state, @Nullable PeerView peer,
             @Nullable GroupView group, @Nullable BroadcastView broadcast, long lastSeq, @Nullable MessagePreview lastMessage, long unreadCount,
             @Nullable Long firstUnreadSeq, boolean markedUnread, long readSeq, long peerDeliveredSeq,
             @Nullable Long peerReadSeq, Instant updatedAt, boolean canSend, boolean blockedByMe,
-            @Nullable Integer disappearingSeconds, @Nullable String draft) {
+            @Nullable Integer disappearingSeconds, @Nullable String draft, boolean locked,
+            @Nullable Boolean readReceipts, boolean readReceiptsEnabled) {
     }
 
     /**

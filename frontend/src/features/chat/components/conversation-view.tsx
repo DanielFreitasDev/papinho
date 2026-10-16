@@ -11,6 +11,7 @@ import {
   StarIcon,
   Trash2Icon,
   XIcon,
+  SearchIcon,
 } from "lucide-react"
 
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -87,15 +88,19 @@ import {
   type MessageAction,
 } from "./message-row"
 import { PresenceLine } from "./presence-line"
+import { ConversationSearch } from "./conversation-search"
 import { UnlockForm } from "@/features/privacy"
 
 /** Tela de uma conversa individual (Fase 2): cabeçalho, fixadas, mensagens e campo de envio. */
 export function ConversationView({
   conversationId,
   meId,
+  focusMessageId,
 }: {
   conversationId: string
   meId: string
+  /** Mensagem para mostrar ao abrir (resultado da busca global, GR-06). */
+  focusMessageId?: string
 }) {
   const { t } = useTranslation()
   const conversation = useQuery(chatQueries.detail(conversationId))
@@ -167,6 +172,7 @@ export function ConversationView({
         conversation={conversation.data}
         cache={cache.data}
         meId={meId}
+        focusMessageId={focusMessageId}
       />
     </MessageScrollerProvider>
   )
@@ -176,10 +182,12 @@ function LoadedConversation({
   conversation,
   cache,
   meId,
+  focusMessageId,
 }: {
   conversation: Conversation
   cache: ConversationCache
   meId: string
+  focusMessageId?: string
 }) {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
@@ -322,7 +330,8 @@ function LoadedConversation({
   )
 
   async function jumpTo(messageId: string) {
-    for (let page = 0; page < 10; page++) {
+    // Resultados da busca podem estar bem para trás: carrega até 100 páginas antigas.
+    for (let page = 0; page < 100; page++) {
       const current = queryClient.getQueryData<ConversationCache>(
         chatQueries.messages(conversation.id).queryKey
       )
@@ -342,6 +351,17 @@ function LoadedConversation({
       await loadOlder(queryClient, conversation.id)
     }
   }
+
+  const [searchOpen, setSearchOpen] = useState(false)
+  const focused = useRef<string | null>(null)
+  useEffect(() => {
+    if (focusMessageId && focused.current !== focusMessageId) {
+      focused.current = focusMessageId
+      void jumpTo(focusMessageId)
+    }
+    // jumpTo lê o cache na hora; só a mensagem pedida dispara o salto.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusMessageId])
 
   const sendWithAttachment = (input: {
     clientMessageId: string
@@ -653,7 +673,36 @@ function LoadedConversation({
               </span>
             </button>
           </h1>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label={t("search.inConversation")}
+            aria-expanded={searchOpen}
+            onClick={() => setSearchOpen((open) => !open)}
+          >
+            <SearchIcon />
+          </Button>
         </header>
+        {searchOpen ? (
+          <ConversationSearch
+            conversationId={conversation.id}
+            people={
+              group
+                ? (members.data ?? []).map((member) => ({
+                    userId: member.userId,
+                    label: member.me ? t("chat.you") : member.label,
+                  }))
+                : conversation.peer && conversation.kind === "DIRECT"
+                  ? [
+                      { userId: meId, label: t("chat.you") },
+                      { userId: conversation.peer.userId, label: peerName },
+                    ]
+                  : []
+            }
+            onJump={(id) => void jumpTo(id)}
+            onClose={() => setSearchOpen(false)}
+          />
+        ) : null}
         {latestPinned ? (
           <button
             type="button"

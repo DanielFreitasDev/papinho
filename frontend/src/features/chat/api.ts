@@ -21,6 +21,7 @@ import type {
   Conversation,
   LocalAttachment,
   Message,
+  MessagingPreferences,
   MessageInfo,
   MessagePage,
   Presence,
@@ -142,10 +143,9 @@ export const chatQueries = {
     queryOptions({
       queryKey: chatKeys.preferences,
       queryFn: ({ signal }) =>
-        apiFetch<{ defaultDisappearingSeconds: number | null }>(
-          "/api/v1/messaging/preferences",
-          { signal }
-        ),
+        apiFetch<MessagingPreferences>("/api/v1/messaging/preferences", {
+          signal,
+        }),
     }),
   presence: (userId: string) =>
     queryOptions({
@@ -518,15 +518,25 @@ export function useDisappearing(conversationId: string) {
   })
 }
 
-/** Timer padrão para conversas novas (MS-07). */
+/** Timer padrão para conversas novas (MS-07) e "manter arquivadas" (GR-05). */
 export function useChangePreferences() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (defaultDisappearingSeconds: number | null) =>
-      apiFetch<{ defaultDisappearingSeconds: number | null }>(
-        "/api/v1/messaging/preferences",
-        { method: "PUT", json: { defaultDisappearingSeconds } }
-      ),
+    mutationFn: (change: Partial<MessagingPreferences>) => {
+      // O servidor troca o timer sempre: manda o atual quando só a outra opção mudou.
+      const current = queryClient.getQueryData<MessagingPreferences>(
+        chatKeys.preferences
+      )
+      return apiFetch<MessagingPreferences>("/api/v1/messaging/preferences", {
+        method: "PUT",
+        json: {
+          defaultDisappearingSeconds:
+            current?.defaultDisappearingSeconds ?? null,
+          keepArchived: current?.keepArchived ?? false,
+          ...change,
+        },
+      })
+    },
     onSuccess: (preferences) =>
       queryClient.setQueryData(chatKeys.preferences, preferences),
   })

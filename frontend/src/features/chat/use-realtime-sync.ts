@@ -6,6 +6,7 @@ import { authQueries } from "@/features/auth"
 import { realtime } from "@/lib/realtime"
 import { chatKeys, hideLocally, markDelivered, syncConversation } from "./api"
 import { clearActivity, setActivity } from "./activity"
+import { forgetMessages, invalidateFolders } from "./organization"
 import type { Presence } from "./types"
 
 /**
@@ -54,6 +55,15 @@ export function useRealtimeSync(meId: string) {
           break
         case "hidden":
           hideLocally(queryClient, event.conversationId, event.messageIds)
+          break
+        case "cleared":
+          forgetMessages(queryClient, event.conversationId)
+          void queryClient.invalidateQueries({
+            queryKey: chatKeys.conversations,
+          })
+          break
+        case "folders":
+          void invalidateFolders(queryClient)
           break
         case "activity":
           if (event.userId !== meId) {

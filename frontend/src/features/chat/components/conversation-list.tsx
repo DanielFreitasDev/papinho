@@ -1,13 +1,15 @@
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { Link, useParams } from "@tanstack/react-router"
 import { useQuery } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
 import {
-  EllipsisVerticalIcon,
+  ArchiveIcon,
+  BellOffIcon,
   InboxIcon,
   LockKeyholeIcon,
-  MailIcon,
   MessagesSquareIcon,
+  PinIcon,
+  SearchIcon,
 } from "lucide-react"
 import { cn } from "cn"
 
@@ -15,11 +17,10 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group"
 import {
   Empty,
   EmptyDescription,
@@ -31,12 +32,20 @@ import { Item, ItemActions, ItemGroup } from "@/components/ui/item"
 import { Skeleton } from "@/components/ui/skeleton"
 import { formatListTime } from "@/lib/format"
 import { privacyQueries } from "@/features/privacy"
-import { chatQueries, markDelivered, useConversationAction } from "../api"
+import { chatQueries, markDelivered } from "../api"
+import {
+  applyListFilter,
+  isMuted,
+  organizationQueries,
+  type ListFilter,
+} from "../organization"
 import { plainText } from "../format/parse"
 import { useActivity } from "../activity"
 import { describeNotice } from "../system-notice"
 import type { Conversation } from "../types"
 import { ConversationAvatar, useConversationLabel } from "./conversation-avatar"
+import { ConversationMenu } from "./conversation-menu"
+import { GlobalSearchResults } from "./global-search"
 
 /**
  * Lista de conversas (ou de solicitações, ou a pasta das trancadas) com prévia, horário e não lidas (MS-14).
@@ -61,6 +70,9 @@ export function ConversationList({
     ...privacyQueries.lockedCount(),
     enabled: main,
   })
+  const folders = useQuery({ ...organizationQueries.folders(), enabled: main })
+  const [filter, setFilter] = useState<ListFilter>({ kind: "all" })
+  const [query, setQuery] = useState("")
 
   // Abrir o app confirma a entrega do que chegou enquanto estava fora (MS-02).
   useEffect(() => {
@@ -99,9 +111,100 @@ export function ConversationList({
   }
   const requestCount = pending.data?.length ?? 0
   const lockedTotal = lockedCount.data?.count ?? 0
+  const searching = main && query.trim().length > 0
+  const shown = main
+    ? applyListFilter(conversations.data, filter)
+    : conversations.data
+  const archivedCount = main
+    ? conversations.data.filter((c) => c.organization.archived).length
+    : 0
+  const filters: { key: string; label: string; value: ListFilter }[] = [
+    { key: "all", label: t("organize.filter.all"), value: { kind: "all" } },
+    {
+      key: "unread",
+      label: t("organize.filter.unread"),
+      value: { kind: "unread" },
+    },
+    {
+      key: "favorites",
+      label: t("organize.filter.favorites"),
+      value: { kind: "favorites" },
+    },
+    {
+      key: "groups",
+      label: t("organize.filter.groups"),
+      value: { kind: "groups" },
+    },
+    ...(folders.data ?? []).map((folder) => ({
+      key: folder.id,
+      label: folder.name,
+      value: { kind: "folder", folderId: folder.id } as ListFilter,
+    })),
+  ]
+  const filterKey = filter.kind === "folder" ? filter.folderId : filter.kind
+  if (searching) {
+    return (
+      <div className="flex flex-col gap-2">
+        <SearchBox query={query} onChange={setQuery} />
+        <GlobalSearchResults
+          query={query}
+          meId={meId}
+          conversations={conversations.data}
+        />
+      </div>
+    )
+  }
   return (
     <div className="flex flex-col gap-2">
-      {main && lockedTotal > 0 ? (
+      {main ? (
+        <>
+          <SearchBox query={query} onChange={setQuery} />
+          <div
+            role="group"
+            aria-label={t("organize.filter.label")}
+            className="flex gap-1.5 overflow-x-auto px-1 pb-1"
+          >
+            {filters.map((item) => (
+              <Button
+                key={item.key}
+                size="sm"
+                variant={filterKey === item.key ? "default" : "outline"}
+                aria-pressed={filterKey === item.key}
+                className="shrink-0 rounded-full"
+                onClick={() => setFilter(item.value)}
+              >
+                {item.label}
+              </Button>
+            ))}
+          </div>
+        </>
+      ) : null}
+      {main && filter.kind === "all" && archivedCount > 0 ? (
+        <button
+          type="button"
+          onClick={() => setFilter({ kind: "archived" })}
+          className="flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50"
+        >
+          <ArchiveIcon aria-hidden="true" className="size-5" />
+          <span className="flex-1">{t("organize.archivedFolder")}</span>
+          <span className="text-xs text-muted-foreground">{archivedCount}</span>
+        </button>
+      ) : null}
+      {main && filter.kind === "archived" ? (
+        <div className="flex items-center gap-2 px-1">
+          <h2 className="flex-1 text-sm font-semibold">
+            {t("organize.archivedFolder")}
+          </h2>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setFilter({ kind: "all" })}
+          >
+            {t("common.back")}
+          </Button>
+        </div>
+      ) : null}
+      {main && filter.kind === "all" && lockedTotal > 0 ? (
         <Link
           to="/locked"
           className="flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50"
@@ -110,7 +213,7 @@ export function ConversationList({
           <span className="flex-1">{t("privacy.locked.folder")}</span>
         </Link>
       ) : null}
-      {main && requestCount > 0 ? (
+      {main && filter.kind === "all" && requestCount > 0 ? (
         <Link
           to="/requests"
           className="flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50"
@@ -121,7 +224,11 @@ export function ConversationList({
           </span>
         </Link>
       ) : null}
-      {conversations.data.length === 0 ? (
+      {main && filter.kind !== "all" && shown.length === 0 ? (
+        <p className="px-3 py-6 text-center text-sm text-muted-foreground">
+          {t("organize.filter.empty")}
+        </p>
+      ) : shown.length === 0 ? (
         <Empty className="py-10">
           <EmptyHeader>
             <EmptyMedia variant="icon">
@@ -160,7 +267,7 @@ export function ConversationList({
           }
           className="gap-0.5!"
         >
-          {conversations.data.map((conversation) => (
+          {shown.map((conversation) => (
             <ConversationItem
               key={conversation.id}
               conversation={conversation}
@@ -183,7 +290,6 @@ function ConversationItem({
   const { t } = useTranslation()
   const params = useParams({ strict: false })
   const activity = useActivity(conversation.id)
-  const action = useConversationAction()
   const labelOf = useConversationLabel()
   const label = labelOf(conversation)
   const active = params.conversationId === conversation.id
@@ -274,6 +380,20 @@ function ConversationItem({
             >
               {preview}
             </span>
+            {isMuted(conversation) ? (
+              <BellOffIcon
+                role="img"
+                aria-label={t("organize.mutedLabel")}
+                className="size-4 shrink-0 text-muted-foreground"
+              />
+            ) : null}
+            {conversation.organization.pinnedAt ? (
+              <PinIcon
+                role="img"
+                aria-label={t("organize.pinnedLabel")}
+                className="size-4 shrink-0 text-muted-foreground"
+              />
+            ) : null}
             {conversation.unreadCount > 0 ? (
               <Badge className="min-w-5 justify-center">
                 <span aria-hidden="true">{conversation.unreadCount}</span>
@@ -291,37 +411,42 @@ function ConversationItem({
       </Link>
       {conversation.state === "ACTIVE" ? (
         <ItemActions className="pr-1">
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label={t("chat.conversationActions", {
-                    name: label,
-                  })}
-                />
-              }
-            >
-              <EllipsisVerticalIcon />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                disabled={unread}
-                onClick={() =>
-                  action.mutate({
-                    conversationId: conversation.id,
-                    action: "unread",
-                  })
-                }
-              >
-                <MailIcon />
-                {t("chat.markUnread")}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <ConversationMenu conversation={conversation} label={label} />
         </ItemActions>
       ) : null}
     </Item>
+  )
+}
+
+/** Campo da busca global (GR-06): conversas, contatos e mensagens. */
+function SearchBox({
+  query,
+  onChange,
+}: {
+  query: string
+  onChange: (query: string) => void
+}) {
+  const { t } = useTranslation()
+  return (
+    <div role="search" className="px-1">
+      <InputGroup>
+        <InputGroupAddon>
+          <SearchIcon aria-hidden="true" />
+        </InputGroupAddon>
+        <InputGroupInput
+          type="search"
+          value={query}
+          aria-label={t("search.global")}
+          placeholder={t("search.globalPlaceholder")}
+          onChange={(event) => onChange(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Escape" && query) {
+              event.preventDefault()
+              onChange("")
+            }
+          }}
+        />
+      </InputGroup>
+    </div>
   )
 }

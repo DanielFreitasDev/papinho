@@ -146,6 +146,36 @@ export type Conversation = {
   disappearingSeconds: number | null
   /** Meu rascunho nesta conversa, sincronizado entre dispositivos (MS-11). */
   draft: string | null
+  /** Como organizei a conversa na minha lista (GR-05); ninguém mais vê. */
+  organization: Organization
+}
+
+/** Arquivar, fixar, silenciar, favoritar e pastas (GR-05). */
+export type Organization = {
+  /** Arquivada agora: mensagem nova de outra pessoa tira do arquivo, salvo "manter arquivadas". */
+  archived: boolean
+  pinnedAt: string | null
+  /** Silenciada até (ano 9999 = sempre); pode já ter passado. */
+  mutedUntil: string | null
+  /** Mesmo silenciada, menções a mim notificam. */
+  muteMentions: boolean
+  favorite: boolean
+  folderIds: string[]
+}
+
+/** Lista personalizada (pasta) de conversas (GR-05). */
+export type Folder = {
+  id: string
+  name: string
+  conversationIds: string[]
+}
+
+export type MuteDuration = "EIGHT_HOURS" | "ONE_WEEK" | "ALWAYS"
+
+/** Preferências de mensagens (MS-07, GR-05). */
+export type MessagingPreferences = {
+  defaultDisappearingSeconds: number | null
+  keepArchived: boolean
 }
 
 /** Mensagem agendada (MS-11). */

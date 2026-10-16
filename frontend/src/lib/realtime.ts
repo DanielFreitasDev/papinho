@@ -17,6 +17,8 @@ export type RealtimeEvent =
     }
   | { type: "conversation"; conversationId: string }
   | { type: "hidden"; conversationId: string; messageIds: string[] }
+  | { type: "cleared"; conversationId: string }
+  | { type: "folders" }
   | {
       type: "activity"
       conversationId: string

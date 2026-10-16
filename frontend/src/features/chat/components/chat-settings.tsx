@@ -7,9 +7,20 @@ import { SettingsSection } from "@/features/account"
 import { errorMessage } from "@/lib/api-client"
 import { chatQueries, useChangePreferences } from "../api"
 import { DisappearingSelect } from "./disappearing-select"
+import { FolderSettings, KeepArchivedSetting } from "./folder-settings"
 
-/** Configurações > Conversas: timer padrão de mensagens temporárias para conversas novas (MS-07). */
+/** Configurações > Conversas: timer padrão (MS-07), listas personalizadas e arquivadas (GR-05). */
 export function ChatSettings() {
+  return (
+    <div className="flex flex-col gap-4">
+      <DefaultTimerSetting />
+      <FolderSettings />
+      <KeepArchivedSetting />
+    </div>
+  )
+}
+
+function DefaultTimerSetting() {
   const { t } = useTranslation()
   const preferences = useQuery(chatQueries.preferences())
   const change = useChangePreferences()
@@ -30,14 +41,17 @@ export function ChatSettings() {
             value={preferences.data?.defaultDisappearingSeconds ?? null}
             disabled={change.isPending}
             onChange={(seconds) =>
-              change.mutate(seconds, {
-                onSuccess: () => toast.add({ title: t("common.saved") }),
-                onError: (error) =>
-                  toast.add({
-                    title: errorMessage(error, t("common.genericError")),
-                    type: "error",
-                  }),
-              })
+              change.mutate(
+                { defaultDisappearingSeconds: seconds },
+                {
+                  onSuccess: () => toast.add({ title: t("common.saved") }),
+                  onError: (error) =>
+                    toast.add({
+                      title: errorMessage(error, t("common.genericError")),
+                      type: "error",
+                    }),
+                }
+              )
             }
           />
         </div>

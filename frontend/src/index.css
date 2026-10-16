@@ -83,9 +83,17 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  /* Controles nativos residuais (UI-05): o que o navegador ainda desenha segue o tema escolhido no app, não o
+     do sistema; as cores abaixo derivam dos tokens e valem para os dois temas. */
+  color-scheme: light;
+  --scrollbar-thumb: color-mix(in oklch, var(--foreground) 24%, transparent);
+  --scrollbar-thumb-hover: color-mix(in oklch, var(--foreground) 40%, transparent);
+  --selection: color-mix(in oklch, var(--primary) 22%, transparent);
+  --autofill: color-mix(in oklch, var(--primary) 7%, var(--background));
 }
 
 .dark {
+  color-scheme: dark;
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
@@ -132,6 +140,111 @@
   }
   html {
     @apply font-sans;
+    accent-color: var(--primary);
+    /* Herdado: todas as áreas roláveis usam a mesma cor (Chromium e Firefox). */
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+  }
+}
+
+/*
+ * UI-05: nenhum controle com a aparência padrão do navegador. A rolagem, o foco, a seleção e o preenchimento
+ * automático continuam nativos no comportamento; só a aparência vem dos tokens do tema.
+ */
+@layer base {
+  * {
+    scrollbar-width: thin;
+  }
+  /* Safari e WebKit ignoram scrollbar-color; o Chromium usa as propriedades padrão quando elas existem. */
+  ::-webkit-scrollbar {
+    width: 0.625rem;
+    height: 0.625rem;
+  }
+  ::-webkit-scrollbar-track,
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    border: 0.1875rem solid transparent;
+    border-radius: 9999px;
+    background-clip: padding-box;
+    background-color: var(--scrollbar-thumb);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--scrollbar-thumb-hover);
+  }
+  ::-webkit-scrollbar-button {
+    display: none;
+  }
+
+  /* Anel de foco próprio para o que não é componente do shadcn (links no texto, áreas roláveis com foco). */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background-color: var(--selection);
+  }
+  input,
+  textarea,
+  [contenteditable="true"] {
+    caret-color: var(--primary);
+  }
+  ::placeholder {
+    color: var(--muted-foreground);
+    opacity: 1;
+  }
+  /* A alça de redimensionar é nativa; os campos crescem com o conteúdo (field-sizing) ou rolam. */
+  textarea {
+    resize: none;
+  }
+
+  /*
+   * Preenchimento automático sem o fundo amarelo/azul do navegador: uma sombra interna com a cor do tema cobre
+   * o fundo forçado (!important do navegador). Ela entra em --tw-inset-shadow para continuar sob o anel de foco
+   * dos componentes, que também usa box-shadow.
+   */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  textarea:-webkit-autofill {
+    -webkit-text-fill-color: var(--foreground);
+    caret-color: var(--foreground);
+    --tw-inset-shadow: inset 0 0 0 100vmax var(--autofill);
+    box-shadow: var(--tw-inset-shadow);
+  }
+  input:autofill,
+  textarea:autofill {
+    --tw-inset-shadow: inset 0 0 0 100vmax var(--autofill);
+    box-shadow: var(--tw-inset-shadow);
+  }
+
+  /* Busca: sem o botão de limpar e a lupa nativos (os campos de busca têm o próprio botão). */
+  input[type="search"] {
+    appearance: none;
+  }
+  input[type="search"]::-webkit-search-cancel-button,
+  input[type="search"]::-webkit-search-decoration,
+  input[type="search"]::-webkit-search-results-button,
+  input[type="search"]::-webkit-search-results-decoration {
+    appearance: none;
+    display: none;
+  }
+
+  /* Números sem as setinhas nativas; o valor é digitado (inputmode numérico no celular). */
+  input[type="number"] {
+    appearance: textfield;
+  }
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    appearance: none;
+    margin: 0;
+  }
+
+  /* Edge: botões nativos de revelar senha e de limpar campo. */
+  input::-ms-reveal,
+  input::-ms-clear {
+    display: none;
   }
 }
 /* Troca de tema sem animar cores (ver components/theme-provider.tsx). */

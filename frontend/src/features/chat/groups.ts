@@ -6,6 +6,7 @@ import {
 } from "@tanstack/react-query"
 
 import { apiFetch } from "@/lib/api-client"
+import { refreshQueries } from "@/lib/query-refresh"
 import { chatKeys } from "./api"
 import type { Conversation, GroupMember } from "./types"
 
@@ -94,7 +95,7 @@ export const groupQueries = {
 
 /** Depois de qualquer mudança no grupo: conversa, lista e membros. */
 export function refreshGroup(queryClient: QueryClient, id: string) {
-  void queryClient.invalidateQueries({ queryKey: chatKeys.conversations })
+  void refreshQueries(queryClient, chatKeys.conversations)
   void queryClient.invalidateQueries({ queryKey: ["groups", id] })
 }
 
@@ -109,7 +110,7 @@ export function useCreateGroup() {
       apiFetch<Conversation>("/api/v1/groups", { method: "POST", json: input }),
     onSuccess: (conversation) => {
       queryClient.setQueryData(chatKeys.detail(conversation.id), conversation)
-      void queryClient.invalidateQueries({ queryKey: chatKeys.conversations })
+      void refreshQueries(queryClient, chatKeys.conversations)
     },
   })
 }
@@ -205,7 +206,6 @@ export function useJoinGroup() {
         `/api/v1/groups/invites/${code}/join`,
         { method: "POST" }
       ),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: chatKeys.conversations }),
+    onSuccess: () => refreshQueries(queryClient, chatKeys.conversations),
   })
 }

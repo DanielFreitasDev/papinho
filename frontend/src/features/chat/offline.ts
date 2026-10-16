@@ -11,6 +11,7 @@ import {
   writeSnapshot,
 } from "@/lib/offline-db"
 import { realtime } from "@/lib/realtime"
+import { refreshQueries } from "@/lib/query-refresh"
 import { chatKeys } from "./api"
 import { confirmSent, markPendingFailed, type ConversationCache } from "./cache"
 import type { Conversation, Message } from "./types"
@@ -158,7 +159,7 @@ export async function flushOutbox(queryClient: QueryClient) {
       }
     }
     if (queued.length > 0) {
-      void queryClient.invalidateQueries({ queryKey: chatKeys.conversations })
+      void refreshQueries(queryClient, chatKeys.conversations)
     }
   } finally {
     flushing = false

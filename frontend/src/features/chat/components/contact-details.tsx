@@ -19,6 +19,7 @@ import { toast } from "@/components/ui/toast"
 import { contactQueries, useAddContact, useBlock } from "@/features/contact"
 import { ReportDialog } from "@/features/moderation"
 import { errorMessage } from "@/lib/api-client"
+import { refreshQueries } from "@/lib/query-refresh"
 import { chatKeys } from "../api"
 import type { Attachment, Conversation, Peer } from "../types"
 import { ConversationGallery } from "./conversation-gallery"
@@ -60,9 +61,7 @@ export function ContactDetails({
       { userId: peer.userId, blocked: value },
       {
         onSuccess: () => {
-          void queryClient.invalidateQueries({
-            queryKey: chatKeys.conversations,
-          })
+          void refreshQueries(queryClient, chatKeys.conversations)
           toast.add({
             title: value ? t("chat.blockedToast") : t("chat.unblockedToast"),
           })
@@ -161,9 +160,7 @@ export function ContactDetails({
                   { username: peer.username },
                   {
                     onSuccess: () => {
-                      void queryClient.invalidateQueries({
-                        queryKey: chatKeys.conversations,
-                      })
+                      void refreshQueries(queryClient, chatKeys.conversations)
                       toast.add({ title: t("chat.contactAdded") })
                     },
                   }

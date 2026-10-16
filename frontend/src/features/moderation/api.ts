@@ -6,6 +6,7 @@ import {
 } from "@tanstack/react-query"
 
 import { apiFetch } from "@/lib/api-client"
+import { refreshQueries } from "@/lib/query-refresh"
 
 export type PersonRef = { id: string; username: string; active: boolean }
 
@@ -74,7 +75,7 @@ export function useReport() {
     onSuccess: (_data, input) => {
       if (input.block) {
         void queryClient.invalidateQueries({ queryKey: ["contacts"] })
-        void queryClient.invalidateQueries({ queryKey: ["conversations"] })
+        void refreshQueries(queryClient, ["conversations"])
       }
     },
   })

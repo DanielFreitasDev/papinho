@@ -6,6 +6,7 @@ import {
 
 import { apiFetch } from "@/lib/api-client"
 import { setUnlockToken } from "@/lib/unlock-token"
+import { refreshQueries } from "@/lib/query-refresh"
 import type {
   PrivacyItem,
   PrivacyState,
@@ -83,7 +84,7 @@ export function useUpdatePrivacy() {
       queryClient.setQueryData(privacyKeys.settings, state)
       // Visibilidade e reciprocidade mudam o que vejo dos outros.
       void queryClient.invalidateQueries({ queryKey: ["presence"] })
-      void queryClient.invalidateQueries({ queryKey: ["conversations"] })
+      void refreshQueries(queryClient, ["conversations"])
     },
   })
 }
@@ -144,7 +145,7 @@ export function useUnlockConversations() {
       }),
     onSuccess: (unlocked) => {
       setUnlockToken(unlocked.token)
-      void queryClient.invalidateQueries({ queryKey: ["conversations"] })
+      void refreshQueries(queryClient, ["conversations"])
       void queryClient.invalidateQueries({ queryKey: ["messages"] })
     },
   })
@@ -167,7 +168,7 @@ export function useLockConversation() {
       ),
     onSuccess: (unlocked) => {
       setUnlockToken(unlocked.token)
-      void queryClient.invalidateQueries({ queryKey: ["conversations"] })
+      void refreshQueries(queryClient, ["conversations"])
       void queryClient.invalidateQueries({ queryKey: privacyKeys.lockedCount })
     },
   })
@@ -182,7 +183,7 @@ export function useUnlockPermanently() {
         method: "DELETE",
       }),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["conversations"] })
+      void refreshQueries(queryClient, ["conversations"])
       void queryClient.invalidateQueries({ queryKey: privacyKeys.lockedCount })
     },
   })
@@ -205,7 +206,7 @@ export function useRelockAll() {
         queryClient.removeQueries({ queryKey: ["conversations", "detail", id] })
       })
       queryClient.removeQueries({ queryKey: ["conversations", "locked"] })
-      void queryClient.invalidateQueries({ queryKey: ["conversations"] })
+      void refreshQueries(queryClient, ["conversations"])
     },
   })
 }

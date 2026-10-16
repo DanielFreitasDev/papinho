@@ -5,6 +5,7 @@ import {
 } from "@tanstack/react-query"
 
 import { apiFetch } from "@/lib/api-client"
+import { refreshQueries } from "@/lib/query-refresh"
 import { chatKeys } from "./api"
 import type {
   Conversation,
@@ -134,7 +135,7 @@ export function useListAction() {
       if (input.action === "clear" || input.action === "remove") {
         forgetMessages(queryClient, input.conversationId)
       }
-      return queryClient.invalidateQueries({ queryKey: chatKeys.conversations })
+      return refreshQueries(queryClient, chatKeys.conversations)
     },
   })
 }
@@ -201,7 +202,7 @@ export function invalidateFolders(
   queryClient: ReturnType<typeof useQueryClient>
 ) {
   void queryClient.invalidateQueries({ queryKey: organizationKeys.folders })
-  return queryClient.invalidateQueries({ queryKey: chatKeys.conversations })
+  return refreshQueries(queryClient, chatKeys.conversations)
 }
 
 /** Silenciada agora (o "até" ainda não passou). */

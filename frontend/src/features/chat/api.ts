@@ -8,6 +8,7 @@ import {
 
 import { apiFetch, ApiError } from "@/lib/api-client"
 import { dequeue, enqueue, networkFirst, queuedFor } from "@/lib/offline-db"
+import { refreshQueries } from "@/lib/query-refresh"
 import {
   addPending,
   applyChanges,
@@ -289,9 +290,7 @@ export function markRead(queryClient: QueryClient, id: string, seq: number) {
   return apiFetch<void>(`/api/v1/conversations/${id}/read`, {
     method: "PUT",
     json: { seq },
-  }).then(() =>
-    queryClient.invalidateQueries({ queryKey: chatKeys.conversations })
-  )
+  }).then(() => refreshQueries(queryClient, chatKeys.conversations))
 }
 
 function updateMessage(queryClient: QueryClient, message: Message) {
@@ -366,7 +365,7 @@ export function useSendMessage(conversationId: string) {
     onSuccess: (message) => {
       void dequeue(message.clientMessageId)
       updateMessage(queryClient, message)
-      void queryClient.invalidateQueries({ queryKey: chatKeys.conversations })
+      void refreshQueries(queryClient, chatKeys.conversations)
     },
     onError: (error, input) => {
       // Sem rede, o texto continua "enviando" na fila; recusa do servidor ou anexo viram falha.
@@ -454,7 +453,7 @@ export function useEditMessage() {
       }),
     onSuccess: (message) => {
       updateMessage(queryClient, message)
-      void queryClient.invalidateQueries({ queryKey: chatKeys.conversations })
+      void refreshQueries(queryClient, chatKeys.conversations)
     },
   })
 }
@@ -467,7 +466,7 @@ export function useDeleteForEveryone() {
       apiFetch<Message>(`/api/v1/messages/${messageId}`, { method: "DELETE" }),
     onSuccess: (message) => {
       updateMessage(queryClient, message)
-      void queryClient.invalidateQueries({ queryKey: chatKeys.conversations })
+      void refreshQueries(queryClient, chatKeys.conversations)
       void queryClient.invalidateQueries({
         queryKey: chatKeys.pinned(message.conversationId),
       })
@@ -486,7 +485,7 @@ export function hideLocally(
     chatKeys.messages(conversationId),
     (current) => (current ? removeMessages(current, messageIds) : current)
   )
-  void queryClient.invalidateQueries({ queryKey: chatKeys.conversations })
+  void refreshQueries(queryClient, chatKeys.conversations)
   void queryClient.invalidateQueries({
     queryKey: chatKeys.pinned(conversationId),
   })
@@ -561,7 +560,7 @@ export function useCreatePoll(conversationId: string) {
       }),
     onSuccess: (message) => {
       updateMessage(queryClient, message)
-      void queryClient.invalidateQueries({ queryKey: chatKeys.conversations })
+      void refreshQueries(queryClient, chatKeys.conversations)
     },
   })
 }
@@ -589,8 +588,7 @@ export function useReadReceipts(conversationId: string) {
         `/api/v1/conversations/${conversationId}/read-receipts`,
         { method: "PUT", json: { enabled } }
       ),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: chatKeys.conversations }),
+    onSuccess: () => refreshQueries(queryClient, chatKeys.conversations),
   })
 }
 
@@ -602,8 +600,7 @@ export function useDisappearing(conversationId: string) {
         method: "PUT",
         json: { seconds },
       }),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: chatKeys.conversations }),
+    onSuccess: () => refreshQueries(queryClient, chatKeys.conversations),
   })
 }
 
@@ -641,7 +638,7 @@ export function useForward() {
       }),
     onSuccess: (messages) => {
       messages.forEach((message) => updateMessage(queryClient, message))
-      void queryClient.invalidateQueries({ queryKey: chatKeys.conversations })
+      void refreshQueries(queryClient, chatKeys.conversations)
     },
   })
 }
@@ -659,7 +656,6 @@ export function useConversationAction() {
       }
       return apiFetch<void>(`${base}/${input.action}`, { method: "POST" })
     },
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: chatKeys.conversations }),
+    onSuccess: () => refreshQueries(queryClient, chatKeys.conversations),
   })
 }

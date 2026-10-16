@@ -58,7 +58,7 @@ automática no e2e (AU-03), rótulos do Spinner e do botão de rolagem traduzido
 aviso no teste de inatividade (o mesmo que falhou sob carga na passada 5). Fim da passada: backend **78 unitários + 125
 de integração** (com `OutsiderAccessIT` e `ProblemDetailsIT` da auditoria de IDOR), frontend **55 Vitest** com lint, typecheck, format e build, e2e **63 verdes** na suíte completa
 contra instância nova com e-mail ligado (1 falha, a da inatividade no celular, corrigida e 3/3 depois; 4 de `/setup` e
-`perf` pulados), CI run 56 verde nos três jobs.
+`perf` pulados), CI runs 56, 58 e 59 (38892740074, `15a0c16`, com a auditoria de IDOR) verdes nos três jobs.
 
 ## Fase 0 — Fundação
 
@@ -70,7 +70,7 @@ contra instância nova com e-mail ligado (1 falha, a da inatividade no celular, 
 | F0-ADR | ADRs 0001–0010 | feito | `docs/adr/` | |
 | F0-COMPOSE | `compose.yaml` com PostgreSQL 18 | feito | `spring-boot:run` no perfil local subiu `papinho-postgres-1` e o health respondeu UP | |
 | F0-SEC | Segurança base (cadeias, denyAll, CSRF spa, CSP, Problem Details, Argon2) | feito | `SecurityIT` (12 testes) e `LanSetupIT.shouldIssueStrictCsrfCookieOverTls`; e2e sem violação de CSP | `__Host-SESSION` provado em `IdentityIT` |
-| QA-04 | CI no GitHub Actions: backend, frontend e e2e em jobs separados | feito | `.github/workflows/ci.yml`; runs 38757286112, 38769083331, 38815227435 e, na passada 4, 38830633763 e 38832315052 (`828abb7`, com a Fase 5) verdes nos três jobs; na passada 5, run 38847160629 (54, `9868970`, com as Fases 6 e 7) verde nos três jobs depois das falhas dos runs 45/46 (format), 51 (ArchUnit) e 52 (e2e de notificações) | e2e sobe instância padrão e perfil lan. Correção da passada 4: o run 40 (último da passada 3) falhou no backend por um teste instável do `RealtimeIT`, corrigido em `6a4c833` |
+| QA-04 | CI no GitHub Actions: backend, frontend e e2e em jobs separados | feito | `.github/workflows/ci.yml`; runs 38757286112, 38769083331, 38815227435 e, na passada 4, 38830633763 e 38832315052 (`828abb7`, com a Fase 5) verdes nos três jobs; na passada 5, run 38847160629 (54, `9868970`, com as Fases 6 e 7) verde nos três jobs; na passada 6, runs 56, 58 e 59 (38892740074, `15a0c16`) verdes, com o Mailpit no job e2e depois das falhas dos runs 45/46 (format), 51 (ArchUnit) e 52 (e2e de notificações) | e2e sobe instância padrão e perfil lan. Correção da passada 4: o run 40 (último da passada 3) falhou no backend por um teste instável do `RealtimeIT`, corrigido em `6a4c833` |
 | QA-05 | README pt-BR (dev, LAN, CA, backup, produção) | feito | `README.md` com Desenvolvimento, Testes, Configuração (inclusive e-mail), Subir na rede local, Instalar a CA, Produção e Backup; os comandos de build, testes e e2e foram executados nesta passada e os de backup/restauração na passada 5 (BK-03) | instruções por aparelho (iOS, Android, Windows, macOS) não testadas em aparelho real |
 | PK-01 | `pki init` com BouncyCastle: CA P-256 10 anos com Name Constraints; servidor ≤398 dias; chave 0600 | feito | `CertificateAuthorityTest` (7) e `PkiCommandTest` (5); `openssl verify` e `certutil -V` recusam domínio/IP de fora | PKIX do JDK ignora NC da âncora (LEARNING) |
 | PK-02 | TLS por SSL bundle com HTTP/2; porta HTTP só com `/setup/**` e redirecionamento | feito | `LanSetupIT` (HTTP/2 validado pela CA; 301 para HTTPS; POST recusado); `curl --http2` manual no perfil lan | |

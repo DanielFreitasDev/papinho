@@ -68,6 +68,22 @@ class MediaIT {
     }
 
     @Test
+    @DisplayName("limite de uploads por pessoa (SG-03): 200 por hora, depois 429 com Retry-After; outra pessoa segue")
+    void shouldRateLimitUploads() {
+        // O balde reabastece aos poucos durante o laço: conta quantos passam até o primeiro 429.
+        int accepted = 0;
+        MvcTestResult limited = ana.perform(tusCreate(10, "a.txt", "text/plain"));
+        while (limited.getResponse().getStatus() == 201 && accepted < 250) {
+            accepted++;
+            limited = ana.perform(tusCreate(10, "a.txt", "text/plain"));
+        }
+        assertThat(accepted).isBetween(200, 210);
+        assertThat(limited).hasStatus(429);
+        assertThat(limited.getResponse().getHeader(HttpHeaders.RETRY_AFTER)).isNotBlank();
+        assertThat(bruno.perform(tusCreate(10, "b.txt", "text/plain"))).hasStatus(201);
+    }
+
+    @Test
     @DisplayName("tus: cria, retoma pelo HEAD, recusa deslocamento errado e completa em dois pedaços")
     void shouldUploadInChunks() {
         byte[] pdf = ("%PDF-1.4\n" + "conteúdo ".repeat(2000)).getBytes(StandardCharsets.UTF_8);

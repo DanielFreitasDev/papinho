@@ -199,6 +199,8 @@ class IdentityIT {
         var limited = attacker.post("/api/v1/auth/login", Map.of("username", "ana", "password", Accounts.PASSWORD));
         assertThat(limited).hasStatus(429);
         assertThat(attacker.json(limited).get("retryAfterSeconds").asLong()).isPositive();
+        assertThat(limited.getResponse().getHeader("Retry-After")).isEqualTo(
+                Long.toString(attacker.json(limited).get("retryAfterSeconds").asLong()));
     }
 
     @Test

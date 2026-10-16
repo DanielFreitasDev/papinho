@@ -20,6 +20,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
+import io.github.labdev2025cmd.papinho.shared.security.RateLimitedException;
+
 /**
  * Converte toda exceção da camada web em Problem Details (RFC 9457) com textos vindos dos bundles de mensagem.
  * Exceções inesperadas são registradas uma única vez aqui e respondidas como 500 genérico, sem stack trace.
@@ -47,7 +49,12 @@ class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         if (exception.status().is5xxServerError()) {
             log.error("Request failed slug={}", exception.slug(), exception);
         }
-        return ResponseEntity.status(exception.status()).body(problem);
+        ResponseEntity.BodyBuilder response = ResponseEntity.status(exception.status());
+        // RFC 6585: o cabeçalho padrão, que clientes como o tus (Uppy) respeitam, além da propriedade no corpo.
+        if (exception instanceof RateLimitedException limited) {
+            response.header(HttpHeaders.RETRY_AFTER, Long.toString(limited.retryAfterSeconds()));
+        }
+        return response.body(problem);
     }
 
     @ExceptionHandler(Exception.class)

@@ -21,18 +21,24 @@ export function UserAvatar({
   hasPhoto,
   version,
   className,
+  privateItem = false,
 }: {
   userId: string
   name: string
   hasPhoto: boolean
   version?: string
   className?: string
+  /** Foto de outra pessoa: o modo privado pode desfocá-la (PV-01). */
+  privateItem?: boolean
 }) {
   const src = hasPhoto
     ? `/api/v1/users/${userId}/photo?thumbnail=true&v=${encodeURIComponent(version ?? "")}`
     : undefined
   return (
-    <Avatar className={cn("size-10", className)}>
+    <Avatar
+      className={cn("size-10", className)}
+      data-private={privateItem ? "photos" : undefined}
+    >
       {src ? <AvatarImage src={src} alt="" /> : null}
       <AvatarFallback aria-hidden="true">{initials(name)}</AvatarFallback>
     </Avatar>

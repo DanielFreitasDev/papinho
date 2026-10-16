@@ -196,3 +196,56 @@
     @apply text-sky-700 dark:text-sky-300;
   }
 }
+
+/*
+ * Modo privado (PV-01): <html data-blur="messages previews names photos media"> diz o que desfocar e
+ * data-reveal-delay quanto esperar com o mouse em cima. Revela com o mouse, com o foco do teclado (o item ou o
+ * bloco [data-private-scope] focado) e com toque longo (data-revealed, posto pelo script). Sem estilos inline
+ * (CSP): os atrasos são valores fixos.
+ */
+@layer components {
+  html[data-blur~="messages"] [data-private="messages"],
+  html[data-blur~="previews"] [data-private="previews"],
+  html[data-blur~="names"] [data-private="names"],
+  html[data-blur~="photos"] [data-private="photos"],
+  html[data-blur~="media"] [data-private="media"] {
+    filter: blur(0.45rem);
+    transition: filter 150ms ease 0ms;
+  }
+  html[data-blur] [data-private]:hover {
+    filter: none;
+    transition-delay: var(--reveal-delay, 0ms);
+  }
+  html[data-blur] [data-private]:focus-within,
+  html[data-blur] [data-private-scope]:focus-within [data-private],
+  html[data-blur] [data-private][data-revealed],
+  html[data-blur] [data-revealed] [data-private] {
+    filter: none;
+    transition-delay: 0ms;
+  }
+  html[data-reveal-delay="500"] {
+    --reveal-delay: 500ms;
+  }
+  html[data-reveal-delay="1000"] {
+    --reveal-delay: 1000ms;
+  }
+  html[data-reveal-delay="2000"] {
+    --reveal-delay: 2000ms;
+  }
+  html[data-reveal-delay="3000"] {
+    --reveal-delay: 3000ms;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html[data-blur] [data-private] {
+      transition-duration: 0ms;
+    }
+  }
+}
+
+/* Bloqueio de tela (PV-02): nada por trás fica visível nem interativo (o conteúdo recebe inert). */
+@layer components {
+  [data-screen-locked] {
+    filter: blur(1.5rem);
+    user-select: none;
+  }
+}

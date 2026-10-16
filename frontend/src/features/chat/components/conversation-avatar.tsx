@@ -34,7 +34,7 @@ export function ConversationAvatar({
   if (conversation.group) {
     const photo = conversation.group.photoId
     return (
-      <Avatar className={cn("size-10", className)}>
+      <Avatar className={cn("size-10", className)} data-private="photos">
         {photo ? (
           <AvatarImage
             src={`/api/v1/media/${photo}/thumbnail?v=${encodeURIComponent(conversation.group.photoVersion)}`}
@@ -76,6 +76,7 @@ export function ConversationAvatar({
       hasPhoto={peer.hasPhoto}
       version={peer.photoVersion}
       className={className}
+      privateItem
     />
   ) : null
 }

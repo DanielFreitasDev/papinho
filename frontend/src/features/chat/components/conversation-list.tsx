@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next"
 import {
   EllipsisVerticalIcon,
   InboxIcon,
+  LockKeyholeIcon,
   MailIcon,
   MessagesSquareIcon,
 } from "lucide-react"
@@ -29,6 +30,7 @@ import {
 import { Item, ItemActions, ItemGroup } from "@/components/ui/item"
 import { Skeleton } from "@/components/ui/skeleton"
 import { formatListTime } from "@/lib/format"
+import { privacyQueries } from "@/features/privacy"
 import { chatQueries, markDelivered, useConversationAction } from "../api"
 import { plainText } from "../format/parse"
 import { useActivity } from "../activity"
@@ -36,17 +38,29 @@ import { describeNotice } from "../system-notice"
 import type { Conversation } from "../types"
 import { ConversationAvatar, useConversationLabel } from "./conversation-avatar"
 
-/** Lista de conversas (ou de solicitações) com prévia, horário e não lidas (MS-14). */
+/**
+ * Lista de conversas (ou de solicitações, ou a pasta das trancadas) com prévia, horário e não lidas (MS-14).
+ */
 export function ConversationList({
   meId,
   requests = false,
+  locked = false,
 }: {
   meId: string
   requests?: boolean
+  /** Pasta das conversas trancadas (PV-03), já aberta com o código. */
+  locked?: boolean
 }) {
   const { t } = useTranslation()
-  const conversations = useQuery(chatQueries.list(requests))
-  const pending = useQuery({ ...chatQueries.list(true), enabled: !requests })
+  const list = useQuery({ ...chatQueries.list(requests), enabled: !locked })
+  const lockedList = useQuery({ ...chatQueries.locked(), enabled: locked })
+  const conversations = locked ? lockedList : list
+  const main = !requests && !locked
+  const pending = useQuery({ ...chatQueries.list(true), enabled: main })
+  const lockedCount = useQuery({
+    ...privacyQueries.lockedCount(),
+    enabled: main,
+  })
 
   // Abrir o app confirma a entrega do que chegou enquanto estava fora (MS-02).
   useEffect(() => {
@@ -84,9 +98,19 @@ export function ConversationList({
     )
   }
   const requestCount = pending.data?.length ?? 0
+  const lockedTotal = lockedCount.data?.count ?? 0
   return (
     <div className="flex flex-col gap-2">
-      {!requests && requestCount > 0 ? (
+      {main && lockedTotal > 0 ? (
+        <Link
+          to="/locked"
+          className="flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50"
+        >
+          <LockKeyholeIcon aria-hidden="true" className="size-5" />
+          <span className="flex-1">{t("privacy.locked.folder")}</span>
+        </Link>
+      ) : null}
+      {main && requestCount > 0 ? (
         <Link
           to="/requests"
           className="flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50"
@@ -101,21 +125,39 @@ export function ConversationList({
         <Empty className="py-10">
           <EmptyHeader>
             <EmptyMedia variant="icon">
-              {requests ? <InboxIcon /> : <MessagesSquareIcon />}
+              {requests ? (
+                <InboxIcon />
+              ) : locked ? (
+                <LockKeyholeIcon />
+              ) : (
+                <MessagesSquareIcon />
+              )}
             </EmptyMedia>
             <EmptyTitle>
-              {requests ? t("chat.requestsEmpty") : t("chat.emptyList")}
+              {requests
+                ? t("chat.requestsEmpty")
+                : locked
+                  ? t("privacy.locked.empty")
+                  : t("chat.emptyList")}
             </EmptyTitle>
             <EmptyDescription>
               {requests
                 ? t("chat.requestsEmptyDescription")
-                : t("chat.emptyListDescription")}
+                : locked
+                  ? t("privacy.locked.emptyDescription")
+                  : t("chat.emptyListDescription")}
             </EmptyDescription>
           </EmptyHeader>
         </Empty>
       ) : (
         <ItemGroup
-          aria-label={requests ? t("chat.requests") : t("chat.conversations")}
+          aria-label={
+            requests
+              ? t("chat.requests")
+              : locked
+                ? t("privacy.locked.folder")
+                : t("chat.conversations")
+          }
           className="gap-0.5!"
         >
           {conversations.data.map((conversation) => (
@@ -187,12 +229,14 @@ function ConversationItem({
         to="/c/$conversationId"
         params={{ conversationId: conversation.id }}
         aria-current={active ? "page" : undefined}
+        data-private-scope=""
         className="flex min-h-14 min-w-0 flex-1 items-center gap-3 rounded-md px-3 py-2 outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
       >
         <ConversationAvatar conversation={conversation} className="size-10" />
         <span className="flex min-w-0 flex-1 flex-col">
           <span className="flex items-baseline gap-2">
             <span
+              data-private="names"
               className={cn(
                 "flex-1 truncate text-sm",
                 unread ? "font-semibold" : "font-medium"
@@ -218,6 +262,7 @@ function ConversationItem({
           </span>
           <span className="flex items-center gap-2">
             <span
+              data-private={activity ? undefined : "previews"}
               className={cn(
                 "flex-1 truncate text-xs",
                 activity

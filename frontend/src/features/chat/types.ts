@@ -131,7 +131,13 @@ export type Conversation = {
   markedUnread: boolean
   readSeq: number
   peerDeliveredSeq: number
-  /** Nulo enquanto a outra pessoa não aceitou a conversa (CT-02). */
+  /** Trancada por mim (PV-03): fora da lista, conteúdo só com o código. */
+  locked: boolean
+  /** Minha escolha de confirmação de leitura aqui; nulo segue o padrão (PV-06). */
+  readReceipts: boolean | null
+  /** A confirmação de leitura vale para mim nesta conversa. */
+  readReceiptsEnabled: boolean
+  /** Nulo enquanto a outra pessoa não aceitou a conversa (CT-02) ou se um dos dois desligou a leitura (PV-06). */
   peerReadSeq: number | null
   updatedAt: string
   canSend: boolean

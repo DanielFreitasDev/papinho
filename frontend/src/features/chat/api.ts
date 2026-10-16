@@ -31,6 +31,8 @@ import type {
 export const chatKeys = {
   conversations: ["conversations"] as const,
   list: (requests: boolean) => ["conversations", "list", requests] as const,
+  /** Pasta das trancadas (PV-03): só com o token de desbloqueio. */
+  locked: ["conversations", "locked"] as const,
   detail: (id: string) => ["conversations", "detail", id] as const,
   messages: (id: string) => ["messages", id] as const,
   pinned: (id: string) => ["messages", id, "pinned"] as const,
@@ -57,13 +59,24 @@ export const chatQueries = {
           { signal }
         ),
     }),
+  locked: () =>
+    queryOptions({
+      queryKey: chatKeys.locked,
+      queryFn: ({ signal }) =>
+        apiFetch<Conversation[]>("/api/v1/conversations?locked=true", {
+          signal,
+        }),
+    }),
   detail: (id: string) =>
     queryOptions({
       queryKey: chatKeys.detail(id),
       queryFn: ({ signal }) =>
         apiFetch<Conversation>(`/api/v1/conversations/${id}`, { signal }),
       retry: (count, error) =>
-        !(error instanceof ApiError && error.status === 404) && count < 2,
+        !(
+          error instanceof ApiError &&
+          (error.status === 404 || error.status === 403)
+        ) && count < 2,
     }),
   /** Mensagens carregadas da conversa; o WebSocket e a reconexão mantêm o cache em dia. */
   messages: (id: string) =>
@@ -78,6 +91,11 @@ export const chatQueries = {
         ),
       staleTime: Infinity,
       gcTime: 5 * 60_000,
+      retry: (count, error) =>
+        !(
+          error instanceof ApiError &&
+          (error.status === 404 || error.status === 403)
+        ) && count < 2,
     }),
   pinned: (id: string) =>
     queryOptions({
@@ -473,6 +491,20 @@ export function useVote() {
 }
 
 /** Timer de mensagens temporárias da conversa (MS-07). */
+/** Confirmação de leitura nesta conversa (PV-06): ligada, desligada ou o padrão ({@code null}). */
+export function useReadReceipts(conversationId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (enabled: boolean | null) =>
+      apiFetch<Conversation>(
+        `/api/v1/conversations/${conversationId}/read-receipts`,
+        { method: "PUT", json: { enabled } }
+      ),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: chatKeys.conversations }),
+  })
+}
+
 export function useDisappearing(conversationId: string) {
   const queryClient = useQueryClient()
   return useMutation({

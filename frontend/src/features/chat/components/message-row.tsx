@@ -167,6 +167,7 @@ export function MessageRow({
   return (
     <Message
       align={mine ? "end" : "start"}
+      data-private-scope=""
       className={cn(
         "group/row items-center rounded-lg px-1",
         selecting && "cursor-pointer",
@@ -190,7 +191,10 @@ export function MessageRow({
           align={mine ? "end" : "start"}
           className={cn("max-w-[min(80%,36rem)]", grouped.length > 0 && "mb-3")}
         >
-          <BubbleContent className="flex flex-col gap-1">
+          <BubbleContent
+            className="flex flex-col gap-1"
+            data-private="messages"
+          >
             {showSender && !mine ? (
               <span className="text-xs font-semibold text-primary">
                 {senderName}
@@ -478,6 +482,7 @@ function DeletedRow({
   return (
     <Message
       align={mine ? "end" : "start"}
+      data-private-scope=""
       className={cn(
         "group/row items-center rounded-lg px-1",
         selecting && "cursor-pointer",

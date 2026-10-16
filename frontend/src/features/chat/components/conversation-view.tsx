@@ -87,6 +87,7 @@ import {
   type MessageAction,
 } from "./message-row"
 import { PresenceLine } from "./presence-line"
+import { UnlockForm } from "@/features/privacy"
 
 /** Tela de uma conversa individual (Fase 2): cabeçalho, fixadas, mensagens e campo de envio. */
 export function ConversationView({
@@ -100,7 +101,10 @@ export function ConversationView({
   const conversation = useQuery(chatQueries.detail(conversationId))
   const cache = useQuery(chatQueries.messages(conversationId))
 
-  if (conversation.isPending || cache.isPending) {
+  if (
+    (conversation.isPending && !cache.isError) ||
+    (cache.isPending && !conversation.isError)
+  ) {
     return (
       <div
         className="flex flex-1 flex-col gap-3 p-4"
@@ -114,6 +118,18 @@ export function ConversationView({
     )
   }
   if (conversation.isError || cache.isError) {
+    const error = conversation.error ?? cache.error
+    if (
+      error instanceof ApiError &&
+      error.problem.type === "urn:papinho:problem:conversation-locked"
+    ) {
+      // PV-03: trancada sem token válido nesta aba.
+      return (
+        <div className="flex flex-1 items-center justify-center">
+          <UnlockForm title={t("privacy.locked.conversationTitle")} />
+        </div>
+      )
+    }
     const notFound =
       conversation.error instanceof ApiError &&
       conversation.error.status === 404
@@ -136,6 +152,9 @@ export function ConversationView({
         </Empty>
       </div>
     )
+  }
+  if (!conversation.data || !cache.data) {
+    return null
   }
   return (
     <MessageScrollerProvider
@@ -621,7 +640,10 @@ function LoadedConversation({
                 className="size-9"
               />
               <span className="flex min-w-0 flex-1 flex-col">
-                <span className="truncate text-base font-semibold">
+                <span
+                  className="truncate text-base font-semibold"
+                  data-private="names"
+                >
                   {peerName}
                 </span>
                 <PresenceLine

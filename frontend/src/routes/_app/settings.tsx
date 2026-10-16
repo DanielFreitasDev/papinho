@@ -9,6 +9,7 @@ const SECTIONS = [
   { to: "/settings/account", key: "settings.account" },
   { to: "/settings/security", key: "settings.security" },
   { to: "/settings/sessions", key: "settings.sessions" },
+  { to: "/settings/privacy", key: "settings.privacy" },
   { to: "/settings/blocked", key: "settings.blocked" },
   { to: "/settings/chats", key: "settings.chats" },
   { to: "/settings/appearance", key: "settings.appearance" },

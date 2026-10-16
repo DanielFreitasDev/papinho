@@ -4,6 +4,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query"
 
+import { setUnlockToken } from "@/lib/unlock-token"
 import { apiFetch } from "@/lib/api-client"
 import type { Instance, Me, RegisterResponse } from "./types"
 
@@ -85,7 +86,9 @@ export function useLogout() {
   return useMutation({
     mutationFn: () => apiFetch<void>("/api/v1/auth/logout", { method: "POST" }),
     onSettled: () => {
-      // Nada da conta anterior fica em memória (NT-05): limpa todo o cache do TanStack Query.
+      // Nada da conta anterior fica em memória (NT-05): limpa todo o cache do TanStack Query e o token das
+      // conversas trancadas (PV-03).
+      setUnlockToken(null)
       queryClient.clear()
       queryClient.setQueryData(authKeys.me, null)
     },

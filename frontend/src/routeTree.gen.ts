@@ -15,6 +15,7 @@ import { Route as RecoverRouteImport } from './routes/recover'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppAdminRouteImport } from './routes/_app/admin'
+import { Route as AppLockedRouteImport } from './routes/_app/locked'
 import { Route as AppRequestsRouteImport } from './routes/_app/requests'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppStarredRouteImport } from './routes/_app/starred'
@@ -26,6 +27,7 @@ import { Route as AppSettingsAccountRouteImport } from './routes/_app/settings/a
 import { Route as AppSettingsAppearanceRouteImport } from './routes/_app/settings/appearance'
 import { Route as AppSettingsBlockedRouteImport } from './routes/_app/settings/blocked'
 import { Route as AppSettingsChatsRouteImport } from './routes/_app/settings/chats'
+import { Route as AppSettingsPrivacyRouteImport } from './routes/_app/settings/privacy'
 import { Route as AppSettingsProfileRouteImport } from './routes/_app/settings/profile'
 import { Route as AppSettingsSecurityRouteImport } from './routes/_app/settings/security'
 import { Route as AppSettingsSessionsRouteImport } from './routes/_app/settings/sessions'
@@ -58,6 +60,11 @@ const AppIndexRoute = AppIndexRouteImport.update({
 const AppAdminRoute = AppAdminRouteImport.update({
   id: '/admin',
   path: '/admin',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppLockedRoute = AppLockedRouteImport.update({
+  id: '/locked',
+  path: '/locked',
   getParentRoute: () => AppRoute,
 } as any)
 const AppRequestsRoute = AppRequestsRouteImport.update({
@@ -115,6 +122,11 @@ const AppSettingsChatsRoute = AppSettingsChatsRouteImport.update({
   path: '/chats',
   getParentRoute: () => AppSettingsRoute,
 } as any)
+const AppSettingsPrivacyRoute = AppSettingsPrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => AppSettingsRoute,
+} as any)
 const AppSettingsProfileRoute = AppSettingsProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
@@ -143,6 +155,7 @@ export interface FileRoutesByFullPath {
   '/recover': typeof RecoverRoute
   '/register': typeof RegisterRoute
   '/admin': typeof AppAdminRoute
+  '/locked': typeof AppLockedRoute
   '/requests': typeof AppRequestsRoute
   '/settings': typeof AppSettingsRouteWithChildren
   '/starred': typeof AppStarredRoute
@@ -153,6 +166,7 @@ export interface FileRoutesByFullPath {
   '/settings/appearance': typeof AppSettingsAppearanceRoute
   '/settings/blocked': typeof AppSettingsBlockedRoute
   '/settings/chats': typeof AppSettingsChatsRoute
+  '/settings/privacy': typeof AppSettingsPrivacyRoute
   '/settings/profile': typeof AppSettingsProfileRoute
   '/settings/security': typeof AppSettingsSecurityRoute
   '/settings/sessions': typeof AppSettingsSessionsRoute
@@ -164,6 +178,7 @@ export interface FileRoutesByTo {
   '/recover': typeof RecoverRoute
   '/register': typeof RegisterRoute
   '/admin': typeof AppAdminRoute
+  '/locked': typeof AppLockedRoute
   '/requests': typeof AppRequestsRoute
   '/starred': typeof AppStarredRoute
   '/': typeof AppIndexRoute
@@ -174,6 +189,7 @@ export interface FileRoutesByTo {
   '/settings/appearance': typeof AppSettingsAppearanceRoute
   '/settings/blocked': typeof AppSettingsBlockedRoute
   '/settings/chats': typeof AppSettingsChatsRoute
+  '/settings/privacy': typeof AppSettingsPrivacyRoute
   '/settings/profile': typeof AppSettingsProfileRoute
   '/settings/security': typeof AppSettingsSecurityRoute
   '/settings/sessions': typeof AppSettingsSessionsRoute
@@ -187,6 +203,7 @@ export interface FileRoutesById {
   '/recover': typeof RecoverRoute
   '/register': typeof RegisterRoute
   '/_app/admin': typeof AppAdminRoute
+  '/_app/locked': typeof AppLockedRoute
   '/_app/requests': typeof AppRequestsRoute
   '/_app/settings': typeof AppSettingsRouteWithChildren
   '/_app/starred': typeof AppStarredRoute
@@ -198,6 +215,7 @@ export interface FileRoutesById {
   '/_app/settings/appearance': typeof AppSettingsAppearanceRoute
   '/_app/settings/blocked': typeof AppSettingsBlockedRoute
   '/_app/settings/chats': typeof AppSettingsChatsRoute
+  '/_app/settings/privacy': typeof AppSettingsPrivacyRoute
   '/_app/settings/profile': typeof AppSettingsProfileRoute
   '/_app/settings/security': typeof AppSettingsSecurityRoute
   '/_app/settings/sessions': typeof AppSettingsSessionsRoute
@@ -212,6 +230,7 @@ export interface FileRouteTypes {
     | '/recover'
     | '/register'
     | '/admin'
+    | '/locked'
     | '/requests'
     | '/settings'
     | '/starred'
@@ -222,6 +241,7 @@ export interface FileRouteTypes {
     | '/settings/appearance'
     | '/settings/blocked'
     | '/settings/chats'
+    | '/settings/privacy'
     | '/settings/profile'
     | '/settings/security'
     | '/settings/sessions'
@@ -233,6 +253,7 @@ export interface FileRouteTypes {
     | '/recover'
     | '/register'
     | '/admin'
+    | '/locked'
     | '/requests'
     | '/starred'
     | '/'
@@ -243,6 +264,7 @@ export interface FileRouteTypes {
     | '/settings/appearance'
     | '/settings/blocked'
     | '/settings/chats'
+    | '/settings/privacy'
     | '/settings/profile'
     | '/settings/security'
     | '/settings/sessions'
@@ -255,6 +277,7 @@ export interface FileRouteTypes {
     | '/recover'
     | '/register'
     | '/_app/admin'
+    | '/_app/locked'
     | '/_app/requests'
     | '/_app/settings'
     | '/_app/starred'
@@ -266,6 +289,7 @@ export interface FileRouteTypes {
     | '/_app/settings/appearance'
     | '/_app/settings/blocked'
     | '/_app/settings/chats'
+    | '/_app/settings/privacy'
     | '/_app/settings/profile'
     | '/_app/settings/security'
     | '/_app/settings/sessions'
@@ -322,6 +346,13 @@ declare module '@tanstack/react-router' {
       path: '/admin'
       fullPath: '/admin'
       preLoaderRoute: typeof AppAdminRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/locked': {
+      id: '/_app/locked'
+      path: '/locked'
+      fullPath: '/locked'
+      preLoaderRoute: typeof AppLockedRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/requests': {
@@ -401,6 +432,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSettingsChatsRouteImport
       parentRoute: typeof AppSettingsRoute
     }
+    '/_app/settings/privacy': {
+      id: '/_app/settings/privacy'
+      path: '/privacy'
+      fullPath: '/settings/privacy'
+      preLoaderRoute: typeof AppSettingsPrivacyRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
     '/_app/settings/profile': {
       id: '/_app/settings/profile'
       path: '/profile'
@@ -437,6 +475,7 @@ interface AppSettingsRouteChildren {
   AppSettingsAppearanceRoute: typeof AppSettingsAppearanceRoute
   AppSettingsBlockedRoute: typeof AppSettingsBlockedRoute
   AppSettingsChatsRoute: typeof AppSettingsChatsRoute
+  AppSettingsPrivacyRoute: typeof AppSettingsPrivacyRoute
   AppSettingsProfileRoute: typeof AppSettingsProfileRoute
   AppSettingsSecurityRoute: typeof AppSettingsSecurityRoute
   AppSettingsSessionsRoute: typeof AppSettingsSessionsRoute
@@ -449,6 +488,7 @@ const AppSettingsRouteChildren: AppSettingsRouteChildren = {
   AppSettingsAppearanceRoute: AppSettingsAppearanceRoute,
   AppSettingsBlockedRoute: AppSettingsBlockedRoute,
   AppSettingsChatsRoute: AppSettingsChatsRoute,
+  AppSettingsPrivacyRoute: AppSettingsPrivacyRoute,
   AppSettingsProfileRoute: AppSettingsProfileRoute,
   AppSettingsSecurityRoute: AppSettingsSecurityRoute,
   AppSettingsSessionsRoute: AppSettingsSessionsRoute,
@@ -462,6 +502,7 @@ const AppSettingsRouteWithChildren = AppSettingsRoute._addFileChildren(
 
 interface AppRouteChildren {
   AppAdminRoute: typeof AppAdminRoute
+  AppLockedRoute: typeof AppLockedRoute
   AppRequestsRoute: typeof AppRequestsRoute
   AppSettingsRoute: typeof AppSettingsRouteWithChildren
   AppStarredRoute: typeof AppStarredRoute
@@ -473,6 +514,7 @@ interface AppRouteChildren {
 
 const AppRouteChildren: AppRouteChildren = {
   AppAdminRoute: AppAdminRoute,
+  AppLockedRoute: AppLockedRoute,
   AppRequestsRoute: AppRequestsRoute,
   AppSettingsRoute: AppSettingsRouteWithChildren,
   AppStarredRoute: AppStarredRoute,

@@ -67,6 +67,7 @@ export function ContactPicker({
                 }
               />
               <UserAvatar
+                privateItem
                 userId={contact.userId}
                 name={contact.label}
                 hasPhoto={contact.hasPhoto}

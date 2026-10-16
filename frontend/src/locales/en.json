@@ -151,7 +151,8 @@
     "blocked": "Blocked",
     "appearance": "Appearance",
     "transcription": "Transcription",
-    "chats": "Chats"
+    "chats": "Chats",
+    "privacy": "Privacy"
   },
   "profile": {
     "about": "About",
@@ -599,7 +600,8 @@
     "send": "Send message",
     "newLine": "New line",
     "pasteImage": "Paste an image or file in the field",
-    "dragHint": "You can also drag and drop files into the chat."
+    "dragHint": "You can also drag and drop files into the chat.",
+    "privateMode": "Turn private mode (blur) on or off"
   },
   "poll": {
     "new": "New poll",
@@ -702,5 +704,126 @@
     "label": "GIF",
     "unavailable": "Could not search GIFs right now.",
     "poweredBy": "Search through the server's provider"
+  },
+  "privacy": {
+    "whoCanSee": "Who can see",
+    "whoCanSeeDescription": "Applies to people who have a chat with you. By default everything is visible, as on WhatsApp.",
+    "item": {
+      "LAST_SEEN": "Last seen",
+      "ONLINE": "Online",
+      "PHOTO": "Profile photo",
+      "ABOUT": "About",
+      "GROUPS_ADD": "Who can add me to groups"
+    },
+    "visibility": {
+      "EVERYONE": "Everyone",
+      "CONTACTS": "My contacts",
+      "CONTACTS_EXCEPT": "My contacts except…",
+      "NOBODY": "Nobody"
+    },
+    "reciprocity": "If you don't share yours, you can't see other people's.",
+    "exceptions": {
+      "choose_one": "{{count}} contact excluded",
+      "choose_other": "{{count}} contacts excluded",
+      "description": "Checked contacts won't see this item.",
+      "noContacts": "You have no contacts yet."
+    },
+    "groupsTitle": "Groups",
+    "groupsDescription": "People who can't add you are told to send you the group invite link.",
+    "messagesTitle": "Messages and notifications",
+    "readReceipts": "Read receipts",
+    "readReceiptsDescription": "Applies to one-to-one chats. If you turn it off, you won't see when others read either. In groups it stays on, but you can turn it off per group.",
+    "hideNotificationContent": "Hide notification content",
+    "hideNotificationContentDescription": "Notifications only say \"New message\".",
+    "blur": {
+      "title": "Private mode",
+      "description": "Blurs what you choose for people looking at your screen from afar. It's only visual: hover, use the keyboard or touch and hold to see.",
+      "privateMode": "Private mode on",
+      "shortcut": "Shortcut: Alt+Shift+P on any screen.",
+      "items": "What to blur",
+      "item": {
+        "messages": "Messages",
+        "previews": "Preview in the chat list",
+        "names": "Contact names",
+        "photos": "Contact photos",
+        "media": "Photos and videos in chats"
+      },
+      "reveal": "Reveal on hover",
+      "revealHint": "Keyboard focus and long press reveal right away.",
+      "delay": {
+        "0": "Right away",
+        "500": "After half a second",
+        "1000": "After 1 second",
+        "2000": "After 2 seconds",
+        "3000": "After 3 seconds"
+      }
+    },
+    "screenLock": {
+      "title": "Screen lock",
+      "description": "Covers Papinho with its own PIN or password, separate from your account password. It's visual protection: the session stays active.",
+      "kindLabel": "Code type",
+      "kind": {
+        "PIN": "PIN (digits only)",
+        "PASSWORD": "Password"
+      },
+      "newPin": "New PIN",
+      "newPassword": "New password",
+      "confirm": "Repeat to confirm",
+      "pinHint": "4 to 12 digits.",
+      "passwordHint": "At least 6 characters.",
+      "mismatch": "The two fields don't match.",
+      "idle": "Lock after a period of inactivity",
+      "idleOff": "Never",
+      "idleMinutes_one": "{{count}} minute",
+      "idleMinutes_other": "{{count}} minutes",
+      "onHidden": "Lock when switching tabs or windows",
+      "shortcut": "Shortcut to lock",
+      "pressKeys": "Press the keys…",
+      "noShortcut": "No shortcut",
+      "removeShortcut": "Remove shortcut",
+      "shortcutHint": "Click and press a letter or digit with Ctrl, Alt, Shift or Meta. Esc cancels.",
+      "allowPasskey": "Also unlock with a passkey",
+      "turnOn": "Turn on screen lock",
+      "enabled": "Screen lock on",
+      "lockNow": "Lock screen",
+      "currentToTurnOff": "Current code to turn it off",
+      "turnOff": "Turn off screen lock",
+      "disabled": "Screen lock off",
+      "lockedTitle": "Papinho is locked",
+      "pinLabel": "PIN",
+      "passwordLabel": "Lock password",
+      "unlock": "Unlock",
+      "withPasskey": "Use passkey",
+      "wrong": "Wrong code.",
+      "passkeyFailed": "Could not use the passkey.",
+      "visualOnly": "Visual protection: the session stays active on this device."
+    },
+    "conversation": {
+      "defaultDirect": "Default (global setting)",
+      "defaultGroup": "Default (on in groups)",
+      "on": "On",
+      "off": "Off",
+      "reciprocity": "When off, you also won't see when others read in this chat."
+    },
+    "locked": {
+      "folder": "Locked chats",
+      "folderTitle": "Enter the code for your locked chats",
+      "conversationTitle": "This chat is locked",
+      "code": "Code",
+      "open": "Open",
+      "wrongCode": "Wrong code.",
+      "empty": "No chat opened with this code",
+      "emptyDescription": "Lock a chat from its details panel.",
+      "relock": "Lock again",
+      "lock": "Lock chat",
+      "lockTitle": "Lock chat",
+      "lockDescription": "The chat leaves the list and goes to the Locked chats folder; its content only opens with the code. Use the same code as another chat to open both together.",
+      "codeHint": "4 to 64 characters. A forgotten code can't be recovered.",
+      "confirm": "Repeat the code",
+      "mismatch": "The two codes don't match.",
+      "lockedToast": "Chat locked",
+      "unlockForGood": "Unlock chat",
+      "unlockedForGood": "The chat is back in the list"
+    }
   }
 }

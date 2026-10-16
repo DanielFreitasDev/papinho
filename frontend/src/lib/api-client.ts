@@ -25,6 +25,7 @@ export class ApiError extends Error {
 }
 
 import i18n from "@/lib/i18n"
+import { UNLOCK_HEADER, unlockToken } from "@/lib/unlock-token"
 
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"])
 
@@ -55,6 +56,11 @@ export async function apiFetch<T>(
   finalHeaders.set("Accept-Language", i18n.language || "pt-BR")
   if (json !== undefined) {
     finalHeaders.set("Content-Type", "application/json")
+  }
+  // Conversas trancadas abertas nesta aba (PV-03).
+  const unlock = unlockToken()
+  if (unlock && !finalHeaders.has(UNLOCK_HEADER)) {
+    finalHeaders.set(UNLOCK_HEADER, unlock)
   }
   if (!SAFE_METHODS.has(method) && !readCookie("XSRF-TOKEN")) {
     // Primeira escrita da sessão: busca o cookie CSRF que o servidor entrega em qualquer GET da API.

@@ -86,6 +86,7 @@ export function BroadcastDetails({
                 className="flex min-h-12 items-center gap-3 px-1"
               >
                 <UserAvatar
+                  privateItem
                   userId={person.userId}
                   name={person.label}
                   hasPhoto={person.hasPhoto}

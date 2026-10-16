@@ -151,7 +151,8 @@
     "blocked": "Bloqueados",
     "appearance": "Aparência",
     "transcription": "Transcrição",
-    "chats": "Conversas"
+    "chats": "Conversas",
+    "privacy": "Privacidade"
   },
   "profile": {
     "about": "Recado",
@@ -599,7 +600,8 @@
     "send": "Enviar mensagem",
     "newLine": "Quebrar linha",
     "pasteImage": "Colar imagem ou arquivo no campo",
-    "dragHint": "Também dá para arrastar e soltar arquivos na conversa."
+    "dragHint": "Também dá para arrastar e soltar arquivos na conversa.",
+    "privateMode": "Ligar ou desligar o modo privado (desfoque)"
   },
   "poll": {
     "new": "Nova enquete",
@@ -702,5 +704,126 @@
     "label": "GIF",
     "unavailable": "Não foi possível buscar GIFs agora.",
     "poweredBy": "Busca pelo provedor configurado no servidor"
+  },
+  "privacy": {
+    "whoCanSee": "Quem pode ver",
+    "whoCanSeeDescription": "Vale para quem tem conversa com você. O padrão é tudo visível, como no WhatsApp.",
+    "item": {
+      "LAST_SEEN": "Visto por último",
+      "ONLINE": "Online",
+      "PHOTO": "Foto do perfil",
+      "ABOUT": "Recado",
+      "GROUPS_ADD": "Quem pode me adicionar a grupos"
+    },
+    "visibility": {
+      "EVERYONE": "Todos",
+      "CONTACTS": "Meus contatos",
+      "CONTACTS_EXCEPT": "Meus contatos, exceto…",
+      "NOBODY": "Ninguém"
+    },
+    "reciprocity": "Se você não compartilha, também não vê o dos outros.",
+    "exceptions": {
+      "choose_one": "{{count}} contato fora",
+      "choose_other": "{{count}} contatos fora",
+      "description": "Os contatos marcados não verão este item.",
+      "noContacts": "Você ainda não tem contatos."
+    },
+    "groupsTitle": "Grupos",
+    "groupsDescription": "Quem não pode adicionar você recebe um aviso para mandar o link de convite do grupo.",
+    "messagesTitle": "Mensagens e notificações",
+    "readReceipts": "Confirmação de leitura",
+    "readReceiptsDescription": "Vale para as conversas individuais. Se desligar, você também não vê quando os outros leem. Nos grupos ela continua ligada, mas dá para desligar em cada grupo.",
+    "hideNotificationContent": "Ocultar o conteúdo das notificações",
+    "hideNotificationContentDescription": "As notificações mostram só \"Nova mensagem\".",
+    "blur": {
+      "title": "Modo privado",
+      "description": "Desfoca o que você escolher para quem olha a tela de longe. É só visual: passe o mouse, use o teclado ou toque e segure para ver.",
+      "privateMode": "Modo privado ligado",
+      "shortcut": "Atalho: Alt+Shift+P em qualquer tela.",
+      "items": "O que desfocar",
+      "item": {
+        "messages": "Mensagens",
+        "previews": "Prévia na lista de conversas",
+        "names": "Nomes dos contatos",
+        "photos": "Fotos dos contatos",
+        "media": "Fotos e vídeos das conversas"
+      },
+      "reveal": "Revelar com o mouse em cima",
+      "revealHint": "O foco do teclado e o toque longo revelam na hora.",
+      "delay": {
+        "0": "Na hora",
+        "500": "Depois de meio segundo",
+        "1000": "Depois de 1 segundo",
+        "2000": "Depois de 2 segundos",
+        "3000": "Depois de 3 segundos"
+      }
+    },
+    "screenLock": {
+      "title": "Bloqueio de tela",
+      "description": "Cobre o Papinho com um PIN ou senha próprios, separados da senha da conta. É uma proteção visual: a sessão continua ativa.",
+      "kindLabel": "Tipo de código",
+      "kind": {
+        "PIN": "PIN (só números)",
+        "PASSWORD": "Senha"
+      },
+      "newPin": "Novo PIN",
+      "newPassword": "Nova senha",
+      "confirm": "Repita para confirmar",
+      "pinHint": "De 4 a 12 dígitos.",
+      "passwordHint": "Pelo menos 6 caracteres.",
+      "mismatch": "Os dois campos não são iguais.",
+      "idle": "Bloquear depois de um tempo sem uso",
+      "idleOff": "Nunca",
+      "idleMinutes_one": "{{count}} minuto",
+      "idleMinutes_other": "{{count}} minutos",
+      "onHidden": "Bloquear ao trocar de aba ou de janela",
+      "shortcut": "Atalho para bloquear",
+      "pressKeys": "Pressione as teclas…",
+      "noShortcut": "Sem atalho",
+      "removeShortcut": "Remover atalho",
+      "shortcutHint": "Clique e pressione uma letra ou número com Ctrl, Alt, Shift ou Meta. Esc cancela.",
+      "allowPasskey": "Desbloquear também com passkey",
+      "turnOn": "Ligar o bloqueio",
+      "enabled": "Bloqueio de tela ligado",
+      "lockNow": "Bloquear tela",
+      "currentToTurnOff": "Código atual para desligar",
+      "turnOff": "Desligar o bloqueio",
+      "disabled": "Bloqueio de tela desligado",
+      "lockedTitle": "Papinho bloqueado",
+      "pinLabel": "PIN",
+      "passwordLabel": "Senha do bloqueio",
+      "unlock": "Desbloquear",
+      "withPasskey": "Usar passkey",
+      "wrong": "Código incorreto.",
+      "passkeyFailed": "Não foi possível usar a passkey.",
+      "visualOnly": "Proteção visual: a sessão continua ativa neste aparelho."
+    },
+    "conversation": {
+      "defaultDirect": "Padrão (configuração global)",
+      "defaultGroup": "Padrão (ligada no grupo)",
+      "on": "Ligada",
+      "off": "Desligada",
+      "reciprocity": "Desligada, você também não vê quando os outros leem nesta conversa."
+    },
+    "locked": {
+      "folder": "Conversas trancadas",
+      "folderTitle": "Digite o código das conversas trancadas",
+      "conversationTitle": "Esta conversa está trancada",
+      "code": "Código",
+      "open": "Abrir",
+      "wrongCode": "Código incorreto.",
+      "empty": "Nenhuma conversa aberta com este código",
+      "emptyDescription": "Tranque uma conversa pelo painel de dados dela.",
+      "relock": "Trancar de novo",
+      "lock": "Trancar conversa",
+      "lockTitle": "Trancar conversa",
+      "lockDescription": "A conversa sai da lista e vai para a pasta Conversas trancadas; o conteúdo só abre com o código. Use o mesmo código de outra conversa para abrir as duas juntas.",
+      "codeHint": "De 4 a 64 caracteres. Não dá para recuperar um código esquecido.",
+      "confirm": "Repita o código",
+      "mismatch": "Os dois códigos não são iguais.",
+      "lockedToast": "Conversa trancada",
+      "unlockForGood": "Destrancar conversa",
+      "unlockedForGood": "A conversa voltou para a lista"
+    }
   }
 }

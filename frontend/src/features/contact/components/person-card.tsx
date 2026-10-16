@@ -58,6 +58,7 @@ export function PersonCard({ username }: { username: string }) {
     <Card className="w-full max-w-sm">
       <CardHeader className="flex flex-row items-center gap-3">
         <UserAvatar
+          privateItem
           userId={data.userId}
           name={data.displayName}
           hasPhoto={data.hasPhoto}

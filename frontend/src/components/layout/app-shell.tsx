@@ -10,6 +10,8 @@ import { useTranslation } from "react-i18next"
 import {
   BookmarkIcon,
   EllipsisVerticalIcon,
+  LockIcon,
+  LockKeyholeIcon,
   LogOutIcon,
   MegaphoneIcon,
   MessageSquarePlusIcon,
@@ -51,6 +53,12 @@ import {
 } from "@/features/chat"
 import { AddContactDialog, ContactList, MyLinkDialog } from "@/features/contact"
 import { InviteDialog } from "@/features/invite"
+import {
+  lockScreenNow,
+  privacyQueries,
+  ScreenLockGate,
+  usePrivateMode,
+} from "@/features/privacy"
 import { CommandPalette } from "./command-palette"
 import { ShortcutsDialog } from "./shortcuts-dialog"
 import { MiniPlayer } from "@/features/media"
@@ -75,6 +83,8 @@ function SignedInShell({ me }: { me: Me }) {
   const openDirect = useOpenDirect()
   const openSaved = useOpenSaved()
   useRealtimeSync(me.account.id)
+  usePrivateMode()
+  const screenLock = useQuery(privacyQueries.screenLock())
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   })
@@ -215,6 +225,18 @@ function SignedInShell({ me }: { me: Me }) {
                   {t("chat.starredMessages")}
                 </DropdownMenuItem>
                 <DropdownMenuItem
+                  onClick={() => void navigate({ to: "/locked" })}
+                >
+                  <LockKeyholeIcon />
+                  {t("privacy.locked.folder")}
+                </DropdownMenuItem>
+                {screenLock.data?.enabled ? (
+                  <DropdownMenuItem onClick={() => lockScreenNow()}>
+                    <LockIcon />
+                    {t("privacy.screenLock.lockNow")}
+                  </DropdownMenuItem>
+                ) : null}
+                <DropdownMenuItem
                   onClick={() => void navigate({ to: "/settings/profile" })}
                 >
                   <SettingsIcon />
@@ -336,6 +358,7 @@ function SignedInShell({ me }: { me: Me }) {
         }}
       />
       <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
+      <ScreenLockGate userId={account.id} />
     </div>
   )
 }

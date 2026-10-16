@@ -76,6 +76,7 @@ export function AttachmentView({
       return (
         <button
           type="button"
+          data-private="media"
           className="relative block overflow-hidden rounded-md outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
           aria-label={t("media.openImage", { name: attachment.filename })}
           onClick={(event) => {
@@ -111,6 +112,7 @@ export function AttachmentView({
         <video
           controls
           preload="metadata"
+          data-private="media"
           src={mediaUrl(attachment.id)}
           className="max-h-80 w-full rounded-md bg-black"
           aria-label={attachment.filename}

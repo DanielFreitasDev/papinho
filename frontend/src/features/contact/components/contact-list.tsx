@@ -122,6 +122,7 @@ export function ContactList({
           >
             <ItemMedia>
               <UserAvatar
+                privateItem
                 userId={contact.userId}
                 name={contact.label}
                 hasPhoto={contact.hasPhoto}
@@ -138,7 +139,9 @@ export function ContactList({
                   })}
                   className="flex min-w-0 flex-col rounded-md text-left outline-none after:absolute after:inset-0 focus-visible:ring-3 focus-visible:ring-ring/50"
                 >
-                  <ItemTitle className="truncate">{contact.label}</ItemTitle>
+                  <ItemTitle className="truncate" data-private="names">
+                    {contact.label}
+                  </ItemTitle>
                   <ItemDescription className="truncate">
                     @{contact.username}
                     {contact.about ? ` · ${contact.about}` : ""}
@@ -146,7 +149,9 @@ export function ContactList({
                 </button>
               ) : (
                 <>
-                  <ItemTitle className="truncate">{contact.label}</ItemTitle>
+                  <ItemTitle className="truncate" data-private="names">
+                    {contact.label}
+                  </ItemTitle>
                   <ItemDescription className="truncate">
                     @{contact.username}
                     {contact.about ? ` · ${contact.about}` : ""}

@@ -29,6 +29,7 @@ export function ShortcutsDialog({
     [["Enter"], t("shortcuts.send")],
     [["Shift", "Enter"], t("shortcuts.newLine")],
     [[mod, "V"], t("shortcuts.pasteImage")],
+    [["Alt", "Shift", "P"], t("shortcuts.privateMode")],
   ]
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

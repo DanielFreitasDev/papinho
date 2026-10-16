@@ -48,6 +48,7 @@ import type { Attachment, Conversation, GroupInfo } from "../types"
 import { ContactPicker } from "./contact-picker"
 import { ConversationAvatar } from "./conversation-avatar"
 import { ConversationGallery } from "./conversation-gallery"
+import { ConversationPrivacy } from "./conversation-privacy"
 import { DisappearingSetting } from "./disappearing-select"
 
 /**
@@ -206,6 +207,7 @@ export function GroupDetails({
           conversation={conversation}
           disabled={!group.canEditInfo}
         />
+        <ConversationPrivacy conversation={conversation} />
         <Separator />
         <section
           aria-labelledby="group-members"
@@ -247,6 +249,7 @@ export function GroupDetails({
                   className="flex min-h-12 items-center gap-3 rounded-md px-1"
                 >
                   <UserAvatar
+                    privateItem
                     userId={member.userId}
                     name={member.label}
                     hasPhoto={member.hasPhoto}
@@ -461,6 +464,7 @@ function JoinRequests({ conversationId }: { conversationId: string }) {
         {requests.data.map((request) => (
           <li key={request.userId} className="flex items-center gap-2">
             <UserAvatar
+              privateItem
               userId={request.userId}
               name={request.label}
               hasPhoto={request.hasPhoto}

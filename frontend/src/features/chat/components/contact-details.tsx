@@ -22,6 +22,7 @@ import { errorMessage } from "@/lib/api-client"
 import { chatKeys } from "../api"
 import type { Attachment, Conversation, Peer } from "../types"
 import { ConversationGallery } from "./conversation-gallery"
+import { ConversationPrivacy } from "./conversation-privacy"
 import { DisappearingSetting } from "./disappearing-select"
 
 /**
@@ -101,6 +102,7 @@ export function ContactDetails({
       <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
         <div className="flex flex-col items-center gap-2 text-center">
           <UserAvatar
+            privateItem
             userId={peer.userId}
             name={peer.label}
             hasPhoto={peer.hasPhoto}
@@ -144,6 +146,7 @@ export function ContactDetails({
               conversation={conversation}
               disabled={conversation.blockedByMe}
             />
+            <ConversationPrivacy conversation={conversation} />
           </>
         )}
         <Separator />

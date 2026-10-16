@@ -81,11 +81,12 @@ export function useRealtimeSync(meId: string) {
     })
     // Uma mensagem nova encerra o "digitando" de quem a mandou.
     const clearActivityFromOthers = (conversationId: string) => {
-      const peers = queryClient.getQueryData<{ peer: { userId: string } }>(
-        chatKeys.detail(conversationId)
-      )
-      if (peers) {
-        clearActivity(conversationId, peers.peer.userId)
+      const detail = queryClient.getQueryData<{
+        peer: { userId: string } | null
+      }>(chatKeys.detail(conversationId))
+      // Só na conversa individual; em grupo (sem peer) cada membro tem o próprio aviso.
+      if (detail?.peer) {
+        clearActivity(conversationId, detail.peer.userId)
       }
     }
     const offState = realtime.onState((state) => {

@@ -346,6 +346,10 @@ public class ConversationService {
             }
         } else if (blockedWithSomeone(me, conversationId)) {
             throw new MessagingExceptions.BlockedException();
+        } else if (conversation.kind() == ConversationKind.DIRECT
+                && members.findByConversation(conversationId).size() < 2) {
+            // A outra pessoa apagou a conta (BK-02): não há para quem escrever.
+            throw new MessagingExceptions.BlockedException();
         }
         return member;
     }
@@ -486,6 +490,13 @@ public class ConversationService {
             if (peerId != null && summaries.containsKey(peerId)) {
                 result.add(toView(me, row, summaries.get(peerId), views.get(peerId), nicknames, globals,
                         locked.contains(row.id())));
+            } else if (row.kind() == ConversationKind.DIRECT && peerId == null) {
+                // A outra pessoa apagou a conta (BK-02): o histórico fica, sem ninguém para quem escrever.
+                result.add(new ConversationView(row.id(), row.kind().name(), row.state(), null, null, null,
+                        row.lastSeq(), preview(row, Map.of()), row.unreadCount(), row.firstUnreadSeq(),
+                        row.markedUnread(), row.readSeq(), row.lastSeq(), null, row.updatedAt(), false, false,
+                        row.disappearingSeconds(), row.draft(), locked.contains(row.id()), row.myReadReceipts(),
+                        false, row.organization()));
             }
         }
         return result;
@@ -568,7 +579,8 @@ public class ConversationService {
      *
      * @param kind DIRECT, GROUP ou SELF ("Mensagens salvas")
      * @param state ACTIVE ou REQUEST (solicitação de mensagem para mim)
-     * @param peer a outra pessoa (conversa individual) ou eu mesmo (mensagens salvas); nulo em grupo
+     * @param peer a outra pessoa (conversa individual) ou eu mesmo (mensagens salvas); nulo em grupo e quando a outra
+     *     pessoa apagou a conta
      * @param group dados do grupo; nulo nas outras
      * @param broadcast dados da lista de transmissão (GR-03); nulo nas outras
      * @param readSeq até onde eu li

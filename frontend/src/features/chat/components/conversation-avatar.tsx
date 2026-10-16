@@ -18,7 +18,7 @@ export function useConversationLabel() {
           ? conversation.broadcast.name
           : conversation.kind === "SELF"
             ? t("chat.savedMessages")
-            : (conversation.peer?.label ?? ""),
+            : (conversation.peer?.label ?? t("chat.deletedAccount")),
     [t]
   )
 }

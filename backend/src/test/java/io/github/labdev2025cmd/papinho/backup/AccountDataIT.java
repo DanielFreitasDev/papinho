@@ -108,6 +108,11 @@ class AccountDataIT {
         JsonNode history = ana.json(ana.get("/api/v1/conversations/" + conversation + "/messages")).get("messages");
         assertThat(history.get(0).get("body").asString()).isEqualTo("fica para a Ana");
         assertThat(history.get(0).get("senderId").isNull()).as("Conta apagada").isTrue();
+        JsonNode kept = ana.json(ana.get("/api/v1/conversations/" + conversation));
+        assertThat(kept.get("peer").isNull()).as("a conversa fica, sem a outra pessoa").isTrue();
+        assertThat(kept.get("canSend").asBoolean()).isFalse();
+        assertThat(ana.post("/api/v1/conversations/" + conversation + "/messages",
+                Map.of("clientMessageId", UUID.randomUUID(), "body", "alô?"))).hasStatus(403);
         assertThat(jdbc.queryForObject("select role from conversation_members where conversation_id = ?",
                 String.class, UUID.fromString(groupId))).as("o admin do grupo passa para quem ficou")
                 .isEqualTo("ADMIN");

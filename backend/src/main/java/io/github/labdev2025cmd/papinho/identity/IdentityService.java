@@ -39,8 +39,11 @@ public class IdentityService {
     static final int RECOVERY_CODE_COUNT = 10;
     /** Período em que o {@code @usuario} antigo fica reservado ao dono depois de uma troca (ID-03). */
     static final Duration USERNAME_RESERVATION = Duration.ofDays(30);
-    /** Chave do advisory lock que serializa cadastros: decide sem corrida quem é o primeiro usuário (ID-08). */
-    private static final long REGISTRATION_LOCK = 0x5041_5049_4E48_4F01L;
+    /**
+     * Chave do advisory lock que serializa os cadastros enquanto a instância está vazia: decide sem corrida quem é
+     * o primeiro usuário (ID-08).
+     */
+    static final long REGISTRATION_LOCK = 0x5041_5049_4E48_4F01L;
     private static final String RECOVERY_ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789";
 
     private final UserAccountRepository users;
@@ -89,8 +92,7 @@ public class IdentityService {
         Username username = Username.parse(rawUsername);
         passwordPolicy.validate(password);
 
-        jdbc.queryForObject("select pg_advisory_xact_lock(?)", Object.class, REGISTRATION_LOCK);
-        boolean firstUser = users.count() == 0;
+        boolean firstUser = isFirstUser();
         if (!firstUser) {
             RegistrationMode mode = settings.current().registrationMode();
             if (mode == RegistrationMode.CLOSED) {
@@ -112,6 +114,19 @@ public class IdentityService {
         List<String> codes = replaceRecoveryCodes(account.id());
         log.info("Account registered userId={} admin={}", account.id(), firstUser);
         return new Registration(toPrincipal(account), codes);
+    }
+
+    /**
+     * Só o primeiro cadastro precisa da trava: com alguém já cadastrado (contas nunca chegam a zero, o último admin
+     * não sai), ninguém mais vira o primeiro, e os cadastros seguem em paralelo em vez de esperar, um por vez, os
+     * hashes Argon2 da senha e dos códigos de recuperação dos outros.
+     */
+    private boolean isFirstUser() {
+        if (users.count() > 0) {
+            return false;
+        }
+        jdbc.queryForObject("select pg_advisory_xact_lock(?)", Object.class, REGISTRATION_LOCK);
+        return users.count() == 0;
     }
 
     /**

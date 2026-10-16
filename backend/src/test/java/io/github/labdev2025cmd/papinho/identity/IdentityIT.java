@@ -1,9 +1,19 @@
 package io.github.labdev2025cmd.papinho.identity;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
+import java.sql.Connection;
+import java.sql.Statement;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
+import javax.sql.DataSource;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -26,6 +36,9 @@ class IdentityIT {
 
     @Autowired
     private JdbcTemplate jdbc;
+
+    @Autowired
+    private DataSource dataSource;
 
     @Test
     @DisplayName("primeiro cadastro dispensa convite, vira admin e abre sessão __Host-SESSION")
@@ -50,6 +63,41 @@ class IdentityIT {
                 .asString()).isEqualTo("ana.silva");
         assertThat(jdbc.queryForObject("select id::text from user_accounts", String.class)).satisfies(
                 id -> assertThat(java.util.UUID.fromString(id).version()).isEqualTo(7));
+    }
+
+    @Test
+    @DisplayName("primeiro cadastro espera a trava do primeiro usuário: dois ao mesmo tempo não viram admin (ID-08)")
+    void shouldSerializeFirstRegistration() throws Exception {
+        ApiClient client = clients.create().bootstrap();
+        try (Connection holder = dataSource.getConnection(); Statement statement = holder.createStatement()) {
+            statement.execute("select pg_advisory_lock(" + IdentityService.REGISTRATION_LOCK + ")");
+            CompletableFuture<JsonNode> first = CompletableFuture.supplyAsync(() -> Accounts.register(client, "ana", null));
+            try {
+                assertThatThrownBy(() -> first.get(500, TimeUnit.MILLISECONDS)).as("espera a trava")
+                        .isInstanceOf(TimeoutException.class);
+            } finally {
+                statement.execute("select pg_advisory_unlock(" + IdentityService.REGISTRATION_LOCK + ")");
+            }
+            assertThat(first.get(10, TimeUnit.SECONDS).get("me").get("account").get("admin").asBoolean()).isTrue();
+        }
+    }
+
+    @Test
+    @DisplayName("com a instância já em uso, cadastros não esperam uns pelos outros (sem a trava do primeiro usuário)")
+    void shouldNotSerializeLaterRegistrations() throws Exception {
+        ApiClient ana = clients.create();
+        Accounts.register(ana, "ana", null);
+        String invite = Accounts.invite(ana);
+        try (Connection holder = dataSource.getConnection(); Statement statement = holder.createStatement()) {
+            statement.execute("select pg_advisory_lock(" + IdentityService.REGISTRATION_LOCK + ")");
+            try {
+                JsonNode bruno = assertTimeoutPreemptively(Duration.ofSeconds(10),
+                        () -> Accounts.register(clients.create(), "bruno", invite));
+                assertThat(bruno.get("me").get("account").get("admin").asBoolean()).isFalse();
+            } finally {
+                statement.execute("select pg_advisory_unlock(" + IdentityService.REGISTRATION_LOCK + ")");
+            }
+        }
     }
 
     @Test

@@ -11,11 +11,13 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  *
  * @param uploadDir onde ficam os uploads tus em andamento (disco local, mesmo com S3)
  * @param uploadExpiry quanto tempo um upload incompleto espera ser retomado
+ * @param unusedFileExpiry quanto tempo um arquivo enviado espera virar anexo, figurinha ou foto de grupo antes de
+ *     sair do servidor (MD-01)
  * @param clamav antivírus opcional (MD-06)
  */
 @ConfigurationProperties(prefix = "app.media")
 public record MediaProperties(Path uploadDir, @DefaultValue("24h") Duration uploadExpiry,
-        @DefaultValue ClamAv clamav) {
+        @DefaultValue("24h") Duration unusedFileExpiry, @DefaultValue ClamAv clamav) {
 
     /** Tamanho máximo de um arquivo (MD-01). */
     public static final long MAX_FILE_SIZE = 1L << 30;

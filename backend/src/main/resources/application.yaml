@@ -110,6 +110,8 @@ app:
     # Uploads tus em andamento (sempre em disco local, mesmo com armazenamento S3).
     upload-dir: ${PAPINHO_UPLOAD_DIR:${PAPINHO_DATA_DIR:${user.home}/.papinho}/uploads}
     upload-expiry: 24h
+    # Arquivo enviado que não virou anexo, figurinha nem foto de grupo nesse prazo sai do servidor (MD-01).
+    unused-file-expiry: 24h
     clamav:
       enabled: ${PAPINHO_CLAMAV_ENABLED:false}
       host: ${PAPINHO_CLAMAV_HOST:localhost}

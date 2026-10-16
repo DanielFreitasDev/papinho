@@ -1,9 +1,12 @@
 package io.github.labdev2025cmd.papinho.media;
 
 import java.io.IOException;
+import java.time.Instant;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -28,11 +31,14 @@ public class MediaService {
     private final MediaFileRepository files;
     private final FileStorage storage;
     private final List<MediaAccessPolicy> policies;
+    private final List<MediaReferences> references;
 
-    MediaService(MediaFileRepository files, FileStorage storage, List<MediaAccessPolicy> policies) {
+    MediaService(MediaFileRepository files, FileStorage storage, List<MediaAccessPolicy> policies,
+            List<MediaReferences> references) {
         this.files = files;
         this.storage = storage;
         this.policies = policies;
+        this.references = references;
     }
 
     /** Metadados para quem pode ver o arquivo; 404 para os demais (não revela que existe). */
@@ -77,27 +83,55 @@ public class MediaService {
      */
     @Transactional
     public void delete(UUID id) {
-        files.findById(id).ifPresent(file -> {
-            files.delete(file);
-            Runnable removeContent = () -> {
-                try {
-                    storage.delete(MediaFile.contentKey(id));
-                    storage.delete(MediaFile.thumbnailKey(id));
-                } catch (IOException e) {
-                    log.warn("Falha ao remover o conteúdo do arquivo {}", id, e);
-                }
-            };
-            if (TransactionSynchronizationManager.isSynchronizationActive()) {
-                TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                    @Override
-                    public void afterCommit() {
-                        removeContent.run();
-                    }
-                });
-            } else {
-                removeContent.run();
+        files.findById(id).ifPresent(this::remove);
+    }
+
+    /**
+     * Confere até {@code limit} arquivos enviados antes de {@code cutoff} que ainda não foram conferidos (MD-01):
+     * os que algum módulo usa ficam marcados e não voltam a ser conferidos; os que ninguém usa (upload que nunca
+     * virou anexo, figurinha ou foto de grupo) saem do servidor e devolvem a cota. Devolve quantos conferiu.
+     */
+    @Transactional
+    public int purgeUnused(Instant cutoff, int limit) {
+        if (references.isEmpty()) {
+            // Sem nenhum módulo que informe o uso, não há como saber o que está livre: não apaga nada.
+            return 0;
+        }
+        List<UUID> candidates = files.lockUnchecked(cutoff, limit);
+        if (candidates.isEmpty()) {
+            return 0;
+        }
+        Set<UUID> used = new HashSet<>();
+        references.forEach(module -> used.addAll(module.inUse(candidates)));
+        if (!used.isEmpty()) {
+            files.markInUse(used);
+        }
+        List<UUID> unused = candidates.stream().filter(id -> !used.contains(id)).toList();
+        files.findAllById(unused).forEach(this::remove);
+        return candidates.size();
+    }
+
+    private void remove(MediaFile file) {
+        UUID id = file.id();
+        files.delete(file);
+        Runnable removeContent = () -> {
+            try {
+                storage.delete(MediaFile.contentKey(id));
+                storage.delete(MediaFile.thumbnailKey(id));
+            } catch (IOException e) {
+                log.warn("Falha ao remover o conteúdo do arquivo {}", id, e);
             }
-        });
+        };
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    removeContent.run();
+                }
+            });
+        } else {
+            removeContent.run();
+        }
     }
 
     /**

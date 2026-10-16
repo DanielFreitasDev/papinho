@@ -50,6 +50,10 @@ class MediaFile {
     @Column(nullable = false)
     private Instant createdAt;
 
+    /** Algum módulo usa o arquivo, conferido pela limpeza dos que nunca foram usados (MD-01). */
+    @Column(nullable = false)
+    private boolean inUse;
+
     protected MediaFile() {
         this.id = new UUID(0, 0);
         this.kind = MediaKind.DOCUMENT;

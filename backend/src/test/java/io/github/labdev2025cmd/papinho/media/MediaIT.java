@@ -6,6 +6,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -15,10 +16,13 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
+import io.github.labdev2025cmd.papinho.admin.InstanceSettings;
 import io.github.labdev2025cmd.papinho.admin.InstanceSettingsService;
+import io.github.labdev2025cmd.papinho.admin.UpdateInstanceSettingsRequest;
 import io.github.labdev2025cmd.papinho.support.Accounts;
 import io.github.labdev2025cmd.papinho.support.ApiClient;
 import io.github.labdev2025cmd.papinho.support.Images;
@@ -31,13 +35,26 @@ import tools.jackson.databind.JsonNode;
 @IntegrationTest
 class MediaIT {
 
+    /** WebP mínimo (sem perdas, 1×1), aceito como figurinha. */
+    private static final byte[] WEBP = Base64.getDecoder().decode("UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQERGIiP4HAA==");
+
     @Autowired
     private ApiClients clients;
 
     @Autowired
     private InstanceSettingsService settings;
 
+    @Autowired
+    private UnusedFileCleanupJob unusedFiles;
+
+    @Autowired
+    private FileStorage storage;
+
+    @Autowired
+    private JdbcTemplate jdbc;
+
     private ApiClient ana;
+    private String brunoId;
     private ApiClient bruno;
     private ApiClient carla;
     private String conversation;
@@ -47,7 +64,7 @@ class MediaIT {
         ana = clients.create();
         Accounts.register(ana, "ana", null);
         bruno = clients.create();
-        Accounts.register(bruno, "bruno", Accounts.invite(ana));
+        brunoId = Accounts.userId(Accounts.register(bruno, "bruno", Accounts.invite(ana)));
         carla = clients.create();
         Accounts.register(carla, "carla", Accounts.invite(ana));
         conversation = ana.json(ana.post("/api/v1/conversations/direct", Map.of("username", "bruno")))
@@ -217,10 +234,7 @@ class MediaIT {
     void shouldEnforceLimitsAndQuota() {
         assertThat(ana.perform(tusCreate(1_073_741_825L, "grande.bin", null))).hasStatus(413);
         var current = settings.current();
-        settings.update(new io.github.labdev2025cmd.papinho.admin.UpdateInstanceSettingsRequest(
-                current.registrationMode(), (int) current.usernameChangeCooldown().toDays(),
-                (int) current.messageEditWindow().toMinutes(), (int) current.messageDeleteWindow().toHours(), 1,
-                current.breachedPasswordCheck()));
+        updateQuota(current, 1);
         try {
             String location = create(ana, 700_000, "a.bin", null);
             MvcTestResult over = ana.perform(tusCreate(400_000, "b.bin", null));
@@ -230,11 +244,57 @@ class MediaIT {
                     .hasStatus(204);
             assertThat(ana.perform(tusCreate(400_000, "b.bin", null))).hasStatus(201);
         } finally {
-            settings.update(new io.github.labdev2025cmd.papinho.admin.UpdateInstanceSettingsRequest(
-                    current.registrationMode(), (int) current.usernameChangeCooldown().toDays(),
-                    (int) current.messageEditWindow().toMinutes(), (int) current.messageDeleteWindow().toHours(),
-                    (int) (current.userQuotaBytes() / (1024 * 1024)), current.breachedPasswordCheck()));
+            updateQuota(current, (int) (current.userQuotaBytes() / (1024 * 1024)));
         }
+    }
+
+    @Test
+    @DisplayName("arquivo que nunca virou anexo, figurinha ou foto de grupo sai do servidor depois de 24 h e devolve a cota")
+    void shouldPurgeFilesNeverUsed() throws Exception {
+        var current = settings.current();
+        updateQuota(current, 1);
+        try {
+            String forgotten = upload(ana, new byte[700_000], "esquecido.bin", null);
+            assertThat(ana.perform(tusCreate(400_000, "outro.bin", null))).as("cota ocupada").hasStatus(413);
+            String recent = upload(ana, "recente".getBytes(StandardCharsets.UTF_8), "recente.txt", "text/plain");
+            String attached = upload(ana, Images.png(20, 20), "anexo.png", "image/png");
+            sendWith(ana, attached, "");
+            String pack = ana.json(ana.post("/api/v1/stickers/packs", Map.of("name", "Gatos"))).get("id").asString();
+            String sticker = upload(ana, WEBP, "gato.webp", "image/webp");
+            assertThat(ana.post("/api/v1/stickers/packs/" + pack + "/stickers", Map.of("mediaId", sticker)))
+                    .hasStatus(201);
+            assertThat(ana.post("/api/v1/contacts", Map.of("username", "bruno"))).hasStatus(201);
+            String group = ana.json(ana.post("/api/v1/groups", Map.of("name", "Fotos", "memberIds", List.of(brunoId))))
+                    .get("id").asString();
+            String photo = upload(ana, Images.png(64, 64), "grupo.png", "image/png");
+            assertThat(ana.put("/api/v1/groups/" + group + "/photo", Map.of("mediaId", photo))).hasStatusOk();
+
+            unusedFiles.purge();
+            assertThat(ana.get("/api/v1/media/" + forgotten)).as("ainda dentro do prazo").hasStatusOk();
+
+            jdbc.update("update media_files set created_at = now() - interval '25 hours' where id <> ?",
+                    UUID.fromString(recent));
+            unusedFiles.purge();
+
+            assertThat(ana.get("/api/v1/media/" + forgotten)).hasStatus(404);
+            assertThat(storage.resource(MediaFile.contentKey(UUID.fromString(forgotten)))).isEmpty();
+            assertThat(ana.perform(tusCreate(400_000, "outro.bin", null))).as("cota devolvida").hasStatus(201);
+            assertThat(ana.get("/api/v1/media/" + recent)).as("recente").hasStatusOk();
+            assertThat(bruno.get("/api/v1/media/" + attached + "/content")).as("anexo").hasStatusOk();
+            assertThat(bruno.get("/api/v1/media/" + sticker + "/content")).as("figurinha").hasStatusOk();
+            assertThat(bruno.get("/api/v1/media/" + photo + "/thumbnail")).as("foto do grupo").hasStatusOk();
+            assertThat(jdbc.queryForList("select id from media_files where in_use", UUID.class))
+                    .as("conferidos uma vez só").containsExactlyInAnyOrder(UUID.fromString(attached),
+                            UUID.fromString(sticker), UUID.fromString(photo));
+        } finally {
+            updateQuota(current, (int) (current.userQuotaBytes() / (1024 * 1024)));
+        }
+    }
+
+    private void updateQuota(InstanceSettings current, int megabytes) {
+        settings.update(new UpdateInstanceSettingsRequest(current.registrationMode(),
+                (int) current.usernameChangeCooldown().toDays(), (int) current.messageEditWindow().toMinutes(),
+                (int) current.messageDeleteWindow().toHours(), megabytes, current.breachedPasswordCheck()));
     }
 
     private void sendWith(ApiClient client, String attachmentId, String body) {

@@ -91,6 +91,12 @@ test("fluxo completo só com o teclado", async ({ page }) => {
   // Paleta (Ctrl+K) abre "Mensagens salvas"; o foco vai para a conversa e Enter envia.
   await page.keyboard.press("Control+k")
   await page.keyboard.type("salvas")
+  await expect(
+    page
+      .getByRole("dialog", { name: "Paleta de comandos" })
+      .getByRole("option", { name: "Mensagens salvas" })
+      .first()
+  ).toBeVisible()
   await page.keyboard.press("Enter")
   await expect(
     page.getByRole("heading", { name: "Mensagens salvas" })
@@ -157,10 +163,19 @@ test("aparência: papel de parede, fonte e densidade", async ({
     await html.evaluate((element) => getComputedStyle(element).fontSize)
   ).toBe("18px")
 
-  // Vale depois de recarregar e aparece na conversa, sem violações do axe nos dois temas.
+  // Vale depois de recarregar e aparece na conversa, sem violações do axe nos dois temas. Recarrega só depois
+  // de a rota trocar: com o Enter ainda navegando, o reload ficava nas configurações.
   await page.keyboard.press("Control+k")
+  const palette = page.getByRole("dialog", { name: "Paleta de comandos" })
+  await expect(palette).toBeVisible()
   await page.keyboard.type("salvas")
+  await expect(
+    palette.getByRole("option", { name: "Mensagens salvas" }).first()
+  ).toBeVisible()
   await page.keyboard.press("Enter")
+  await expect(
+    page.getByRole("heading", { name: "Mensagens salvas" })
+  ).toBeVisible()
   await page.reload()
   await expect(html).toHaveAttribute("data-wallpaper", "dots")
   const wallpaper = page.locator(".chat-wallpaper")

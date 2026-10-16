@@ -37,6 +37,45 @@ test.describe("página de instalação da CA", () => {
     expect(pageErrors).toEqual([])
   })
 
+  test("UI-05: sem seta, dica nem barra de rolagem do navegador, nos dois temas", async ({
+    page,
+    pageErrors,
+  }) => {
+    await page.goto(setupUrl!)
+    await page.locator("details summary").first().click()
+    for (const theme of ["light", "dark"] as const) {
+      await page.emulateMedia({ colorScheme: theme })
+      const native = await page.evaluate(() => {
+        const found: string[] = []
+        document.querySelectorAll("summary").forEach((summary) => {
+          if (getComputedStyle(summary).listStyleType !== "none") {
+            found.push(`seta nativa: ${summary.textContent}`)
+          }
+        })
+        document.querySelectorAll("[title]").forEach((element) => {
+          found.push(`title nativo: ${element.outerHTML.slice(0, 80)}`)
+        })
+        const html = getComputedStyle(document.documentElement)
+        if (
+          CSS.supports("scrollbar-color", "red blue") &&
+          html.scrollbarColor === "auto"
+        ) {
+          found.push("barra de rolagem padrão")
+        }
+        return found
+      })
+      expect(native).toEqual([])
+      const info = test.info()
+      const path = info.outputPath(`setup-${theme}.png`)
+      await page.screenshot({ path, fullPage: true })
+      await info.attach(`${info.project.name}-setup-${theme}`, {
+        path,
+        contentType: "image/png",
+      })
+    }
+    expect(pageErrors).toEqual([])
+  })
+
   test("cabe em 320 px", async ({ page, pageErrors }) => {
     await page.setViewportSize({ width: 320, height: 640 })
     await page.goto(setupUrl!)

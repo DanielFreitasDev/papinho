@@ -69,6 +69,8 @@ cd frontend && pnpm exec playwright install chromium && PAPINHO_E2E_URL=http://l
 | `PAPINHO_CLAMAV_ENABLED` | `false` | analisa cada arquivo com o ClamAV (`PAPINHO_CLAMAV_HOST`, `PAPINHO_CLAMAV_PORT`, padrão `localhost:3310`) |
 | `PAPINHO_LINK_PREVIEW` | `true` | prévia de links buscada pelo servidor (desligue se a instância não deve acessar a internet) |
 | `PAPINHO_GIFS_PROVIDER` / `PAPINHO_GIFS_API_KEY` | `none` / vazio | GIFs pelo Tenor (`tenor` com a chave da API); a busca e os GIFs passam pelo servidor (ADR 0011) |
+| `PAPINHO_PUSH_ENABLED` | `true` | Web Push para os navegadores assinados (exige que o servidor acesse a internet) |
+| `PAPINHO_PUSH_SUBJECT` | URL do projeto | contato da instância no VAPID (`mailto:` ou `https:`); use o seu |
 
 A cota por usuário (padrão 5 GB), as janelas de edição e exclusão e os provedores de transcrição ficam no
 painel do admin. Arquivos têm limite de 1 GB e sobem por upload retomável (tus): atrás de um proxy, libere
@@ -97,6 +99,28 @@ cada um). Em Configurações > Privacidade também ficam:
 - **Conversas trancadas**: trancadas pelo painel da conversa com um código (o mesmo código em várias conversas
   abre todas juntas). Saem da lista e só abrem com o código; recarregar a página ou reiniciar o servidor tranca
   de novo. Um código esquecido não tem recuperação.
+
+### Lista, busca e notificações
+
+Cada pessoa organiza a própria lista: arquivar (com "manter arquivadas ao receber nova mensagem"), fixar até 3,
+silenciar por 8 horas, 1 semana ou sempre (com a opção de ainda avisar menções), favoritar, listas personalizadas
+(em Configurações > Conversas), limpar e apagar conversa. A busca usa o PostgreSQL com `unaccent`, `pg_trgm` e a
+configuração `portuguese` (as extensões são criadas pela migração; o usuário do banco precisa poder criá-las ou
+elas devem existir antes). Busca dentro da conversa por texto, remetente, dia e tipo.
+
+Notificações: em Configurações > Notificações o botão pede a permissão do navegador. Com o app aberto o aviso vem
+pelo WebSocket; com ele fechado, por **Web Push**, que passa pelo serviço de push do navegador (Google, Mozilla ou
+Apple) e por isso **exige internet** no servidor e no aparelho. O conteúdo vai cifrado de ponta a ponta até o
+navegador; "Ocultar conteúdo" (Privacidade) manda só "Nova mensagem". **No iPhone e no iPad** o push só funciona
+com o Papinho instalado na tela de início (Safari > Compartilhar > Adicionar à Tela de Início).
+
+### App instalável e offline
+
+O Papinho é um PWA: o navegador oferece "Instalar" (ou "Adicionar à tela de início"). Quando sai uma versão nova, o
+app avisa e só atualiza quando você toca em "Atualizar". Sem conexão, as conversas recentes continuam visíveis e
+os textos escritos ficam numa fila que sai quando a conexão volta. Esses dados ficam no IndexedDB do navegador,
+um banco por conta, apagado ao sair da conta ou quando outra conta entra no mesmo navegador; conversas trancadas
+nunca são guardadas e nenhuma resposta da API vai para o cache do service worker.
 
 ### Transcrição de áudios
 

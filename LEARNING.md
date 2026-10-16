@@ -21,13 +21,16 @@ Leia as entradas relacionadas à tarefa. Os detalhes ficam em `docs/learning/`.
 - [E2E do chat](docs/learning/gotcha-e2e-chat-seletores-e-presenca.md) — hasText é substring, opacidade é visível, presença antes de aceitar.
 - [Mídia: ImageIO, Uppy, MockMvc, TRUNCATE, onnxruntime](docs/learning/gotcha-midia-imagem-e-testes.md) — EXIF por segmentos, sem destroy no sucesso, URL crua no MockMvc.
 - [E2E: Chromium preinstalado, toasts e contraste](docs/learning/gotcha-e2e-chromium-preinstalado-e-a11y.md) — nome de download, toast é dialog, muted 0.5, axe em animação, tag por spec.
+- [PWA, Web Push, busca e e2e offline](docs/learning/gotcha-pwa-push-e-busca.md) — stemmer pt, ponto EC sem checagem no JDK, MIME do manifesto, tsc -b com e2e.
 
 ## Decisões de arquitetura
-- As decisões vivem em `docs/adr/` (0001–0013).
+- As decisões vivem em `docs/adr/` (0001–0014).
 - [Fase 4: grupos, transmissão, temporárias, visualização única, figurinhas](docs/learning/decisao-fase4-mensagens-avancadas.md) — limites e escolhas que o código não diz.
 - [Fase 5: privacidade](docs/learning/decisao-fase5-privacidade.md) — reciprocidade por par, leitura no grupo, token das trancadas, cache offline.
+- [Fase 6: lista, busca, notificações e offline](docs/learning/decisao-fase6-organizacao-notificacoes.md) — arquivo calculado, apagar com removed_seq, push decidido no servidor, Dexie por conta.
 
 ## Abordagens que NÃO funcionaram
+- [Reidratar o cache com o IndexedDB antes da rede](docs/learning/falha-reidratar-cache-offline-antes-da-rede.md) — o snapshot velho apagava o marcador de não lidas; use rede primeiro.
 
 ## Notas de performance
 

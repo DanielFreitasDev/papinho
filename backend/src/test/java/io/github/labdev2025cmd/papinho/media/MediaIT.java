@@ -24,6 +24,7 @@ import io.github.labdev2025cmd.papinho.support.ApiClient;
 import io.github.labdev2025cmd.papinho.support.Images;
 import io.github.labdev2025cmd.papinho.support.IntegrationTest;
 import io.github.labdev2025cmd.papinho.support.TestSupportConfiguration.ApiClients;
+import io.github.labdev2025cmd.papinho.support.Uploads;
 import tools.jackson.databind.JsonNode;
 
 /** Upload tus, detecção pelo conteúdo, imagens sem EXIF, cota, anexos em mensagens e acesso (MD-01, MD-02). */
@@ -51,6 +52,19 @@ class MediaIT {
         Accounts.register(carla, "carla", Accounts.invite(ana));
         conversation = ana.json(ana.post("/api/v1/conversations/direct", Map.of("username", "bruno")))
                 .get("id").asString();
+    }
+
+    @Test
+    @DisplayName("uso de disco só para o admin: bytes dos arquivos, banco, espaço livre e quem mais ocupa")
+    void shouldReportStorageUsageToAdmin() {
+        Uploads.upload(bruno, Images.png(40, 40), "a.png", "image/png");
+        assertThat(bruno.get("/api/v1/admin/storage")).hasStatus(403);
+        var usage = ana.json(ana.get("/api/v1/admin/storage"));
+        assertThat(usage.get("filesBytes").asLong()).isPositive();
+        assertThat(usage.get("fileCount").asLong()).isEqualTo(1);
+        assertThat(usage.get("databaseBytes").asLong()).isPositive();
+        assertThat(usage.get("freeBytes").asLong()).isPositive();
+        assertThat(usage.get("top").get(0).get("username").asString()).isEqualTo("bruno");
     }
 
     @Test

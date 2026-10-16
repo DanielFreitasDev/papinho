@@ -63,6 +63,16 @@ class FilesystemFileStorage implements FileStorage {
         Files.deleteIfExists(resolve(key));
     }
 
+    @Override
+    public Optional<Space> space() {
+        try {
+            java.nio.file.FileStore store = Files.getFileStore(root);
+            return Optional.of(new Space(store.getUsableSpace(), store.getTotalSpace()));
+        } catch (IOException unavailable) {
+            return Optional.empty();
+        }
+    }
+
     private Path resolve(String key) {
         if (!SAFE_KEY.matcher(key).matches() || key.contains("//")) {
             throw new IllegalArgumentException("Unsafe storage key");

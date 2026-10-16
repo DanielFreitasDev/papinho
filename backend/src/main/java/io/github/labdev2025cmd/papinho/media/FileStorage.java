@@ -26,4 +26,13 @@ public interface FileStorage {
 
     /** Apaga o arquivo; não falha se ele não existir. */
     void delete(String key) throws IOException;
+
+    /** Espaço do volume onde os arquivos ficam (AD-01); vazio quando o armazenamento não informa (S3). */
+    default Optional<Space> space() {
+        return Optional.empty();
+    }
+
+    /** Bytes livres e totais do volume. */
+    record Space(long usableBytes, long totalBytes) {
+    }
 }

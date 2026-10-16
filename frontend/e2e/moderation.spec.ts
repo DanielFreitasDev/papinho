@@ -1,3 +1,5 @@
+import type { BrowserContext, Page } from "@playwright/test"
+
 import {
   expect,
   expectNoSeriousA11yViolations,
@@ -120,4 +122,89 @@ test("denúncia com bloqueio chega à fila do admin", async ({
   await expect(provider).toBeHidden()
 
   await Promise.all([contextD.close(), contextE.close(), owner.context.close()])
+})
+
+/**
+ * Solicitações de mensagem (CT-02) pela interface: recusar some com a conversa e bloquear pela solicitação impede
+ * novos envios (o servidor já cobre as regras no MessagingIT; aqui, os botões e os avisos).
+ */
+test("solicitação recusada some e a bloqueada impede novos envios", async ({
+  browser,
+  pageErrors,
+}) => {
+  test.slow()
+  const suffix = test.info().project.name.startsWith("mobile") ? "m" : "d"
+  const owner = await ensureAdmin(browser, pageErrors)
+  const invite = await createInvite(owner.page)
+  await owner.context.close()
+
+  type Person = {
+    context: BrowserContext
+    page: Page
+    username: string
+    name: string
+  }
+  const people: Person[] = []
+  for (const [username, name] of [
+    [`fabi.${RUN}${suffix}`, "Fabi Recebe"],
+    [`gui.${RUN}${suffix}`, "Gui Estranho"],
+    [`iara.${RUN}${suffix}`, "Iara Spam"],
+  ]) {
+    const context = await browser.newContext()
+    const page = await context.newPage()
+    await watchErrors(page, pageErrors)
+    await page.goto(invite)
+    await registerThroughUi(page, username, name)
+    people.push({ context, page, username, name })
+  }
+  const [fabi, gui, iara] = people
+
+  const writeToFabi = async (sender: (typeof people)[number], text: string) => {
+    await sender.page.getByRole("button", { name: "Adicionar contato" }).click()
+    const add = sender.page.getByRole("dialog", { name: "Adicionar contato" })
+    await add.getByLabel("@usuario").fill(fabi.username)
+    await add.getByRole("button", { name: "Adicionar", exact: true }).click()
+    await expect(add).toBeHidden()
+    await sender.page
+      .getByRole("complementary")
+      .getByRole("tab", { name: "Contatos" })
+      .click()
+    await sender.page
+      .getByRole("button", { name: `Conversar com ${fabi.name}` })
+      .click()
+    await sender.page.getByRole("textbox", { name: "Mensagem" }).fill(text)
+    await sender.page.getByRole("button", { name: "Enviar" }).click()
+  }
+
+  // Recusar: a solicitação sai da lista e a Fabi volta para as solicitações, vazias.
+  await writeToFabi(gui, "oi, sou o Gui")
+  await fabi.page
+    .getByRole("link", { name: "1 solicitação de mensagem" })
+    .click()
+  await fabi.page.getByRole("link", { name: /Gui Estranho/ }).click()
+  await expect(fabi.page.getByText("oi, sou o Gui")).toBeVisible()
+  await fabi.page.getByRole("button", { name: "Recusar" }).click()
+  await expect(fabi.page.getByText("Solicitação recusada")).toBeVisible()
+  await expect(fabi.page).toHaveURL(/\/requests$/)
+  await expect(fabi.page.getByText("Nenhuma solicitação")).toBeVisible()
+  await expectNoSeriousA11yViolations(fabi.page)
+
+  // Bloquear pela solicitação: confirma e quem foi bloqueado não envia mais.
+  await writeToFabi(iara, "promoção imperdível")
+  await fabi.page.goto("/")
+  await fabi.page
+    .getByRole("link", { name: "1 solicitação de mensagem" })
+    .click()
+  await fabi.page.getByRole("link", { name: /Iara Spam/ }).click()
+  await expect(fabi.page.getByText("promoção imperdível")).toBeVisible()
+  await fabi.page.getByRole("button", { name: "Bloquear", exact: true }).click()
+  await expect(fabi.page.getByText("Pessoa bloqueada")).toBeVisible()
+  await expect(fabi.page).toHaveURL(/\/requests$/)
+  await iara.page.getByRole("textbox", { name: "Mensagem" }).fill("oi?")
+  await iara.page.getByRole("button", { name: "Enviar" }).click()
+  await expect(
+    iara.page.getByRole("button", { name: "Tentar enviar de novo" })
+  ).toBeVisible()
+
+  await Promise.all(people.map((person) => person.context.close()))
 })

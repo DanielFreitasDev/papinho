@@ -15,6 +15,7 @@ import org.springframework.session.FindByIndexNameSessionRepository;
 import org.springframework.session.Session;
 import org.springframework.stereotype.Service;
 
+import io.github.labdev2025cmd.papinho.shared.realtime.RealtimeSessions;
 
 /**
  * Sessões ativas do usuário (ID-06), lidas do Spring Session JDBC pelo índice de principal (o id do usuário).
@@ -29,9 +30,11 @@ public class SessionService {
     static final String IP_ATTRIBUTE = "papinho.ip";
 
     private final FindByIndexNameSessionRepository<? extends Session> sessions;
+    private final RealtimeSessions realtime;
 
-    SessionService(FindByIndexNameSessionRepository<? extends Session> sessions) {
+    SessionService(FindByIndexNameSessionRepository<? extends Session> sessions, RealtimeSessions realtime) {
         this.sessions = sessions;
+        this.realtime = realtime;
     }
 
     /** Sessões do usuário, a mais recente primeiro, marcando a atual. */
@@ -51,7 +54,7 @@ public class SessionService {
         String sessionId = sessions.findByPrincipalName(userId.toString()).keySet().stream()
                 .filter(id -> publicId(id).equals(publicId)).findFirst()
                 .orElseThrow(IdentityExceptions.NotFoundException::new);
-        sessions.deleteById(sessionId);
+        end(sessionId);
     }
 
     /** Encerra todas as sessões do usuário, menos a informada (que pode ser nula: encerra todas). */
@@ -59,11 +62,17 @@ public class SessionService {
         int count = 0;
         for (String id : sessions.findByPrincipalName(userId.toString()).keySet()) {
             if (!id.equals(keepSessionId)) {
-                sessions.deleteById(id);
+                end(id);
                 count++;
             }
         }
         return count;
+    }
+
+    /** Apaga a sessão e derruba na hora o WebSocket aberto com ela. */
+    private void end(String sessionId) {
+        sessions.deleteById(sessionId);
+        realtime.closeHttpSession(sessionId);
     }
 
     static String publicId(String sessionId) {

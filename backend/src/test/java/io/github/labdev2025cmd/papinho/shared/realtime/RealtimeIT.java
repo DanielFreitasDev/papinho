@@ -218,6 +218,22 @@ class RealtimeIT {
         assertThat(anaWs.session().isConnected()).isFalse();
     }
 
+    @Test
+    @DisplayName("revogar a sessão derruba na hora o WebSocket aberto com ela, sem esperar a varredura")
+    void shouldCloseWebSocketWhenSessionIsRevoked() throws Exception {
+        Browser laptop = Browser.register(base(), "ana", null);
+        Connection laptopWs = connect(laptop);
+        assertThat(laptopWs.session().isConnected()).isTrue();
+
+        Browser phone = Browser.login(base(), "ana");
+        phone.delete("/api/v1/sessions");
+        long deadline = System.nanoTime() + Duration.ofSeconds(3).toNanos();
+        while (laptopWs.session().isConnected() && System.nanoTime() < deadline) {
+            Thread.sleep(50);
+        }
+        assertThat(laptopWs.session().isConnected()).as("sem esperar a varredura de 30 s").isFalse();
+    }
+
     private Connection connect(Browser browser) throws Exception {
         WebSocketHttpHeaders headers = new WebSocketHttpHeaders();
         headers.add("Cookie", browser.cookieHeader());
@@ -293,6 +309,14 @@ class RealtimeIT {
             return browser;
         }
 
+        static Browser login(String base, String username) throws Exception {
+            Browser browser = new Browser(base);
+            browser.get("/api/v1/instance");
+            browser.userId = browser.post("/api/v1/auth/login",
+                    Map.of("username", username, "password", Accounts.PASSWORD)).get("account").get("id").asString();
+            return browser;
+        }
+
         String userId() {
             return userId;
         }
@@ -320,6 +344,10 @@ class RealtimeIT {
 
         JsonNode patch(String path, @Nullable Object body) throws Exception {
             return write("PATCH", path, body);
+        }
+
+        JsonNode delete(String path) throws Exception {
+            return write("DELETE", path, null);
         }
 
         String cookieHeader() {

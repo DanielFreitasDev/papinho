@@ -51,7 +51,20 @@ public class RealtimeSessions {
         };
     }
 
-    /** Fecha os WebSockets cuja sessão HTTP não existe mais. */
+    /**
+     * Fecha na hora os WebSockets abertos com a sessão HTTP que acabou de ser revogada: sem esperar a varredura, a
+     * sessão encerrada não recebe mais nenhum evento (nem a prévia de uma notificação).
+     */
+    public void closeHttpSession(String httpSessionId) {
+        for (WebSocketSession session : open.values()) {
+            if (httpSessionId.equals(
+                    session.getAttributes().get(HttpSessionHandshakeInterceptor.HTTP_SESSION_ID_ATTR_NAME))) {
+                close(session);
+            }
+        }
+    }
+
+    /** Fecha os WebSockets cuja sessão HTTP não existe mais (expirou ou caiu por um caminho sem aviso). */
     @Scheduled(fixedDelayString = "${app.realtime.session-check:30s}")
     public void closeOrphans() {
         for (WebSocketSession session : open.values()) {

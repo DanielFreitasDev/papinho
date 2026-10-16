@@ -18,7 +18,9 @@ Diferenças da máquina local em relação ao sandbox de nuvem das passadas 1 a 
 - O `/tmp` é limpo no reboot (scratchpad, logs, PKI de teste e cópias do JAR somem); um reinício do Docker para
   todos os contêineres sem política de reinício.
 - O `gh` está logado numa conta só com leitura no repositório: commits ficam locais até alguém com escrita dar
-  `git push origin main`.
+  `git push origin main`. Com um token da conta `labdev2025-cmd` dado pelo dono, o push sai com um credential helper
+  de um comando só (`git -c credential.helper= -c 'credential.helper=!f() {...}; f' push`), sem gravar nada no git
+  config nem mexer no `gh`; o token fica num arquivo 0600 temporário, apagado no fim (passada 8).
 - O servidor usa threads virtuais: `jstack` não as mostra; use `jcmd <pid> Thread.dump_to_file -format=text`.
 - A internet só sai pelo proxy local (`127.0.0.1:3128`, nas variáveis `*_proxy`); conexão direta não passa. O JVM
   ignora essas variáveis. No e2e, o Chromium só precisa de internet no `whisper.spec.ts`, que recebe o proxy por

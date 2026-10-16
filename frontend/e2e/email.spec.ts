@@ -66,8 +66,8 @@ test.describe("e-mail de recuperação", () => {
     request,
   }) => {
     const suffix = test.info().project.name.startsWith("mobile") ? "m" : "d"
-    const username = `eva.${RUN}${suffix}`
-    const email = `eva.${RUN}${suffix}@exemplo.test`
+    const username = `iris.${RUN}${suffix}e`
+    const email = `iris.${RUN}${suffix}e@exemplo.test`
 
     const admin = await ensureAdmin(browser, pageErrors)
     const invite = await createInvite(admin.page)
@@ -77,7 +77,7 @@ test.describe("e-mail de recuperação", () => {
     const page = await context.newPage()
     await watchErrors(page, pageErrors)
     await page.goto(invite)
-    await registerThroughUi(page, username, "Eva Email")
+    await registerThroughUi(page, username, "Iris Email")
 
     await page.goto("/settings/security")
     await page.getByLabel("E-mail", { exact: true }).fill(email)

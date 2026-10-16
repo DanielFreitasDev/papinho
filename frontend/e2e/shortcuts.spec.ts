@@ -38,6 +38,8 @@ test("paleta de comandos e lista de atalhos pelo teclado", async ({
   // Dentro do campo de mensagem "?" é só texto.
   const field = page.getByRole("textbox", { name: "Mensagem" })
   await field.click()
+  // O rascunho é sincronizado entre aparelhos (MS-11): o outro projeto pode ter deixado este mesmo texto.
+  await field.clear()
   await page.keyboard.type("tudo bem?")
   await expect(field).toHaveValue("tudo bem?")
   await expect(list).toBeHidden()

@@ -290,5 +290,8 @@ test("bloqueio por inatividade e desbloqueio com passkey", async ({
   await expect(
     page.getByRole("heading", { name: "Configurações" })
   ).toBeVisible()
+  // O aviso de "ligado" tem timer próprio, pausado enquanto a tela estava bloqueada: o relógio controlado
+  // precisa andar de novo para ele sair, em vez de depender da folga da máquina.
+  await page.clock.fastForward("00:10")
   await expect(page.getByText("Bloqueio de tela ligado")).toHaveCount(0)
 })

@@ -205,7 +205,35 @@ curl -fsSL http://papinho.lan:8080/setup/install-ca.sh | sh -s -- --uninstall
 
 ## Backup
 
-Pendente (BK-03, Fase 7): script com `pg_dump` mais o volume de arquivos e restauração testada.
+O backup da instância leva o banco (`pg_dump` em formato custom) e o diretório de dados (`PAPINHO_DATA_DIR`:
+arquivos enviados, a chave de cifra `secret.key` e, no padrão, a PKI da LAN) num único `.tar` com SHA-256 de cada
+parte. **Guarde-o como um segredo**: ele contém a chave de cifra e a chave privada da CA (o arquivo sai com
+permissão 0600).
+
+```bash
+# Com o PostgreSQL do compose.yaml (o pg_dump precisa ser da versão 18; sem ele, use o do contêiner):
+PGPASSWORD=papinho PAPINHO_PG_CONTAINER=papinho-postgres-1 scripts/backup.sh /caminho/dos/backups
+```
+
+Sem `PAPINHO_PG_CONTAINER`, o script usa o `pg_dump` local com as variáveis `PGHOST`, `PGPORT`, `PGUSER`,
+`PGPASSWORD` e `PGDATABASE` (padrão `papinho`). Uploads em andamento ficam de fora. Para agendar, um cron
+diário basta; guarde cópias fora da máquina.
+
+Para restaurar, **pare o Papinho**, crie um banco vazio (ou um contêiner novo) e use um diretório de dados vazio:
+
+```bash
+PGPASSWORD=papinho PAPINHO_PG_CONTAINER=papinho-postgres-1 PAPINHO_DATA_DIR=~/.papinho \
+  scripts/restore.sh /caminho/dos/backups/papinho-backup-AAAAMMDD-HHMMSS.tar
+```
+
+O `restore.sh` confere o SHA-256, recusa um banco que já tenha tabelas ou um `files/` com conteúdo (nunca mistura
+duas instâncias) e restaura banco e arquivos. Suba o Papinho com o mesmo `PAPINHO_DATA_DIR` (ou a mesma
+`PAPINHO_CRYPTO_KEY`): sem a chave de cifra, TOTP, chaves de provedores e a chave VAPID ficam ilegíveis.
+`scripts/verify-backup.sh` testa o ciclo inteiro (Docker): instância com dados, backup, restauração num banco
+novo e conferência de login, mensagem, foto e segredos cifrados.
+
+Cada pessoa também pode exportar uma conversa (menu da conversa > Exportar, texto no formato do WhatsApp com
+mídia opcional) e todos os seus dados (Configurações > Conta > Seus dados), e excluir a própria conta.
 
 ## Guias e decisões
 

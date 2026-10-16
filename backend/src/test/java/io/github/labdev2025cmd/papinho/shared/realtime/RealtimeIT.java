@@ -101,7 +101,15 @@ class RealtimeIT {
             assertThatThrownBy(() -> stomp.connectAsync(ws(), headers, connect, recorder).get(5, TimeUnit.SECONDS))
                     .as("CONNECT sem token CSRF válido").isNotNull();
         }
-        assertThat(errors).as("o servidor fecha a conexão nos dois casos").hasSize(2)
+        // O aviso de conexão perdida chega por outra thread, às vezes depois de o future falhar: espera os dois.
+        java.util.List<String> closed = new java.util.ArrayList<>();
+        for (int i = 0; i < 2; i++) {
+            String error = errors.poll(5, TimeUnit.SECONDS);
+            if (error != null) {
+                closed.add(error);
+            }
+        }
+        assertThat(closed).as("o servidor fecha a conexão nos dois casos").hasSize(2)
                 .allMatch(error -> error.contains("Connection closed"));
         assertThat(connect(ana).session().isConnected()).as("com o token, conecta").isTrue();
     }

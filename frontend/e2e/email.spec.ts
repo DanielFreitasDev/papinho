@@ -65,6 +65,8 @@ test.describe("e-mail de recuperação", () => {
     pageErrors,
     request,
   }) => {
+    // Fluxo longo (dois navegadores, duas idas ao Mailpit e três varreduras do axe), como os outros specs lentos.
+    test.slow()
     const suffix = test.info().project.name.startsWith("mobile") ? "m" : "d"
     const username = `iris.${RUN}${suffix}e`
     const email = `iris.${RUN}${suffix}e@exemplo.test`

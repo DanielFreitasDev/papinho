@@ -133,7 +133,7 @@ public class IdentityService {
      * Autentica por senha (e TOTP, se ligado). Usuário inexistente, desativado ou senha errada dão a mesma
      * resposta e gastam o mesmo tempo (ID-04). Limites por IP e por conta (SG-03).
      */
-    @Transactional(readOnly = true)
+    @Transactional
     public PapinhoUser authenticate(String rawUsername, String password, @Nullable String totpCode, String clientKey) {
         rateLimiter.consume(RateLimiter.Policy.LOGIN_BY_IP, clientKey);
         String normalized = Username.normalize(rawUsername);
@@ -152,7 +152,12 @@ public class IdentityService {
             if (totpCode == null || totpCode.isBlank()) {
                 throw new IdentityExceptions.TotpRequiredException();
             }
-            if (!Totp.verify(cipher.decrypt(requireSecret(account)), totpCode.strip(), clock.instant())) {
+            long step = Totp.matchingStep(cipher.decrypt(requireSecret(account)), totpCode.strip(), clock.instant());
+            // Uso único (RFC 6238): quem viu o código não entra com ele de novo; a troca é atômica no banco.
+            if (step < 0 || jdbc.update("""
+                    update user_accounts set totp_last_step = ?
+                     where id = ? and (totp_last_step is null or totp_last_step < ?)
+                    """, step, account.id(), step) == 0) {
                 throw new IdentityExceptions.InvalidCodeException();
             }
         }

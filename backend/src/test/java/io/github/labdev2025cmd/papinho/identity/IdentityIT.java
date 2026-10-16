@@ -342,7 +342,7 @@ class IdentityIT {
     }
 
     @Test
-    @DisplayName("TOTP: depois de confirmado, o login exige o código do app")
+    @DisplayName("TOTP: depois de confirmado, o login exige o código do app, que não vale duas vezes")
     void shouldRequireTotpAfterEnrollment() {
         ApiClient client = clients.create();
         Accounts.register(client, "ana", null);
@@ -356,8 +356,16 @@ class IdentityIT {
         var missing = other.post("/api/v1/auth/login", Map.of("username", "ana", "password", Accounts.PASSWORD));
         assertThat(missing).hasStatus(401);
         assertThat(other.json(missing).get("totpRequired").asBoolean()).isTrue();
+        String code = currentCode(secret);
         assertThat(other.post("/api/v1/auth/login", Map.of("username", "ana", "password", Accounts.PASSWORD,
-                "totpCode", currentCode(secret)))).hasStatusOk();
+                "totpCode", code))).hasStatusOk();
+
+        // Quem viu o código (por cima do ombro, num site falso) não entra com ele de novo, nem dentro dos 30 s.
+        ApiClient replay = clients.create().bootstrap();
+        var reused = replay.post("/api/v1/auth/login", Map.of("username", "ana", "password", Accounts.PASSWORD,
+                "totpCode", code));
+        assertThat(reused).hasStatus(400);
+        assertThat(replay.json(reused).get("type").asString()).isEqualTo("urn:papinho:problem:code-invalid");
     }
 
     @Test

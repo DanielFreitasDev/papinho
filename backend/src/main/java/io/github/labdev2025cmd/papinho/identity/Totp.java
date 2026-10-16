@@ -39,15 +39,25 @@ final class Totp {
 
     /** Confere o código no passo atual e nos vizinhos (±30 s), em tempo constante por passo. */
     static boolean verify(String secret, String code, Instant now) {
+        return matchingStep(secret, code, now) >= 0;
+    }
+
+    /**
+     * Passo de 30 s do código (atual ou vizinho), ou -1 se não confere; o login guarda o passo para o código não
+     * valer duas vezes. Confere os três passos sempre, para não vazar qual bateu pelo tempo de resposta.
+     */
+    static long matchingStep(String secret, String code, Instant now) {
         if (code == null || !code.matches("^[0-9]{6}$")) {
-            return false;
+            return -1;
         }
         long step = now.getEpochSecond() / STEP_SECONDS;
-        boolean match = false;
+        long matched = -1;
         for (long offset = -1; offset <= 1; offset++) {
-            match |= MessageDigest.isEqual(generate(secret, step + offset).getBytes(), code.getBytes());
+            if (MessageDigest.isEqual(generate(secret, step + offset).getBytes(), code.getBytes())) {
+                matched = step + offset;
+            }
         }
-        return match;
+        return matched;
     }
 
     static String generate(String secret, long step) {

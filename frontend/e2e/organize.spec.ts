@@ -28,9 +28,7 @@ async function showList(page: Page) {
 
 async function conversationAction(page: Page, name: string, item: string) {
   const list = await showList(page)
-  await list
-    .getByRole("button", { name: `Ações da conversa: ${name}` })
-    .click()
+  await list.getByRole("button", { name: `Ações da conversa: ${name}` }).click()
   await page.getByRole("menuitem", { name: item }).click()
 }
 
@@ -98,9 +96,7 @@ test("organizar a lista e buscar conversas e mensagens", async ({
   await expect(row(gil.page, "Reunião às três")).toBeVisible()
 
   // Busca dentro da conversa por texto e por remetente.
-  await gil.page
-    .getByRole("button", { name: "Buscar nesta conversa" })
-    .click()
+  await gil.page.getByRole("button", { name: "Buscar nesta conversa" }).click()
   const inside = gil.page.getByRole("search", {
     name: "Buscar nesta conversa",
   })

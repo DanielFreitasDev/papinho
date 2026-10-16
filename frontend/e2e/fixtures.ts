@@ -10,13 +10,19 @@ type Fixtures = {
 // não são falhas da aplicação. 5xx e qualquer outro erro continuam reprovando o teste.
 const EXPECTED_CLIENT_ERROR =
   /Failed to load resource: the server responded with a status of 4\d\d/
+// Rede cortada de propósito (context.setOffline, NT-05): o navegador registra cada pedido que falhou.
+const EXPECTED_OFFLINE = /net::ERR_INTERNET_DISCONNECTED/
+// Contextos do Playwright são anônimos e o Chrome não tem Push API neles; ele avisa no console ao assinar.
+const EXPECTED_NO_PUSH = /does not support the Push API in incognito mode/
 
 /** Coleta erros de console e violações de CSP de uma página (também das abertas em outros contextos). */
 export async function watchErrors(page: Page, errors: string[]) {
   page.on("console", (message) => {
     if (
       message.type() === "error" &&
-      !EXPECTED_CLIENT_ERROR.test(message.text())
+      !EXPECTED_CLIENT_ERROR.test(message.text()) &&
+      !EXPECTED_OFFLINE.test(message.text()) &&
+      !EXPECTED_NO_PUSH.test(message.text())
     ) {
       errors.push(`console: ${message.text()}`)
     }

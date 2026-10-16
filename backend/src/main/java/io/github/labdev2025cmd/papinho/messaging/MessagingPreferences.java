@@ -11,7 +11,10 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Component;
 
-/** Preferências de mensagens de cada pessoa: o timer padrão de mensagens temporárias (MS-07). */
+/**
+ * Preferências de mensagens de cada pessoa: o timer padrão de mensagens temporárias (MS-07) e "manter arquivadas"
+ * (GR-05).
+ */
 @Component
 class MessagingPreferences {
 
@@ -41,6 +44,21 @@ class MessagingPreferences {
                 on conflict (user_id) do update
                    set default_disappearing_seconds = excluded.default_disappearing_seconds, updated_at = excluded.updated_at
                 """, new MapSqlParameterSource("userId", userId).addValue("seconds", seconds)
+                .addValue("now", now.atOffset(ZoneOffset.UTC)));
+    }
+
+    boolean keepArchived(UUID userId) {
+        List<Boolean> found = jdbc.queryForList("select keep_archived from messaging_preferences where user_id = :userId",
+                new MapSqlParameterSource("userId", userId), Boolean.class);
+        return !found.isEmpty() && Boolean.TRUE.equals(found.getFirst());
+    }
+
+    /** "Manter arquivadas ao receber nova mensagem" (GR-05). */
+    void changeKeepArchived(UUID userId, boolean keep, Instant now) {
+        jdbc.update("""
+                insert into messaging_preferences (user_id, keep_archived, updated_at) values (:userId, :keep, :now)
+                on conflict (user_id) do update set keep_archived = excluded.keep_archived, updated_at = excluded.updated_at
+                """, new MapSqlParameterSource("userId", userId).addValue("keep", keep)
                 .addValue("now", now.atOffset(ZoneOffset.UTC)));
     }
 }

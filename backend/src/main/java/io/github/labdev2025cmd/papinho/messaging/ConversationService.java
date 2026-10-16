@@ -464,7 +464,7 @@ public class ConversationService {
                     result.add(new ConversationView(row.id(), row.kind().name(), row.state(), null, null,
                             broadcast, row.lastSeq(), preview(row, Map.of()), 0, null, false, row.readSeq(),
                             row.lastSeq(), row.lastSeq(), row.updatedAt(), !broadcast.expired(), false, null,
-                            row.draft(), locked.contains(row.id()), row.myReadReceipts(), true));
+                            row.draft(), locked.contains(row.id()), row.myReadReceipts(), true, row.organization()));
                 }
                 continue;
             }
@@ -509,7 +509,8 @@ public class ConversationService {
         return new ConversationView(row.id(), row.kind().name(), row.state(), peerView, null, null, row.lastSeq(),
                 preview(row, Map.of()), row.unreadCount(), row.firstUnreadSeq(), row.markedUnread(), row.readSeq(),
                 peerDeliveredSeq, peerReadSeq, row.updatedAt(), !blockedByMe && peer.active(), blockedByMe,
-                row.disappearingSeconds(), row.draft(), locked, row.myReadReceipts(), self || iShare);
+                row.disappearingSeconds(), row.draft(), locked, row.myReadReceipts(), self || iShare,
+                row.organization());
     }
 
     /** Nome como {@code me} vê cada pessoa: apelido do contato, nome de exibição ou {@code @usuario}. */
@@ -544,7 +545,7 @@ public class ConversationService {
         return new ConversationView(row.id(), row.kind().name(), row.state(), null, groupView, null, row.lastSeq(),
                 preview(row, senderLabels), row.unreadCount(), row.firstUnreadSeq(), row.markedUnread(), row.readSeq(),
                 row.peerDeliveredSeq(), peerReadSeq, row.updatedAt(), canSend, false,
-                row.disappearingSeconds(), row.draft(), locked, row.myReadReceipts(), iShare);
+                row.disappearingSeconds(), row.draft(), locked, row.myReadReceipts(), iShare, row.organization());
     }
 
     private static @Nullable MessagePreview preview(ConversationQueries.Row row, Map<UUID, String> senderLabels) {
@@ -573,13 +574,14 @@ public class ConversationService {
      * @param locked trancada por mim (PV-03): fica fora da lista e o conteúdo exige o token de desbloqueio
      * @param readReceipts minha escolha de confirmação de leitura nesta conversa; nulo = padrão (PV-06)
      * @param readReceiptsEnabled a confirmação de leitura vale para mim aqui (escolha ou padrão)
+     * @param organization arquivar, fixar, silenciar, favoritar e pastas (GR-05), só minhas
      */
     public record ConversationView(UUID id, String kind, MemberState state, @Nullable PeerView peer,
             @Nullable GroupView group, @Nullable BroadcastView broadcast, long lastSeq, @Nullable MessagePreview lastMessage, long unreadCount,
             @Nullable Long firstUnreadSeq, boolean markedUnread, long readSeq, long peerDeliveredSeq,
             @Nullable Long peerReadSeq, Instant updatedAt, boolean canSend, boolean blockedByMe,
             @Nullable Integer disappearingSeconds, @Nullable String draft, boolean locked,
-            @Nullable Boolean readReceipts, boolean readReceiptsEnabled) {
+            @Nullable Boolean readReceipts, boolean readReceiptsEnabled, Organization organization) {
     }
 
     /**
@@ -624,5 +626,19 @@ public class ConversationService {
     public record MessagePreview(UUID id, long seq, @Nullable UUID senderId, @Nullable String senderLabel,
             String body, Instant createdAt, @Nullable String attachmentKind, boolean deleted, MessageKind kind,
             boolean sticker) {
+    }
+
+    /**
+     * Como a pessoa organizou a conversa na própria lista (GR-05).
+     *
+     * @param archived arquivada agora (uma mensagem nova de outra pessoa a tira do arquivo, salvo "manter
+     *     arquivadas")
+     * @param pinnedAt quando foi fixada; nulo = não fixada
+     * @param mutedUntil silenciada até (9999-12-31 = sempre); pode já ter passado
+     * @param muteMentions mesmo silenciada, menções a mim notificam
+     * @param folderIds pastas (listas personalizadas) em que está
+     */
+    public record Organization(boolean archived, @Nullable Instant pinnedAt, @Nullable Instant mutedUntil,
+            boolean muteMentions, boolean favorite, List<UUID> folderIds) {
     }
 }

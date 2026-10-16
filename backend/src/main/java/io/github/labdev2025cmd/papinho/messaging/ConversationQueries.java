@@ -36,10 +36,21 @@ class ConversationQueries {
                    last.id as last_id, last.seq as last_seq_of_message, last.sender_id as last_sender_id,
                    left(last.body, 200) as last_body, last.created_at as last_created_at,
                    last.attachment_kind as last_attachment_kind, last.deleted_at is not null as last_deleted,
-                   last.kind as last_kind, last.sticker_id is not null as last_sticker, draft.body as draft
+                   last.kind as last_kind, last.sticker_id is not null as last_sticker, draft.body as draft,
+                   -- GR-05: arquivada até chegar mensagem nova de outra pessoa (ou sempre, com "manter arquivadas").
+                   me.archived_seq is not null
+                       and (coalesce(prefs.keep_archived, false)
+                            or not exists (select 1 from messages m where m.conversation_id = c.id
+                                              and m.seq > me.archived_seq and m.kind <> 'SYSTEM'
+                                              and m.sender_id is distinct from me.user_id)) as archived,
+                   me.pinned_at, me.muted_until, me.mute_mentions, me.favorite,
+                   array(select fi.folder_id from chat_folder_items fi
+                           join chat_folders f on f.id = fi.folder_id
+                          where fi.conversation_id = c.id and f.user_id = me.user_id) as folder_ids
               from conversation_members me
               join conversations c on c.id = me.conversation_id
               left join message_drafts draft on draft.user_id = me.user_id and draft.conversation_id = c.id
+              left join messaging_preferences prefs on prefs.user_id = me.user_id
               left join conversation_members peer
                      on c.kind = 'DIRECT' and peer.conversation_id = c.id and peer.user_id <> me.user_id
               left join lateral (select count(*) as members, coalesce(min(o.delivered_seq), 0) as delivered,
@@ -60,8 +71,10 @@ class ConversationQueries {
              where me.user_id = :userId and me.state in (:states)
                and (:conversationId::uuid is null
                     and (c.last_seq > 0 or c.created_by = me.user_id or draft.body is not null)
+                    -- "Apagar conversa" (GR-05): fora da lista até chegar mensagem nova.
+                    and (me.removed_seq is null or c.last_seq > me.removed_seq)
                     or c.id = :conversationId::uuid)
-             order by c.updated_at desc
+             order by me.pinned_at desc nulls last, c.updated_at desc
             """;
 
     private final NamedParameterJdbcTemplate jdbc;
@@ -106,7 +119,17 @@ class ConversationQueries {
                 rs.getLong("peer_delivered_seq"), rs.getLong("peer_read_seq"), rs.getLong("unread_count"),
                 firstUnread == 0 ? null : firstUnread, last, rs.getString("draft"),
                 rs.getObject("my_read_receipts", Boolean.class), rs.getObject("peer_read_receipts", Boolean.class),
-                rs.getLong("group_sharing"));
+                rs.getLong("group_sharing"), toOrganization(rs));
+    }
+
+    private static ConversationService.Organization toOrganization(ResultSet rs) throws SQLException {
+        OffsetDateTime pinnedAt = rs.getObject("pinned_at", OffsetDateTime.class);
+        OffsetDateTime mutedUntil = rs.getObject("muted_until", OffsetDateTime.class);
+        java.sql.Array folders = rs.getArray("folder_ids");
+        List<UUID> folderIds = folders == null ? List.of() : List.of((UUID[]) folders.getArray());
+        return new ConversationService.Organization(rs.getBoolean("archived"), pinnedAt == null ? null : pinnedAt.toInstant(),
+                mutedUntil == null ? null : mutedUntil.toInstant(), rs.getBoolean("mute_mentions"),
+                rs.getBoolean("favorite"), folderIds);
     }
 
     private static Instant instant(@Nullable OffsetDateTime timestamp) {
@@ -119,7 +142,8 @@ class ConversationQueries {
             @Nullable UUID peerId,
             @Nullable MemberState peerState, long peerDeliveredSeq, long peerReadSeq, long unreadCount,
             @Nullable Long firstUnreadSeq, @Nullable LastMessage last, @Nullable String draft,
-            @Nullable Boolean myReadReceipts, @Nullable Boolean peerReadReceipts, long groupSharing) {
+            @Nullable Boolean myReadReceipts, @Nullable Boolean peerReadReceipts, long groupSharing,
+            ConversationService.Organization organization) {
     }
 
     record LastMessage(UUID id, long seq, @Nullable UUID senderId, String body, Instant createdAt,

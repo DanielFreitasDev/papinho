@@ -135,4 +135,18 @@ final class MessagingExceptions {
             super(HttpStatus.FORBIDDEN, "group-add-not-allowed", "This person does not allow being added to groups");
         }
     }
+
+    /** Já há três conversas fixadas (GR-05). */
+    static class PinLimitException extends ApiException {
+        PinLimitException() {
+            super(HttpStatus.CONFLICT, "conversation-pin-limit", "At most 3 pinned conversations");
+        }
+    }
+
+    /** Limite de pastas por pessoa (GR-05). */
+    static class FolderLimitException extends ApiException {
+        FolderLimitException() {
+            super(HttpStatus.CONFLICT, "folder-limit", "Too many folders");
+        }
+    }
 }

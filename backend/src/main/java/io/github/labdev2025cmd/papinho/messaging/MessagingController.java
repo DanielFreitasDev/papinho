@@ -87,7 +87,7 @@ class MessagingController {
 
     @PutMapping("/messaging/preferences")
     MessageService.Preferences changePreferences(@RequestBody MessageService.Preferences body) {
-        return messages.changePreferences(CurrentUser.id(), body.defaultDisappearingSeconds());
+        return messages.changePreferences(CurrentUser.id(), body.defaultDisappearingSeconds(), body.keepArchived());
     }
 
     @GetMapping("/conversations/{conversationId}")

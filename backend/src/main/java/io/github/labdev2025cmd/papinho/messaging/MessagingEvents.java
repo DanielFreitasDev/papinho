@@ -24,4 +24,12 @@ final class MessagingEvents {
     /** {@code userId} apagou mensagens só para si: os outros dispositivos dela tiram da tela (MS-06). */
     record MessagesHidden(UUID conversationId, java.util.List<UUID> messageIds, UUID userId) {
     }
+
+    /** {@code userId} limpou ou apagou a conversa só para si: os outros dispositivos dela esvaziam a tela (GR-05). */
+    record ConversationCleared(UUID conversationId, UUID userId) {
+    }
+
+    /** As pastas de {@code userId} mudaram (GR-05). */
+    record FoldersChanged(UUID userId) {
+    }
 }

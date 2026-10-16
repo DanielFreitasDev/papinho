@@ -43,6 +43,16 @@ class MessagingNotifier {
         send(Set.of(event.userId()), new HiddenEvent("hidden", event.conversationId(), event.messageIds()));
     }
 
+    @TransactionalEventListener
+    void on(MessagingEvents.ConversationCleared event) {
+        send(Set.of(event.userId()), new ConversationEvent("cleared", event.conversationId()));
+    }
+
+    @TransactionalEventListener
+    void on(MessagingEvents.FoldersChanged event) {
+        send(Set.of(event.userId()), new FoldersEvent("folders"));
+    }
+
     void send(Set<UUID> recipients, Object payload) {
         // O nome do principal no WebSocket é o id da conta (PapinhoUser.getUsername()).
         recipients.forEach(user -> broker.convertAndSendToUser(user.toString(), DESTINATION, payload));
@@ -58,6 +68,9 @@ class MessagingNotifier {
     }
 
     record ConversationEvent(String type, UUID conversationId) {
+    }
+
+    record FoldersEvent(String type) {
     }
 
     /** "digitando…" ("typing") ou "gravando áudio…" ("recording"); {@code activity} vazio quando parou (MS-03). */

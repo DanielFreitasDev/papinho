@@ -685,17 +685,24 @@ public class MessageService {
 
     @Transactional(readOnly = true)
     public Preferences preferences(UUID me) {
-        return new Preferences(preferences.defaultDisappearing(me));
+        return new Preferences(preferences.defaultDisappearing(me), preferences.keepArchived(me));
     }
 
-    /** Timer padrão para conversas novas (MS-07). */
+    /**
+     * Timer padrão para conversas novas (MS-07) e "manter arquivadas ao receber nova mensagem" (GR-05; nulo mantém
+     * a escolha atual).
+     */
     @Transactional
-    public Preferences changePreferences(UUID me, @Nullable Integer defaultDisappearingSeconds) {
+    public Preferences changePreferences(UUID me, @Nullable Integer defaultDisappearingSeconds,
+            @Nullable Boolean keepArchived) {
         if (defaultDisappearingSeconds != null && !MessagingPreferences.TIMERS.contains(defaultDisappearingSeconds)) {
             throw new InvalidMessageException("timer");
         }
         preferences.changeDefaultDisappearing(me, defaultDisappearingSeconds, clock.instant());
-        return new Preferences(defaultDisappearingSeconds);
+        if (keepArchived != null) {
+            preferences.changeKeepArchived(me, keepArchived, clock.instant());
+        }
+        return preferences(me);
     }
 
     /**
@@ -724,8 +731,11 @@ public class MessageService {
         return expired.size();
     }
 
-    /** @param defaultDisappearingSeconds timer das conversas novas; nulo = desligado */
-    public record Preferences(@Nullable Integer defaultDisappearingSeconds) {
+    /**
+     * @param defaultDisappearingSeconds timer das conversas novas; nulo = desligado
+     * @param keepArchived conversas arquivadas continuam arquivadas quando chega mensagem nova (GR-05)
+     */
+    public record Preferences(@Nullable Integer defaultDisappearingSeconds, @Nullable Boolean keepArchived) {
     }
 
     /**

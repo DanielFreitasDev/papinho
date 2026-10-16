@@ -20,17 +20,21 @@ class InstanceController {
 
     private final InstanceSettingsService settings;
     private final IdentityService identity;
+    private final EmailRecoveryService emailRecovery;
 
-    InstanceController(InstanceSettingsService settings, IdentityService identity) {
+    InstanceController(InstanceSettingsService settings, IdentityService identity,
+            EmailRecoveryService emailRecovery) {
         this.settings = settings;
         this.identity = identity;
+        this.emailRecovery = emailRecovery;
     }
 
     @GetMapping("/instance")
     InstanceResponse instance() {
         var current = settings.current();
         return new InstanceResponse("Papinho", current.registrationMode(), identity.isSetupRequired(),
-                current.messageEditWindow().toMinutes(), current.messageDeleteWindow().toMinutes());
+                current.messageEditWindow().toMinutes(), current.messageDeleteWindow().toMinutes(),
+                emailRecovery.enabled());
     }
 
     @GetMapping("/usernames/availability")
@@ -43,9 +47,10 @@ class InstanceController {
      * @param setupRequired nenhuma conta existe: o próximo cadastro cria o admin sem convite
      * @param messageEditWindowMinutes janela para editar mensagens (MS-05), para o menu esconder o que expirou
      * @param messageDeleteWindowMinutes janela para apagar para todos (MS-06)
+     * @param emailRecovery a instância envia links de recuperação por e-mail (ID-05)
      */
     record InstanceResponse(String name, RegistrationMode registrationMode, boolean setupRequired,
-            long messageEditWindowMinutes, long messageDeleteWindowMinutes) {
+            long messageEditWindowMinutes, long messageDeleteWindowMinutes, boolean emailRecovery) {
     }
 
     record AvailabilityResponse(boolean available) {

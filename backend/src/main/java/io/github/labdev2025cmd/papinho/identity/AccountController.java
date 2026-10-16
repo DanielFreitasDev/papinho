@@ -2,6 +2,7 @@ package io.github.labdev2025cmd.papinho.identity;
 
 import java.util.List;
 
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 import io.github.labdev2025cmd.papinho.shared.security.CurrentUser;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
@@ -25,11 +27,14 @@ class AccountController {
     private final IdentityService identity;
     private final SessionService sessions;
     private final AccountDeletionService deletion;
+    private final EmailRecoveryService emailRecovery;
 
-    AccountController(IdentityService identity, SessionService sessions, AccountDeletionService deletion) {
+    AccountController(IdentityService identity, SessionService sessions, AccountDeletionService deletion,
+            EmailRecoveryService emailRecovery) {
         this.identity = identity;
         this.sessions = sessions;
         this.deletion = deletion;
+        this.emailRecovery = emailRecovery;
     }
 
     /** Exclui a própria conta (BK-02) com a senha; encerra todas as sessões, inclusive esta. */
@@ -78,6 +83,23 @@ class AccountController {
     @PostMapping("/recovery-codes")
     RecoveryCodesResponse regenerateRecoveryCodes(@Valid @RequestBody PasswordRequest body) {
         return new RecoveryCodesResponse(identity.regenerateRecoveryCodes(CurrentUser.id(), body.password()));
+    }
+
+    /** Define o e-mail de recuperação (ID-05) e envia o link de confirmação; exige a senha. */
+    @PutMapping("/email")
+    IdentityService.AccountView changeEmail(@Valid @RequestBody ChangeEmailRequest body) {
+        emailRecovery.changeEmail(CurrentUser.id(), body.email(), body.password(), LocaleContextHolder.getLocale());
+        return identity.account(CurrentUser.id());
+    }
+
+    @DeleteMapping("/email")
+    IdentityService.AccountView removeEmail(@Valid @RequestBody PasswordRequest body) {
+        emailRecovery.removeEmail(CurrentUser.id(), body.password());
+        return identity.account(CurrentUser.id());
+    }
+
+    record ChangeEmailRequest(@NotBlank @Email @Size(max = 254) String email,
+            @NotBlank @Size(max = 512) String password) {
     }
 
     record ChangeUsernameRequest(@NotBlank @Size(max = 64) String username) {

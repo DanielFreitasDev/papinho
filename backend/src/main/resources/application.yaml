@@ -121,6 +121,12 @@ app:
   link-preview:
     enabled: ${PAPINHO_LINK_PREVIEW:true}
     cache-ttl: 24h
+  # E-mail de recuperação (ID-05): desligado por padrão. Ligado, exige o remetente, o endereço público usado nos
+  # links e o servidor SMTP em spring.mail.* (SPRING_MAIL_HOST, SPRING_MAIL_PORT, SPRING_MAIL_USERNAME...).
+  mail:
+    enabled: ${PAPINHO_MAIL_ENABLED:false}
+    from: ${PAPINHO_MAIL_FROM:}
+    public-url: ${PAPINHO_PUBLIC_URL:}
   # Web Push (NT-01): o servidor fala com os serviços de push dos navegadores (exige internet).
   push:
     enabled: ${PAPINHO_PUSH_ENABLED:true}

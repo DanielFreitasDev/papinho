@@ -87,7 +87,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/instance", "/api/v1/invites/status",
                                 "/api/v1/usernames/availability", "/api/v1/auth/session").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/login", "/api/v1/auth/register",
-                                "/api/v1/auth/recover").permitAll()
+                                "/api/v1/auth/recover", "/api/v1/auth/password-reset",
+                                "/api/v1/auth/password-reset/confirm", "/api/v1/auth/email/verify").permitAll()
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated())
                 .csrf(csrf -> csrf.spa().csrfTokenRepository(csrfTokenRepository))

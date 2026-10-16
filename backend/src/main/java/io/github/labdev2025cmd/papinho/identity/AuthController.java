@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.UUID;
 
 import org.jspecify.annotations.Nullable;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -22,7 +23,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
-/** Cadastro, login, recuperação e dados da sessão atual (ID-01, ID-04, ID-05, ID-08). */
+/** Cadastro, login, recuperação (por código ou e-mail) e dados da sessão atual (ID-01, ID-04, ID-05, ID-08). */
 @RestController
 @RequestMapping("/api/v1")
 class AuthController {
@@ -31,13 +32,15 @@ class AuthController {
     private final ProfileService profiles;
     private final SessionLogin sessionLogin;
     private final SessionService sessions;
+    private final EmailRecoveryService emailRecovery;
 
     AuthController(IdentityService identity, ProfileService profiles, SessionLogin sessionLogin,
-            SessionService sessions) {
+            SessionService sessions, EmailRecoveryService emailRecovery) {
         this.identity = identity;
         this.profiles = profiles;
         this.sessionLogin = sessionLogin;
         this.sessions = sessions;
+        this.emailRecovery = emailRecovery;
     }
 
     @PostMapping("/auth/register")
@@ -65,6 +68,28 @@ class AuthController {
         UUID userId = identity.recover(body.username(), body.recoveryCode(), body.newPassword(),
                 request.getRemoteAddr());
         sessions.revokeAllExcept(userId, null);
+    }
+
+    /** Pede o link de redefinição por e-mail (ID-05); a resposta é a mesma exista ou não a conta. */
+    @PostMapping("/auth/password-reset")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    void requestPasswordReset(@Valid @RequestBody PasswordResetRequest body, HttpServletRequest request) {
+        emailRecovery.requestReset(body.username(), request.getRemoteAddr(), LocaleContextHolder.getLocale());
+    }
+
+    /** Redefine a senha pelo link do e-mail e encerra todas as sessões; o usuário entra de novo. */
+    @PostMapping("/auth/password-reset/confirm")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    void confirmPasswordReset(@Valid @RequestBody PasswordResetConfirmRequest body, HttpServletRequest request) {
+        UUID userId = emailRecovery.reset(body.token(), body.newPassword(), request.getRemoteAddr());
+        sessions.revokeAllExcept(userId, null);
+    }
+
+    /** Confirma o e-mail de recuperação pelo link; não exige sessão (o link pode abrir em outro aparelho). */
+    @PostMapping("/auth/email/verify")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    void verifyEmail(@Valid @RequestBody TokenRequest body, HttpServletRequest request) {
+        emailRecovery.verify(body.token(), request.getRemoteAddr());
     }
 
     @GetMapping("/me")
@@ -97,6 +122,16 @@ class AuthController {
 
     record RecoverRequest(@NotBlank @Size(max = 64) String username, @NotBlank @Size(max = 32) String recoveryCode,
             @NotBlank @Size(max = 512) String newPassword) {
+    }
+
+    record PasswordResetRequest(@NotBlank @Size(max = 64) String username) {
+    }
+
+    record PasswordResetConfirmRequest(@NotBlank @Size(max = 128) String token,
+            @NotBlank @Size(max = 512) String newPassword) {
+    }
+
+    record TokenRequest(@NotBlank @Size(max = 128) String token) {
     }
 
     /** Sessão do SPA: {@code me} nulo quando não há login. */

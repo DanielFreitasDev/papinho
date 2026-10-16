@@ -49,6 +49,10 @@ class UserAccount {
 
     private @Nullable Instant usernameChangedAt;
 
+    private @Nullable String email;
+
+    private @Nullable Instant emailVerifiedAt;
+
     @Version
     private long version;
 
@@ -103,6 +107,25 @@ class UserAccount {
 
     @Nullable Instant usernameChangedAt() {
         return usernameChangedAt;
+    }
+
+    @Nullable String email() {
+        return email;
+    }
+
+    /** E-mail confirmado pelo link: só ele recebe links de redefinição de senha (ID-05). */
+    @Nullable String verifiedEmail() {
+        return emailVerifiedAt == null ? null : email;
+    }
+
+    /** Troca o e-mail de recuperação; o novo endereço só vale depois de confirmado. */
+    void changeEmail(@Nullable String newEmail) {
+        this.email = newEmail;
+        this.emailVerifiedAt = null;
+    }
+
+    void verifyEmail(Instant now) {
+        this.emailVerifiedAt = now;
     }
 
     void changeUsername(Username newUsername, Instant now) {

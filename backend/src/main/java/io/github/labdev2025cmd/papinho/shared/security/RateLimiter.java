@@ -28,6 +28,8 @@ public class RateLimiter {
         public static final Policy LOGIN_BY_ACCOUNT = new Policy("login-account", 10, Duration.ofMinutes(15));
         public static final Policy REGISTER_BY_IP = new Policy("register-ip", 10, Duration.ofHours(1));
         public static final Policy RECOVERY_BY_IP = new Policy("recovery-ip", 10, Duration.ofHours(1));
+        /** Links de redefinição por e-mail para a mesma conta (ID-05): impede encher a caixa de alguém. */
+        public static final Policy EMAIL_BY_ACCOUNT = new Policy("email-account", 3, Duration.ofHours(1));
         public static final Policy INVITE_CHECK_BY_IP = new Policy("invite-check-ip", 60, Duration.ofMinutes(10));
         public static final Policy INVITE_CREATE_BY_USER = new Policy("invite-create", 30, Duration.ofHours(1));
         public static final Policy SENSITIVE_BY_USER = new Policy("sensitive-user", 10, Duration.ofMinutes(15));

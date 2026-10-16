@@ -32,6 +32,7 @@ class IdentityPersonalData implements PersonalDataSection {
                 select jsonb_build_object(
                   'id', u.id, 'usuario', u.username, 'papel', u.role, 'criadaEm', u.created_at,
                   'usuarioTrocadoEm', u.username_changed_at, 'totpLigado', u.totp_enabled,
+                  'emailDeRecuperacao', u.email, 'emailConfirmadoEm', u.email_verified_at,
                   'passkeys', coalesce((select jsonb_agg(jsonb_build_object('nome', c.label, 'criadaEm', c.created,
                                                                            'usadaEm', c.last_used))
                                           from user_credentials c join user_entities e on e.id = c.user_entity_user_id

@@ -153,7 +153,8 @@ public class IdentityService {
         int remaining = recoveryCodes.findUnused(userId).size();
         return new AccountView(account.id(), account.username().value(), account.role() == Role.ADMIN,
                 account.totpEnabled(), remaining, account.createdAt(),
-                nextChange.isAfter(clock.instant()) ? nextChange : null);
+                nextChange.isAfter(clock.instant()) ? nextChange : null, account.email(),
+                account.verifiedEmail() != null);
     }
 
     /**
@@ -374,8 +375,11 @@ public class IdentityService {
      * Dados da conta para a tela de configurações.
      *
      * @param nextUsernameChangeAt quando a próxima troca de {@code @usuario} será permitida, ou nulo se já pode
+     * @param email e-mail de recuperação (ID-05), confirmado ou não
+     * @param emailVerified o e-mail foi confirmado pelo link e já recebe links de redefinição
      */
     public record AccountView(UUID id, String username, boolean admin, boolean totpEnabled,
-            int remainingRecoveryCodes, Instant createdAt, @Nullable Instant nextUsernameChangeAt) {
+            int remainingRecoveryCodes, Instant createdAt, @Nullable Instant nextUsernameChangeAt,
+            @Nullable String email, boolean emailVerified) {
     }
 }

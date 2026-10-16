@@ -78,7 +78,15 @@ class StickerIT {
                 Map.of("clientMessageId", UUID.randomUUID(), "body", "texto junto", "stickerId", stickerId)))
                 .hasStatus(400);
 
+        assertThat(bruno.delete("/api/v1/stickers/" + stickerId, null)).as("só o dono tira").hasStatus(404);
+        ApiClient carla = clients.create();
+        Accounts.register(carla, "carla", Accounts.invite(ana));
+        assertThat(carla.get("/api/v1/media/" + webp + "/content")).as("ainda na biblioteca").hasStatusOk();
         assertThat(ana.delete("/api/v1/stickers/" + stickerId, null)).hasStatus(204);
+        assertThat(bruno.get("/api/v1/media/" + webp + "/content")).as("quem recebeu ainda vê a mensagem")
+                .hasStatusOk();
+        assertThat(carla.get("/api/v1/media/" + webp + "/content")).as("tirada: fora da conversa não abre")
+                .hasStatus(404);
         assertThat(bruno.json(bruno.get("/api/v1/stickers/packs")).get(0).get("stickers")).isEmpty();
         JsonNode stillThere = ana.json(ana.get("/api/v1/conversations/" + conversation + "/messages"))
                 .get("messages").get(0);

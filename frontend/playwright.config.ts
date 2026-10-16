@@ -33,6 +33,28 @@ const chromium = {
 const NATIVE_CONTROLS = /native-controls\.spec\.ts/
 
 /**
+ * Whisper de verdade (AU-04), só com PAPINHO_E2E_WHISPER: o projeto desktop-chromium cobre o WASM (o headless não
+ * tem adaptador WebGPU) e este, com o adaptador WebGPU por software do Chromium, cobre o caminho WebGPU.
+ */
+const whisperWebgpu = process.env.PAPINHO_E2E_WHISPER
+  ? [
+      {
+        name: "whisper-webgpu",
+        testMatch: /whisper\.spec\.ts/,
+        use: {
+          ...devices["Desktop Chrome"],
+          ...chromium,
+          launchOptions: {
+            ...chromium.launchOptions,
+            args: [...chromium.launchOptions.args, "--enable-unsafe-webgpu"],
+          },
+        },
+        dependencies: ["primeiro-admin"],
+      },
+    ]
+  : []
+
+/**
  * O e2e só fala com a instância local: conexão direta. Num desktop com proxy configurado, o Firefox usa o
  * proxy do sistema e o WebKit as variáveis *_proxy, e o WebSocket e o HTTPS local passam pelo proxy (e falham).
  */
@@ -92,5 +114,6 @@ export default defineConfig({
       },
       dependencies: ["primeiro-admin"],
     },
+    ...whisperWebgpu,
   ],
 })

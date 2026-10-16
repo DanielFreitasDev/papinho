@@ -39,7 +39,7 @@ nova e **43 verdes** na rodada final com o teste de inatividade e passkey (deskt
 | F0-ADR | ADRs 0001–0010 | feito | `docs/adr/` | |
 | F0-COMPOSE | `compose.yaml` com PostgreSQL 18 | feito | `spring-boot:run` no perfil local subiu `papinho-postgres-1` e o health respondeu UP | |
 | F0-SEC | Segurança base (cadeias, denyAll, CSRF spa, CSP, Problem Details, Argon2) | feito | `SecurityIT` (12 testes) e `LanSetupIT.shouldIssueStrictCsrfCookieOverTls`; e2e sem violação de CSP | `__Host-SESSION` provado em `IdentityIT` |
-| QA-04 | CI no GitHub Actions: backend, frontend e e2e em jobs separados | feito | `.github/workflows/ci.yml`; runs 38757286112, 38769083331 e 38815227435 verdes nos três jobs | e2e sobe instância padrão e perfil lan. Correção da passada 4: o run 40 (último da passada 3) falhou no backend por um teste instável do `RealtimeIT`, corrigido em `6a4c833` |
+| QA-04 | CI no GitHub Actions: backend, frontend e e2e em jobs separados | feito | `.github/workflows/ci.yml`; runs 38757286112, 38769083331, 38815227435 e, na passada 4, 38830633763 e 38832315052 (`828abb7`, com a Fase 5) verdes nos três jobs | e2e sobe instância padrão e perfil lan. Correção da passada 4: o run 40 (último da passada 3) falhou no backend por um teste instável do `RealtimeIT`, corrigido em `6a4c833` |
 | QA-05 | README pt-BR (dev, LAN, CA, backup, produção) | em andamento | `README.md` | backup depende de BK-03 (Fase 7) |
 | PK-01 | `pki init` com BouncyCastle: CA P-256 10 anos com Name Constraints; servidor ≤398 dias; chave 0600 | feito | `CertificateAuthorityTest` (7) e `PkiCommandTest` (5); `openssl verify` e `certutil -V` recusam domínio/IP de fora | PKIX do JDK ignora NC da âncora (LEARNING) |
 | PK-02 | TLS por SSL bundle com HTTP/2; porta HTTP só com `/setup/**` e redirecionamento | feito | `LanSetupIT` (HTTP/2 validado pela CA; 301 para HTTPS; POST recusado); `curl --http2` manual no perfil lan | |
@@ -151,7 +151,7 @@ nova e **43 verdes** na rodada final com o teste de inatividade e passkey (deskt
 | AR-01 | WCAG 2.2 AA; RESPONSIVENESS.md aplicado | em andamento | e2e com axe nas telas existentes (inclui painel, visualizador, galeria, gravação, admin); `muted-foreground` escurecido para 4,5:1 sobre fundos cinza; fechar de toasts empilhados fora da ordem de foco | revisar a cada tela nova; tema escuro sem axe |
 | AR-02 | 320 px, alvos de 44 px, safe areas, teclado virtual | em andamento | e2e 320 px em `/`, `/login`, `/register` e `/setup`; alvos de 44 px em `pointer: coarse` (`index.css`) | teclado virtual só em aparelho real |
 | AR-03 | Fluxo só com teclado; axe sem críticas/sérias | em andamento | axe sem críticas/sérias em `/setup`, cadastro, admin com contatos e segurança | fluxo só com teclado não automatizado |
-| QA-03 | E2E dos fluxos críticos | em andamento | 43 verdes + 4 de `/setup` (desktop e celular), duas rodadas seguidas na passada 4: todos os fluxos da lista têm spec com axe, inclusive privacidade recíproca, conversa trancada e bloqueio de tela (`privacy.spec.ts`) | falta confirmar a suíte com `privacy.spec.ts` no CI; a Fase 7 amplia |
+| QA-03 | E2E dos fluxos críticos | feito | 43 verdes + 4 de `/setup` (desktop e celular), duas rodadas seguidas locais e o job e2e do CI no run 38832315052: cadastro por convite, conversa em dois contextos, grupo, upload, apagar para todos, privacidade recíproca, conversa trancada e bloqueio de tela, todos com axe | a Fase 7 amplia a cobertura (admin, backup) |
 
 ## Requisitos transversais
 

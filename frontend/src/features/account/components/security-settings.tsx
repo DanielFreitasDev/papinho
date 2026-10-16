@@ -39,7 +39,7 @@ import {
   passwordSchema,
   RecoveryCodesDialog,
 } from "@/features/auth"
-import { errorMessage } from "@/lib/api-client"
+import { ApiError, errorMessage } from "@/lib/api-client"
 import { formatDateTime } from "@/lib/format"
 import { svgDataUrl } from "@/lib/image"
 import {
@@ -52,6 +52,7 @@ import {
   accountQueries,
   useChangeEmail,
   useChangePassword,
+  useConfirmPassword,
   useConfirmTotp,
   useDisableTotp,
   useRegenerateRecoveryCodes,
@@ -146,6 +147,66 @@ function PasswordSection() {
   )
 }
 
+/** O servidor pede a senha confirmada há pouco (modo sudo) antes de trocar credenciais. */
+function needsPasswordConfirmation(error: unknown) {
+  return (
+    error instanceof ApiError &&
+    error.problem.type === "urn:papinho:problem:password-confirmation-required"
+  )
+}
+
+/**
+ * Modo sudo: passkey nova e TOTP pedem a senha confirmada nos últimos minutos (o login por senha conta). Quando o
+ * servidor pede, este diálogo confirma a senha e a ação é refeita.
+ */
+function PasswordConfirmDialog({
+  open,
+  onOpenChange,
+  onConfirmed,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onConfirmed: () => void
+}) {
+  const { t } = useTranslation()
+  const confirm = useConfirmPassword()
+  const [password, setPassword] = useState("")
+  return (
+    <ConfirmDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={t("security.confirmPasswordTitle")}
+      description={t("security.confirmPasswordDescription")}
+      confirmLabel={t("common.confirm")}
+      destructive={false}
+      onConfirm={async () => {
+        try {
+          await confirm.mutateAsync(password)
+          onConfirmed()
+        } catch (caught) {
+          toast.add({
+            title: errorMessage(caught, t("common.genericError")),
+            type: "error",
+          })
+        }
+        setPassword("")
+      }}
+    >
+      <Field>
+        <FieldLabel htmlFor="confirm-password">
+          {t("security.currentPassword")}
+        </FieldLabel>
+        <PasswordInput
+          id="confirm-password"
+          autoComplete="current-password"
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+        />
+      </Field>
+    </ConfirmDialog>
+  )
+}
+
 function PasskeysSection() {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
@@ -153,6 +214,7 @@ function PasskeysSection() {
   const [label, setLabel] = useState("")
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [confirming, setConfirming] = useState(false)
   const supported = passkeysSupported()
 
   async function add() {
@@ -164,15 +226,26 @@ function PasskeysSection() {
       toast.add({ title: t("security.passkeyAdded") })
       await queryClient.invalidateQueries({ queryKey: accountKeys.passkeys })
     } catch (caught) {
-      setError(errorMessage(caught, t("auth.passkeyFailed")))
+      if (needsPasswordConfirmation(caught)) {
+        setConfirming(true)
+      } else {
+        setError(errorMessage(caught, t("auth.passkeyFailed")))
+      }
     } finally {
       setPending(false)
     }
   }
 
   async function remove(id: string) {
-    await deletePasskey(id)
-    await queryClient.invalidateQueries({ queryKey: accountKeys.passkeys })
+    try {
+      await deletePasskey(id)
+      await queryClient.invalidateQueries({ queryKey: accountKeys.passkeys })
+    } catch (caught) {
+      toast.add({
+        title: errorMessage(caught, t("common.genericError")),
+        type: "error",
+      })
+    }
   }
 
   return (
@@ -246,6 +319,11 @@ function PasskeysSection() {
           </Field>
         ) : null}
       </FieldGroup>
+      <PasswordConfirmDialog
+        open={confirming}
+        onOpenChange={setConfirming}
+        onConfirmed={() => void add()}
+      />
     </SettingsSection>
   )
 }
@@ -260,6 +338,7 @@ function TotpSection() {
   const [code, setCode] = useState("")
   const [password, setPassword] = useState("")
   const [disabling, setDisabling] = useState(false)
+  const [confirming, setConfirming] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const enabled = me.data?.account.totpEnabled ?? false
 
@@ -269,6 +348,10 @@ function TotpSection() {
     try {
       setEnrollment(await start.mutateAsync())
     } catch (caught) {
+      if (needsPasswordConfirmation(caught)) {
+        setConfirming(true)
+        return
+      }
       // O erro do diálogo só aparece com ele aberto; aqui ele ainda não abriu.
       toast.add({
         title: errorMessage(caught, t("common.genericError")),
@@ -356,6 +439,11 @@ function TotpSection() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <PasswordConfirmDialog
+        open={confirming}
+        onOpenChange={setConfirming}
+        onConfirmed={() => void begin()}
+      />
       <ConfirmDialog
         open={disabling}
         onOpenChange={setDisabling}

@@ -4,10 +4,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
+import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.Statement;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Base64;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -20,6 +22,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.session.Session;
+import org.springframework.session.SessionRepository;
+import org.springframework.test.web.servlet.assertj.MvcTestResult;
 
 import io.github.labdev2025cmd.papinho.support.Accounts;
 import io.github.labdev2025cmd.papinho.support.ApiClient;
@@ -39,6 +44,9 @@ class IdentityIT {
 
     @Autowired
     private DataSource dataSource;
+
+    @Autowired
+    private SessionRepository<? extends Session> sessionRepository;
 
     @Test
     @DisplayName("primeiro cadastro dispensa convite, vira admin e abre sessão __Host-SESSION")
@@ -98,6 +106,32 @@ class IdentityIT {
                 statement.execute("select pg_advisory_unlock(" + IdentityService.REGISTRATION_LOCK + ")");
             }
         }
+    }
+
+    @Test
+    @DisplayName("passkey nova e TOTP pedem a senha confirmada há pouco; com o TOTP ligado, configurar outro é recusado")
+    void shouldRequireRecentPasswordToChangeCredentials() {
+        ApiClient ana = clients.create();
+        Accounts.register(ana, "ana", null);
+        assertThat(ana.post("/webauthn/register/options", null)).as("o cadastro vale como senha confirmada")
+                .hasStatusOk();
+
+        expirePasswordConfirmation(ana);
+        assertProblem(ana.post("/api/v1/account/totp", null), 403, "password-confirmation-required");
+        assertProblem(ana.post("/webauthn/register/options", null), 403, "password-confirmation-required");
+        assertProblem(ana.post("/webauthn/register", Map.of()), 403, "password-confirmation-required");
+        assertThat(ana.post("/api/v1/account/password-confirmation", Map.of("password", "outra senha bem longa")))
+                .hasStatus(401);
+        assertThat(ana.post("/api/v1/account/password-confirmation", Map.of("password", Accounts.PASSWORD)))
+                .hasStatus(204);
+        assertThat(ana.post("/webauthn/register/options", null)).hasStatusOk();
+        JsonNode enrollment = ana.json(ana.post("/api/v1/account/totp", null));
+        assertThat(ana.post("/api/v1/account/totp/confirm",
+                Map.of("code", currentCode(enrollment.get("secret").asString())))).hasStatus(204);
+
+        // Com o TOTP ligado, configurar outro app desligaria o atual sem a senha: recusado, o atual continua.
+        assertProblem(ana.post("/api/v1/account/totp", null), 409, "totp-already-enabled");
+        assertThat(ana.json(ana.get("/api/v1/me")).get("account").get("totpEnabled").asBoolean()).isTrue();
     }
 
     @Test
@@ -409,5 +443,23 @@ class IdentityIT {
 
     private static String currentCode(String secret) {
         return Totp.generate(secret, Instant.now().getEpochSecond() / 30);
+    }
+
+    private static void assertProblem(MvcTestResult result, int status, String slug) {
+        assertThat(result).as(ApiClient.text(result)).hasStatus(status);
+        assertThat(ApiClient.text(result)).contains("urn:papinho:problem:" + slug);
+    }
+
+    /** A senha confirmada ficou para trás: o instante guardado na sessão passa da validade. */
+    private void expirePasswordConfirmation(ApiClient client) {
+        String id = new String(Base64.getDecoder().decode(client.cookie("__Host-SESSION")), StandardCharsets.UTF_8);
+        backdate(sessionRepository, id);
+    }
+
+    private static <S extends Session> void backdate(SessionRepository<S> repository, String id) {
+        S session = repository.findById(id);
+        session.setAttribute(RecentPasswordConfirmation.ATTRIBUTE,
+                Instant.now().minus(RecentPasswordConfirmation.VALIDITY).minusSeconds(60).getEpochSecond());
+        repository.save(session);
     }
 }

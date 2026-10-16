@@ -261,10 +261,25 @@ public class IdentityService {
         return replaceRecoveryCodes(userId);
     }
 
-    /** Inicia a configuração do TOTP: segredo novo (ainda não exigido no login) e QR Code. */
+    /** Confere a senha para o modo sudo (passkey nova, TOTP); a sessão guarda o momento da confirmação. */
+    @Transactional(readOnly = true)
+    public void confirmPassword(UUID userId, String password) {
+        rateLimiter.consume(RateLimiter.Policy.SENSITIVE_BY_USER, userId.toString());
+        if (!passwordEncoder.matches(password, load(userId).passwordHash())) {
+            throw new IdentityExceptions.BadCredentialsException();
+        }
+    }
+
+    /**
+     * Inicia a configuração do TOTP: segredo novo (ainda não exigido no login) e QR Code. Com o TOTP já ligado, é
+     * recusado: trocar o segredo desligaria o atual sem a senha que o desligar exige.
+     */
     @Transactional
     public TotpEnrollment startTotp(UUID userId) {
         UserAccount account = load(userId);
+        if (account.totpEnabled()) {
+            throw new IdentityExceptions.TotpAlreadyEnabledException();
+        }
         String secret = Totp.newSecret(random);
         account.startTotpEnrollment(cipher.encrypt(secret));
         String uri = Totp.uri("Papinho", "@" + account.username().value(), secret);

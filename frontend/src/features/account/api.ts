@@ -128,6 +128,17 @@ export function useConfirmTotp() {
   })
 }
 
+/** Modo sudo: confirma a senha para trocar credenciais (passkey nova, TOTP) nos próximos minutos. */
+export function useConfirmPassword() {
+  return useMutation({
+    mutationFn: (password: string) =>
+      apiFetch<void>("/api/v1/account/password-confirmation", {
+        method: "POST",
+        json: { password },
+      }),
+  })
+}
+
 export function useDisableTotp() {
   const refresh = useRefreshMe()
   return useMutation({

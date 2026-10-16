@@ -17,21 +17,25 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 
 /**
- * Abre a sessão autenticada depois do login, do cadastro ou de uma passkey (ADR 0003).
+ * Abre a sessão autenticada depois do login por senha ou do cadastro (ADR 0003).
  *
  * <p>Troca o id da sessão (proteção contra fixação), gera um token CSRF novo e grava o contexto de segurança
- * na sessão JDBC, junto com a descrição do dispositivo para a tela de sessões.</p>
+ * na sessão JDBC, junto com a descrição do dispositivo para a tela de sessões. A senha acabou de ser digitada:
+ * vale como confirmação recente para o modo sudo ({@link RecentPasswordConfirmation}).</p>
  */
 @Component
 class SessionLogin {
 
     private final SecurityContextRepository contextRepository;
     private final CsrfAuthenticationStrategy csrfStrategy;
+    private final RecentPasswordConfirmation recentConfirmation;
     private final SecurityContextHolderStrategy holder = SecurityContextHolder.getContextHolderStrategy();
 
-    SessionLogin(SecurityContextRepository contextRepository, CsrfTokenRepository csrfTokenRepository) {
+    SessionLogin(SecurityContextRepository contextRepository, CsrfTokenRepository csrfTokenRepository,
+            RecentPasswordConfirmation recentConfirmation) {
         this.contextRepository = contextRepository;
         this.csrfStrategy = new CsrfAuthenticationStrategy(csrfTokenRepository);
+        this.recentConfirmation = recentConfirmation;
     }
 
     void establish(PapinhoUser user, HttpServletRequest request, HttpServletResponse response) {
@@ -56,5 +60,6 @@ class SessionLogin {
         HttpSession session = request.getSession();
         session.setAttribute(SessionService.DEVICE_ATTRIBUTE, client.device());
         session.setAttribute(SessionService.IP_ATTRIBUTE, client.approximateIp());
+        recentConfirmation.mark(request);
     }
 }

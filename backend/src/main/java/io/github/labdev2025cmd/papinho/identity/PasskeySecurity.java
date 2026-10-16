@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.ObjectPostProcessor;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
@@ -52,20 +53,24 @@ class PasskeySecurity implements ApiSecurityCustomizer {
     private final SecurityContextRepository contextRepository;
     private final CsrfTokenRepository csrfTokenRepository;
     private final UserDetailsService userDetailsService;
+    private final RecentPasswordConfirmation recentConfirmation;
 
     PasskeySecurity(WebAuthnConfig.WebAuthnProperties properties, ProblemDetailsWriter problems,
             SecurityContextRepository contextRepository, CsrfTokenRepository csrfTokenRepository,
-            UserDetailsService userDetailsService) {
+            UserDetailsService userDetailsService, RecentPasswordConfirmation recentConfirmation) {
         this.properties = properties;
         this.problems = problems;
         this.contextRepository = contextRepository;
         this.csrfTokenRepository = csrfTokenRepository;
         this.userDetailsService = userDetailsService;
+        this.recentConfirmation = recentConfirmation;
     }
 
     @Override
     public void customize(HttpSecurity http) throws Exception {
         http.addFilterBefore(new PasskeyErrorFilter(problems), BasicAuthenticationFilter.class);
+        http.addFilterBefore(new PasskeyRegistrationGuard(problems, recentConfirmation),
+                BasicAuthenticationFilter.class);
         http.webAuthn(webauthn -> webauthn
                 .rpName("Papinho")
                 .rpId(properties.rpId())
@@ -86,6 +91,42 @@ class PasskeySecurity implements ApiSecurityCustomizer {
                         return filter;
                     }
                 }));
+    }
+
+    /**
+     * Passkey nova é uma forma nova de entrar: exige a senha confirmada há pouco (modo sudo), como ligar o TOTP;
+     * sem isso, quem só tem a sessão deixaria uma passkey própria que sobrevive à troca de senha. Fica antes dos
+     * filtros de registro do Spring (o de opções roda antes da autorização), já com a sessão carregada; sem login,
+     * segue e esses filtros respondem como antes.
+     */
+    static final class PasskeyRegistrationGuard extends OncePerRequestFilter {
+
+        private final ProblemDetailsWriter problems;
+        private final RecentPasswordConfirmation recentConfirmation;
+        private final SecurityContextHolderStrategy holder = SecurityContextHolder.getContextHolderStrategy();
+
+        PasskeyRegistrationGuard(ProblemDetailsWriter problems, RecentPasswordConfirmation recentConfirmation) {
+            this.problems = problems;
+            this.recentConfirmation = recentConfirmation;
+        }
+
+        @Override
+        protected boolean shouldNotFilter(HttpServletRequest request) {
+            return !"POST".equals(request.getMethod()) || !request.getRequestURI().startsWith("/webauthn/register");
+        }
+
+        @Override
+        protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
+                FilterChain chain) throws ServletException, IOException {
+            Authentication authentication = holder.getContext().getAuthentication();
+            boolean signedIn = authentication != null && authentication.isAuthenticated()
+                    && !(authentication instanceof AnonymousAuthenticationToken);
+            if (signedIn && !recentConfirmation.isRecent(request)) {
+                problems.write(request, response, HttpStatus.FORBIDDEN, "password-confirmation-required");
+                return;
+            }
+            chain.doFilter(request, response);
+        }
     }
 
     /**

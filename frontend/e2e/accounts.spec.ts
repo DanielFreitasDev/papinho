@@ -177,6 +177,22 @@ test.describe.serial("contas e contatos", () => {
 
     await page.goto("/settings/sessions")
     await expect(page.getByText("Esta sessão")).toBeVisible()
+
+    // Entrou sem senha: mudar como se entra (aqui, ativar o TOTP) pede a senha antes (modo sudo).
+    await page.goto("/settings/security")
+    await page.getByRole("button", { name: "Ativar" }).click()
+    const confirmPassword = page.getByRole("alertdialog", {
+      name: "Confirme sua senha",
+    })
+    await expect(confirmPassword).toBeVisible()
+    await expectNoSeriousA11yViolations(page)
+    await confirmPassword.getByLabel("Senha atual").fill(PASSWORD)
+    await confirmPassword.getByRole("button", { name: "Confirmar" }).click()
+    const enrollment = page.getByRole("dialog", {
+      name: "Verificação em duas etapas (TOTP)",
+    })
+    await expect(enrollment).toBeVisible()
+    await enrollment.getByRole("button", { name: "Cancelar" }).click()
     expect(pageErrors).toEqual([])
   })
 

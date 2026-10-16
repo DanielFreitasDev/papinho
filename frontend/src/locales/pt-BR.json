@@ -245,7 +245,9 @@
     "emailPendingBadge": "Pendente",
     "emailRemove": "Remover e-mail",
     "emailRemoveDescription": "Sem e-mail, a recuperação da conta só funciona com os códigos de recuperação.",
-    "emailRemoved": "E-mail removido"
+    "emailRemoved": "E-mail removido",
+    "confirmPasswordTitle": "Confirme sua senha",
+    "confirmPasswordDescription": "Para mudar como você entra na conta, digite sua senha."
   },
   "sessions": {
     "description": "Aparelhos com sessão aberta na sua conta.",

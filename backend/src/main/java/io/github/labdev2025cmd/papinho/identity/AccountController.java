@@ -28,13 +28,15 @@ class AccountController {
     private final SessionService sessions;
     private final AccountDeletionService deletion;
     private final EmailRecoveryService emailRecovery;
+    private final RecentPasswordConfirmation recentConfirmation;
 
     AccountController(IdentityService identity, SessionService sessions, AccountDeletionService deletion,
-            EmailRecoveryService emailRecovery) {
+            EmailRecoveryService emailRecovery, RecentPasswordConfirmation recentConfirmation) {
         this.identity = identity;
         this.sessions = sessions;
         this.deletion = deletion;
         this.emailRecovery = emailRecovery;
+        this.recentConfirmation = recentConfirmation;
     }
 
     /** Exclui a própria conta (BK-02) com a senha; encerra todas as sessões, inclusive esta. */
@@ -63,8 +65,17 @@ class AccountController {
         sessions.revokeAllExcept(CurrentUser.id(), request.getSession().getId());
     }
 
+    /** Modo sudo: com a senha certa, a sessão pode trocar credenciais (passkey nova, TOTP) por alguns minutos. */
+    @PostMapping("/password-confirmation")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    void confirmPassword(@Valid @RequestBody PasswordRequest body, HttpServletRequest request) {
+        identity.confirmPassword(CurrentUser.id(), body.password());
+        recentConfirmation.mark(request);
+    }
+
     @PostMapping("/totp")
-    IdentityService.TotpEnrollment startTotp() {
+    IdentityService.TotpEnrollment startTotp(HttpServletRequest request) {
+        recentConfirmation.require(request);
         return identity.startTotp(CurrentUser.id());
     }
 

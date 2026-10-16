@@ -245,7 +245,9 @@
     "emailPendingBadge": "Pending",
     "emailRemove": "Remove email",
     "emailRemoveDescription": "Without an email, account recovery only works with the recovery codes.",
-    "emailRemoved": "Email removed"
+    "emailRemoved": "Email removed",
+    "confirmPasswordTitle": "Confirm your password",
+    "confirmPasswordDescription": "To change how you sign in, enter your password."
   },
   "sessions": {
     "description": "Devices with an open session on your account.",

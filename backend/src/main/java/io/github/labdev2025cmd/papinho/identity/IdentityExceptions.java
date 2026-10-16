@@ -63,6 +63,20 @@ final class IdentityExceptions {
         }
     }
 
+    /** Passkey nova ou TOTP sem a senha confirmada há pouco (modo sudo, {@link RecentPasswordConfirmation}). */
+    static class PasswordConfirmationRequiredException extends ApiException {
+        PasswordConfirmationRequiredException() {
+            super(HttpStatus.FORBIDDEN, "password-confirmation-required", "Recent password confirmation required");
+        }
+    }
+
+    /** Configurar outro app com o TOTP ligado desligaria o atual sem a senha: primeiro desliga (com a senha). */
+    static class TotpAlreadyEnabledException extends ApiException {
+        TotpAlreadyEnabledException() {
+            super(HttpStatus.CONFLICT, "totp-already-enabled", "TOTP already enabled");
+        }
+    }
+
     /** Código de recuperação ou TOTP errado. Mesma mensagem para usuário inexistente. */
     static class InvalidCodeException extends ApiException {
         InvalidCodeException() {

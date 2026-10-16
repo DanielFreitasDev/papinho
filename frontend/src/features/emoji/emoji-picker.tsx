@@ -5,6 +5,11 @@ import { cn } from "cn"
 
 import { SearchInput } from "@/components/search-input"
 import { Skeleton } from "@/components/ui/skeleton"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { authQueries } from "@/features/auth"
 import {
   GROUPS,
@@ -44,6 +49,8 @@ export function EmojiPicker({
   const [query, setQuery] = useState("")
   const [group, setGroup] = useState<number | "recent">("recent")
   const [recent, setRecent] = useState<string[]>(() => readRecent(userId))
+  // Emoji sob o mouse ou com o foco: o nome aparece no rodapé, no lugar do title nativo (UI-05).
+  const [pointed, setPointed] = useState<EmojiItem | null>(null)
 
   useEffect(() => {
     let active = true
@@ -107,27 +114,35 @@ export function EmojiPicker({
           aria-label={t("emoji.categories")}
           className="flex gap-0.5 overflow-x-auto"
         >
-          {(["recent", ...GROUPS] as const).map((key) => (
-            <button
-              key={key}
-              type="button"
-              role="tab"
-              aria-selected={shownGroup === key}
-              aria-label={
-                key === "recent" ? t("emoji.recent") : t(`emoji.group.${key}`)
-              }
-              disabled={key === "recent" && recent.length === 0}
-              onClick={() => setGroup(key)}
-              className={cn(
-                "flex size-9 shrink-0 items-center justify-center rounded-md text-lg outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-40",
-                shownGroup === key && "bg-muted"
-              )}
-            >
-              <span aria-hidden="true">
-                {key === "recent" ? "🕘" : GROUP_ICONS[key]}
-              </span>
-            </button>
-          ))}
+          {(["recent", ...GROUPS] as const).map((key) => {
+            const name =
+              key === "recent" ? t("emoji.recent") : t(`emoji.group.${key}`)
+            return (
+              <Tooltip key={key}>
+                <TooltipTrigger
+                  render={
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={shownGroup === key}
+                      aria-label={name}
+                      disabled={key === "recent" && recent.length === 0}
+                      onClick={() => setGroup(key)}
+                      className={cn(
+                        "flex size-9 shrink-0 items-center justify-center rounded-md text-lg outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-40",
+                        shownGroup === key && "bg-muted"
+                      )}
+                    />
+                  }
+                >
+                  <span aria-hidden="true">
+                    {key === "recent" ? "🕘" : GROUP_ICONS[key]}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>{name}</TooltipContent>
+              </Tooltip>
+            )
+          })}
         </div>
       ) : null}
       <p
@@ -143,14 +158,18 @@ export function EmojiPicker({
           {t("emoji.noResults")}
         </p>
       ) : (
-        <div className="grid h-56 grid-cols-8 content-start gap-0.5 overflow-y-auto">
+        <div
+          className="grid h-56 grid-cols-8 content-start gap-0.5 overflow-y-auto"
+          onPointerLeave={() => setPointed(null)}
+        >
           {visible.map((emoji) => (
             <button
               key={emoji.unicode}
               type="button"
               aria-label={emoji.label}
-              title={emoji.label}
               onClick={() => choose(emoji.unicode)}
+              onPointerEnter={() => setPointed(emoji)}
+              onFocus={() => setPointed(emoji)}
               className="flex aspect-square items-center justify-center rounded-md text-xl outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50"
             >
               {emoji.unicode}
@@ -158,6 +177,20 @@ export function EmojiPicker({
           ))}
         </div>
       )}
+      {/* O nome já é o rótulo acessível de cada botão; o rodapé é só visual. */}
+      <p
+        aria-hidden="true"
+        className="flex h-7 min-w-0 items-center gap-2 border-t pt-1 text-sm text-muted-foreground"
+      >
+        {pointed ? (
+          <>
+            <span className="text-xl">{pointed.unicode}</span>
+            <span className="truncate text-foreground">{pointed.label}</span>
+          </>
+        ) : (
+          t("emoji.hint")
+        )}
+      </p>
     </div>
   )
 }

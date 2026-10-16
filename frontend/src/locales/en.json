@@ -770,7 +770,8 @@
       "8": "Symbols",
       "9": "Flags"
     },
-    "tab": "Emojis"
+    "tab": "Emojis",
+    "hint": "Pick an emoji"
   },
   "sticker": {
     "tab": "Stickers",

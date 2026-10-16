@@ -575,6 +575,22 @@ function LoadedConversation({
     }
   }
 
+  // Callbacks estáveis para as linhas memoizadas (UI-04): a referência não muda, a lógica é sempre a atual.
+  const latest = useRef({ onAction, jumpTo, nameOf })
+  useEffect(() => {
+    latest.current = { onAction, jumpTo, nameOf }
+  })
+  const [stableAction] = useState(
+    () => (message: DisplayMessage, action: MessageAction) =>
+      latest.current.onAction(message, action)
+  )
+  const [stableJump] = useState(
+    () => (id: string) => void latest.current.jumpTo(id)
+  )
+  const [stableNameOf] = useState(
+    () => (userId: string | null) => latest.current.nameOf(userId)
+  )
+
   const detailsTitle = group
     ? t("groups.info")
     : conversation.broadcast
@@ -788,15 +804,10 @@ function LoadedConversation({
           >
             <MessageScrollerContent className="gap-1 py-3">
               {cache.hasOlder ? (
-                <div className="flex justify-center pb-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => void loadOlder(queryClient, conversation.id)}
-                  >
-                    {t("chat.loadOlder")}
-                  </Button>
-                </div>
+                <LoadOlder
+                  label={t("chat.loadOlder")}
+                  onLoad={() => loadOlder(queryClient, conversation.id)}
+                />
               ) : null}
               {display.length === 0 ? (
                 <Empty className="flex-1">
@@ -873,15 +884,19 @@ function LoadedConversation({
                         mine={message.senderId === meId}
                         meId={meId}
                         senderName={nameOf(message.senderId)}
-                        nameOf={nameOf}
+                        nameOf={stableNameOf}
                         selecting={selection !== null}
                         selected={
                           message.id !== null &&
                           (selection ?? []).includes(message.id)
                         }
-                        onAction={(action) => onAction(message, action)}
-                        onJump={(id) => void jumpTo(id)}
-                        audioQueue={audioQueue}
+                        onMessageAction={stableAction}
+                        onJump={stableJump}
+                        audioQueue={
+                          message.attachment?.kind === "AUDIO"
+                            ? audioQueue
+                            : undefined
+                        }
                         canEdit={canEdit(message)}
                         conversationId={conversation.id}
                         showSender={group !== null}
@@ -1225,4 +1240,52 @@ function toDisplay(
     sticker: null,
   }))
   return [...confirmed, ...pending]
+}
+
+/**
+ * Páginas antigas (UI-04): carregam sozinhas quando o topo chega perto da tela, uma de cada vez; o botão fica para
+ * o teclado e para quem prefere pedir.
+ */
+function LoadOlder({
+  label,
+  onLoad,
+}: {
+  label: string
+  onLoad: () => Promise<unknown>
+}) {
+  const sentinel = useRef<HTMLDivElement>(null)
+  const latest = useRef(onLoad)
+  const loading = useRef(false)
+  useEffect(() => {
+    latest.current = onLoad
+  })
+  useEffect(() => {
+    const element = sentinel.current
+    if (!element) {
+      return
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting) && !loading.current) {
+          loading.current = true
+          void latest.current().finally(() => {
+            loading.current = false
+            // Observar de novo dá um aviso com a posição atual: se o topo ainda está perto, carrega a próxima.
+            observer.unobserve(element)
+            observer.observe(element)
+          })
+        }
+      },
+      { rootMargin: "600px 0px 0px 0px" }
+    )
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [])
+  return (
+    <div ref={sentinel} className="flex justify-center pb-2">
+      <Button variant="outline" size="sm" onClick={() => void latest.current()}>
+        {label}
+      </Button>
+    </div>
+  )
 }

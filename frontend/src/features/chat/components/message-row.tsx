@@ -1,3 +1,4 @@
+import { memo } from "react"
 import { useTranslation } from "react-i18next"
 import {
   BanIcon,
@@ -111,7 +112,30 @@ export type MessageAction =
   | "openViewOnce"
   | "unreact"
 
-export function MessageRow({
+/**
+ * Uma linha da conversa. Memoizada (UI-04): ao carregar páginas antigas ou chegar mensagem nova, só as linhas que
+ * mudaram desenham de novo. Por isso os callbacks recebidos precisam ser estáveis (sempre a lógica atual).
+ */
+export const MessageRow = memo(MessageRowView, sameRow)
+
+function sameRow(
+  before: Parameters<typeof MessageRowView>[0],
+  after: Parameters<typeof MessageRowView>[0]
+) {
+  const keys = Object.keys({ ...before, ...after }) as (keyof typeof before)[]
+  return keys.every((key) =>
+    key === "message"
+      ? shallowEqual(before.message, after.message)
+      : Object.is(before[key], after[key])
+  )
+}
+
+function shallowEqual(before: DisplayMessage, after: DisplayMessage) {
+  const keys = Object.keys({ ...before, ...after }) as (keyof DisplayMessage)[]
+  return keys.every((key) => Object.is(before[key], after[key]))
+}
+
+function MessageRowView({
   message,
   mine,
   meId,
@@ -119,7 +143,7 @@ export function MessageRow({
   nameOf,
   selecting,
   selected,
-  onAction,
+  onMessageAction,
   onJump,
   audioQueue = [],
   conversationId,
@@ -134,7 +158,8 @@ export function MessageRow({
   nameOf: (userId: string | null) => string
   selecting: boolean
   selected: boolean
-  onAction: (action: MessageAction) => void
+  /** Estável: recebe a mensagem e a ação. */
+  onMessageAction: (message: DisplayMessage, action: MessageAction) => void
   onJump: (messageId: string) => void
   /** Áudios da conversa em ordem, para tocar em sequência (AU-02). */
   audioQueue?: Track[]
@@ -148,6 +173,7 @@ export function MessageRow({
   canReplyPrivately?: boolean
 }) {
   const { t } = useTranslation()
+  const onAction = (action: MessageAction) => onMessageAction(message, action)
   const confirmed = message.id !== null
   if (message.deleted) {
     return (

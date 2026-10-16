@@ -9,6 +9,8 @@ import io.github.labdev2025cmd.papinho.admin.InstanceSettingsService;
 import io.github.labdev2025cmd.papinho.admin.RegistrationMode;
 import io.github.labdev2025cmd.papinho.shared.security.CurrentUser;
 import io.github.labdev2025cmd.papinho.shared.security.PapinhoUser;
+import io.github.labdev2025cmd.papinho.shared.security.RateLimiter;
+import jakarta.servlet.http.HttpServletRequest;
 
 /**
  * Informações públicas da instância para a tela de entrada: modo de cadastro e se ainda não há nenhum usuário
@@ -21,12 +23,14 @@ class InstanceController {
     private final InstanceSettingsService settings;
     private final IdentityService identity;
     private final EmailRecoveryService emailRecovery;
+    private final RateLimiter rateLimiter;
 
     InstanceController(InstanceSettingsService settings, IdentityService identity,
-            EmailRecoveryService emailRecovery) {
+            EmailRecoveryService emailRecovery, RateLimiter rateLimiter) {
         this.settings = settings;
         this.identity = identity;
         this.emailRecovery = emailRecovery;
+        this.rateLimiter = rateLimiter;
     }
 
     @GetMapping("/instance")
@@ -38,7 +42,8 @@ class InstanceController {
     }
 
     @GetMapping("/usernames/availability")
-    AvailabilityResponse availability(@RequestParam String username) {
+    AvailabilityResponse availability(@RequestParam String username, HttpServletRequest request) {
+        rateLimiter.consume(RateLimiter.Policy.USERNAME_CHECK_BY_IP, request.getRemoteAddr());
         return new AvailabilityResponse(identity.isUsernameAvailable(username,
                 CurrentUser.get().map(PapinhoUser::id).orElse(null)));
     }

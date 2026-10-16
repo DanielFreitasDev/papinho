@@ -26,6 +26,7 @@ import org.springframework.session.Session;
 import org.springframework.session.SessionRepository;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 
+import io.github.labdev2025cmd.papinho.shared.security.RateLimiter;
 import io.github.labdev2025cmd.papinho.support.Accounts;
 import io.github.labdev2025cmd.papinho.support.ApiClient;
 import io.github.labdev2025cmd.papinho.support.IntegrationTest;
@@ -132,6 +133,25 @@ class IdentityIT {
         // Com o TOTP ligado, configurar outro app desligaria o atual sem a senha: recusado, o atual continua.
         assertProblem(ana.post("/api/v1/account/totp", null), 409, "totp-already-enabled");
         assertThat(ana.json(ana.get("/api/v1/me")).get("account").get("totpEnabled").asBoolean()).isTrue();
+    }
+
+    @Test
+    @DisplayName("opções de login por passkey (cada uma cria uma sessão) e consulta de @usuario têm limite por IP")
+    void shouldRateLimitAnonymousLookups() {
+        ApiClient anonymous = clients.create().bootstrap();
+        for (int i = 0; i < RateLimiter.Policy.PASSKEY_OPTIONS_BY_IP.capacity(); i++) {
+            assertThat(anonymous.post("/webauthn/authenticate/options", null)).hasStatusOk();
+        }
+        MvcTestResult options = anonymous.post("/webauthn/authenticate/options", null);
+        assertProblem(options, 429, "rate-limited");
+        assertThat(options.getResponse().getHeader(HttpHeaders.RETRY_AFTER)).isNotBlank();
+
+        for (int i = 0; i < RateLimiter.Policy.USERNAME_CHECK_BY_IP.capacity(); i++) {
+            assertThat(anonymous.get("/api/v1/usernames/availability?username=pessoa" + i)).hasStatusOk();
+        }
+        assertProblem(anonymous.get("/api/v1/usernames/availability?username=outra"), 429, "rate-limited");
+        assertThat(clients.create().get("/api/v1/usernames/availability?username=outra")).as("outro IP segue")
+                .hasStatusOk();
     }
 
     @Test

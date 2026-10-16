@@ -33,6 +33,8 @@ import com.webauthn4j.util.exception.WebAuthnException;
 
 import io.github.labdev2025cmd.papinho.shared.error.ProblemDetailsWriter;
 import io.github.labdev2025cmd.papinho.shared.security.ApiSecurityCustomizer;
+import io.github.labdev2025cmd.papinho.shared.security.RateLimitedException;
+import io.github.labdev2025cmd.papinho.shared.security.RateLimiter;
 import io.github.labdev2025cmd.papinho.shared.web.ClientInfo;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -54,16 +56,19 @@ class PasskeySecurity implements ApiSecurityCustomizer {
     private final CsrfTokenRepository csrfTokenRepository;
     private final UserDetailsService userDetailsService;
     private final RecentPasswordConfirmation recentConfirmation;
+    private final RateLimiter rateLimiter;
 
     PasskeySecurity(WebAuthnConfig.WebAuthnProperties properties, ProblemDetailsWriter problems,
             SecurityContextRepository contextRepository, CsrfTokenRepository csrfTokenRepository,
-            UserDetailsService userDetailsService, RecentPasswordConfirmation recentConfirmation) {
+            UserDetailsService userDetailsService, RecentPasswordConfirmation recentConfirmation,
+            RateLimiter rateLimiter) {
         this.properties = properties;
         this.problems = problems;
         this.contextRepository = contextRepository;
         this.csrfTokenRepository = csrfTokenRepository;
         this.userDetailsService = userDetailsService;
         this.recentConfirmation = recentConfirmation;
+        this.rateLimiter = rateLimiter;
     }
 
     @Override
@@ -71,6 +76,7 @@ class PasskeySecurity implements ApiSecurityCustomizer {
         http.addFilterBefore(new PasskeyErrorFilter(problems), BasicAuthenticationFilter.class);
         http.addFilterBefore(new PasskeyRegistrationGuard(problems, recentConfirmation),
                 BasicAuthenticationFilter.class);
+        http.addFilterBefore(new PasskeyOptionsLimit(problems, rateLimiter), BasicAuthenticationFilter.class);
         http.webAuthn(webauthn -> webauthn
                 .rpName("Papinho")
                 .rpId(properties.rpId())
@@ -124,6 +130,46 @@ class PasskeySecurity implements ApiSecurityCustomizer {
             if (signedIn && !recentConfirmation.isRecent(request)) {
                 problems.write(request, response, HttpStatus.FORBIDDEN, "password-confirmation-required");
                 return;
+            }
+            chain.doFilter(request, response);
+        }
+    }
+
+    /**
+     * Pedir as opções de login por passkey cria uma sessão sem login (guarda o desafio), que dura 30 dias: sem
+     * limite, um script enchia a tabela de sessões. Limite por IP para quem ainda não entrou; o desbloqueio da tela,
+     * já com sessão, não conta.
+     */
+    static final class PasskeyOptionsLimit extends OncePerRequestFilter {
+
+        private final ProblemDetailsWriter problems;
+        private final RateLimiter rateLimiter;
+        private final SecurityContextHolderStrategy holder = SecurityContextHolder.getContextHolderStrategy();
+
+        PasskeyOptionsLimit(ProblemDetailsWriter problems, RateLimiter rateLimiter) {
+            this.problems = problems;
+            this.rateLimiter = rateLimiter;
+        }
+
+        @Override
+        protected boolean shouldNotFilter(HttpServletRequest request) {
+            return !"POST".equals(request.getMethod())
+                    || !"/webauthn/authenticate/options".equals(request.getRequestURI());
+        }
+
+        @Override
+        protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
+                FilterChain chain) throws ServletException, IOException {
+            Authentication authentication = holder.getContext().getAuthentication();
+            boolean signedIn = authentication != null && authentication.isAuthenticated()
+                    && !(authentication instanceof AnonymousAuthenticationToken);
+            if (!signedIn) {
+                try {
+                    rateLimiter.consume(RateLimiter.Policy.PASSKEY_OPTIONS_BY_IP, request.getRemoteAddr());
+                } catch (RateLimitedException limited) {
+                    problems.write(request, response, limited);
+                    return;
+                }
             }
             chain.doFilter(request, response);
         }

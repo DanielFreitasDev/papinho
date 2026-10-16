@@ -46,6 +46,12 @@ public class RateLimiter {
         public static final Policy EXPORT_BY_USER = new Policy("export-user", 10, Duration.ofHours(1));
         /** Códigos do bloqueio de tela e das conversas trancadas (PV-02, PV-03): contra força bruta. */
         public static final Policy UNLOCK_BY_USER = new Policy("unlock-user", 10, Duration.ofMinutes(15));
+        /** Ver se um {@code @usuario} está livre (cadastro e troca): contra varrer as contas em massa. */
+        public static final Policy USERNAME_CHECK_BY_IP = new Policy("username-check-ip", 120,
+                Duration.ofMinutes(15));
+        /** Opções de login por passkey sem sessão: cada pedido cria uma sessão (guarda o desafio). */
+        public static final Policy PASSKEY_OPTIONS_BY_IP = new Policy("passkey-options-ip", 30,
+                Duration.ofMinutes(15));
     }
 
     private final Map<String, Entry> buckets = new ConcurrentHashMap<>();

@@ -82,6 +82,22 @@ temporárias, agendadas e limpeza da visualização única) usam o ShedLock: com
 mesmo banco, só uma roda cada job. Figurinhas são WebP de até 1 MB enviados por qualquer pessoa da instância e
 ficam disponíveis para todos.
 
+### Privacidade
+
+Tudo é aplicado no servidor: quem vê visto por último, online, foto e recado (com "meus contatos exceto…") e
+quem pode adicionar você a grupos; quem não compartilha o visto por último ou o online não vê o dos outros, e
+quem desliga a confirmação de leitura não vê a dos outros (no grupo ela vale por padrão e pode ser desligada em
+cada um). Em Configurações > Privacidade também ficam:
+
+- **Modo privado** (Alt+Shift+P): desfoca mensagens, prévias, nomes, fotos e mídia; revela com o mouse (na hora
+  ou depois de alguns segundos), com o foco do teclado ou com um toque longo.
+- **Bloqueio de tela**: PIN ou senha próprios, separados da senha da conta, com bloqueio por inatividade, ao
+  trocar de aba ou janela e por atalho (tudo desligado por padrão). **É uma proteção visual**: a sessão continua
+  ativa e quem tiver acesso às ferramentas do navegador ainda alcança os dados.
+- **Conversas trancadas**: trancadas pelo painel da conversa com um código (o mesmo código em várias conversas
+  abre todas juntas). Saem da lista e só abrem com o código; recarregar a página ou reiniciar o servidor tranca
+  de novo. Um código esquecido não tem recuperação.
+
 ### Transcrição de áudios
 
 Por padrão os áudios são transcritos **no navegador** (Whisper com Transformers.js): o modelo (≈80 MB no

@@ -16,6 +16,9 @@ import type { WorkerRequest, WorkerResponse } from "./protocol"
  */
 env.allowLocalModels = false
 env.useBrowserCache = true
+// Com o cache de WASM, o Transformers.js reescreve o .mjs do runtime e o importa de uma URL blob:, que a CSP
+// (script-src 'self') recusa. Sem ele, o runtime vem direto do Papinho, já com cache HTTP de um ano.
+env.useWasmCache = false
 if (env.backends.onnx.wasm) {
   env.backends.onnx.wasm.wasmPaths = { mjs: ortMjs, wasm: ortWasm }
 }

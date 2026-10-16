@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog"
 import { Skeleton } from "@/components/ui/skeleton"
 import { authQueries } from "@/features/auth"
+import { LocalAudioPlayer, VideoPlayer } from "@/features/media"
 import { apiFetch, errorMessage } from "@/lib/api-client"
 
 type Grant = { token: string; kind: string; contentType: string }
@@ -107,21 +108,13 @@ function ViewOnceContent({ messageId }: { messageId: string }) {
             className="mx-auto max-h-[70dvh] object-contain"
           />
         ) : kind === "VIDEO" ? (
-          <video
-            src={src}
-            controls
-            autoPlay
-            controlsList="nodownload noremoteplayback"
-            disablePictureInPicture
-            className="mx-auto max-h-[70dvh]"
-          />
+          <VideoPlayer src={src} label={t("viewOnce.video")} autoPlay />
         ) : (
-          <audio
+          <LocalAudioPlayer
             src={src}
-            controls
+            label={t("viewOnce.audio")}
             autoPlay
-            controlsList="nodownload"
-            className="w-full p-4"
+            className="bg-card p-4 text-card-foreground"
           />
         )}
       </div>

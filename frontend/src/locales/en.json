@@ -729,7 +729,9 @@
     "opened": "{{kind}} opened",
     "sent": "View-once {{kind}}",
     "openedBy_one": "{{kind}} opened by {{count}} person",
-    "openedBy_other": "{{kind}} opened by {{count}} people"
+    "openedBy_other": "{{kind}} opened by {{count}} people",
+    "video": "View-once video",
+    "audio": "View-once audio"
   },
   "broadcast": {
     "new": "New broadcast list",
@@ -1052,5 +1054,15 @@
     "minute": "Minute",
     "clear": "Clear date and time",
     "clearDate": "Clear date"
+  },
+  "video": {
+    "play": "Play video",
+    "pause": "Pause video",
+    "position": "Video position",
+    "mute": "Mute",
+    "unmute": "Unmute",
+    "fullscreen": "Full screen",
+    "exitFullscreen": "Exit full screen",
+    "open": "Open video {{name}}"
   }
 }

@@ -729,7 +729,9 @@
     "opened": "{{kind}} aberta",
     "sent": "{{kind}} de visualização única",
     "openedBy_one": "{{kind}} aberta por {{count}} pessoa",
-    "openedBy_other": "{{kind}} aberta por {{count}} pessoas"
+    "openedBy_other": "{{kind}} aberta por {{count}} pessoas",
+    "video": "Vídeo de visualização única",
+    "audio": "Áudio de visualização única"
   },
   "broadcast": {
     "new": "Nova lista de transmissão",
@@ -1052,5 +1054,15 @@
     "minute": "Minuto",
     "clear": "Limpar data e hora",
     "clearDate": "Limpar data"
+  },
+  "video": {
+    "play": "Reproduzir vídeo",
+    "pause": "Pausar vídeo",
+    "position": "Posição do vídeo",
+    "mute": "Desativar o som",
+    "unmute": "Ativar o som",
+    "fullscreen": "Tela cheia",
+    "exitFullscreen": "Sair da tela cheia",
+    "open": "Abrir vídeo {{name}}"
   }
 }

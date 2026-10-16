@@ -1,8 +1,11 @@
+import { useState } from "react"
 import { useInfiniteQuery } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
-import { ArrowLeftIcon, ImagesIcon } from "lucide-react"
+import { ArrowLeftIcon, ImagesIcon, PlayIcon } from "lucide-react"
+import { cn } from "cn"
 
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import {
   Empty,
   EmptyHeader,
@@ -11,7 +14,7 @@ import {
 } from "@/components/ui/empty"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { mediaUrl } from "@/features/media"
+import { mediaUrl, VideoPlayer, type Track } from "@/features/media"
 import { formatDate } from "@/lib/format"
 import { chatQueries, type GalleryTab } from "../api"
 import {
@@ -116,6 +119,15 @@ function GalleryTabContent({
   const images = messages
     .map((message) => message.attachment)
     .filter((item): item is Attachment => item?.kind === "IMAGE")
+  // Áudios tocam no tocador global (AU-02), em sequência na ordem da galeria.
+  const audioQueue: Track[] = messages
+    .filter((message) => message.attachment?.kind === "AUDIO")
+    .map((message) => ({
+      mediaId: message.attachment!.id,
+      conversationId,
+      messageId: message.id,
+      title: `${t("media.kind.AUDIO")} · ${formatDate(message.createdAt)}`,
+    }))
   return (
     <div className="flex flex-col gap-2">
       {tab === "MEDIA" ? (
@@ -145,6 +157,7 @@ function GalleryTabContent({
                 <AttachmentView
                   attachment={message.attachment}
                   onOpenImage={() => undefined}
+                  audio={audioOf(audioQueue, message.id)}
                 />
                 <span className="text-xs text-muted-foreground">
                   {formatDate(message.createdAt)}
@@ -176,15 +189,54 @@ function MediaTile({
   onOpen: () => void
 }) {
   const { t } = useTranslation()
+  const [playing, setPlaying] = useState(false)
   if (attachment.kind === "VIDEO") {
+    // Miniatura com o primeiro quadro; o vídeo toca num diálogo com o tocador do projeto (UI-05).
     return (
-      <video
-        controls
-        preload="metadata"
-        src={mediaUrl(attachment.id)}
-        aria-label={attachment.filename}
-        className="aspect-square size-full rounded-md bg-black object-cover"
-      />
+      <>
+        <button
+          type="button"
+          onClick={() => setPlaying(true)}
+          aria-label={t("video.open", { name: attachment.filename })}
+          className="relative block aspect-square w-full overflow-hidden rounded-md bg-black outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+        >
+          <video
+            src={`${mediaUrl(attachment.id)}#t=0.1`}
+            preload="metadata"
+            muted
+            playsInline
+            tabIndex={-1}
+            aria-hidden="true"
+            className="size-full object-cover"
+          />
+          <span className="absolute inset-0 flex items-center justify-center">
+            <span
+              aria-hidden="true"
+              className={cn(
+                buttonVariants({ variant: "secondary", size: "icon" }),
+                "rounded-full"
+              )}
+            >
+              <PlayIcon />
+            </span>
+          </span>
+        </button>
+        <Dialog open={playing} onOpenChange={setPlaying}>
+          <DialogContent className="max-w-[min(100vw-2rem,48rem)]">
+            <DialogTitle className="truncate pr-8">
+              {attachment.filename}
+            </DialogTitle>
+            {playing ? (
+              <VideoPlayer
+                src={mediaUrl(attachment.id)}
+                label={attachment.filename}
+                downloadUrl={mediaUrl(attachment.id, "content", true)}
+                autoPlay
+              />
+            ) : null}
+          </DialogContent>
+        </Dialog>
+      </>
     )
   }
   return (
@@ -249,4 +301,9 @@ function LinkItem({ message }: { message: Message }) {
       </span>
     </li>
   )
+}
+
+function audioOf(queue: Track[], messageId: string) {
+  const track = queue.find((item) => item.messageId === messageId)
+  return track ? { track, queue, received: false } : undefined
 }

@@ -13,7 +13,14 @@ import {
 import { cn } from "cn"
 
 import { Button } from "@/components/ui/button"
-import { formatBytes, mediaUrl, type Track } from "@/features/media"
+import { Progress } from "@/components/ui/progress"
+import {
+  formatBytes,
+  LocalAudioPlayer,
+  mediaUrl,
+  VideoPlayer,
+  type Track,
+} from "@/features/media"
 import { useUploadProgress } from "../attachments"
 import { AudioMessage } from "./audio-message"
 import type { Attachment, AttachmentKind, LocalAttachment } from "../types"
@@ -53,7 +60,7 @@ function placeholder(thumbhash: string | null): string | null {
 
 /**
  * Anexo de uma mensagem confirmada (MD-01, MD-02): imagem com placeholder ThumbHash que abre o visualizador,
- * vídeo e áudio com controles nativos e documento como cartão de download.
+ * vídeo e áudio com os tocadores do projeto (UI-05) e documento como cartão de download.
  */
 export function AttachmentView({
   attachment,
@@ -62,7 +69,7 @@ export function AttachmentView({
 }: {
   attachment: Attachment
   onOpenImage: (id: string) => void
-  /** Faixa no tocador global; sem ela, o áudio usa o controle nativo (galeria). */
+  /** Faixa no tocador global; sem ela, o áudio toca no próprio elemento. */
   audio?: { track: Track; queue: Track[]; received: boolean }
 }) {
   const { t, i18n } = useTranslation()
@@ -109,14 +116,11 @@ export function AttachmentView({
       )
     case "VIDEO":
       return (
-        <video
-          controls
-          preload="metadata"
-          data-private="media"
+        <VideoPlayer
           src={mediaUrl(attachment.id)}
-          className="max-h-80 w-full rounded-md bg-black"
-          aria-label={attachment.filename}
-          onClick={(event) => event.stopPropagation()}
+          label={attachment.filename}
+          downloadUrl={mediaUrl(attachment.id, "content", true)}
+          privateMedia
         />
       )
     case "AUDIO":
@@ -130,12 +134,10 @@ export function AttachmentView({
         )
       }
       return (
-        <audio
-          controls
-          preload="metadata"
+        <LocalAudioPlayer
           src={mediaUrl(attachment.id)}
+          label={attachment.filename}
           className="w-64 max-w-full"
-          aria-label={attachment.filename}
         />
       )
     default:
@@ -202,11 +204,10 @@ export function LocalAttachmentView({
       )}
       {uploading ? (
         <span className="flex items-center gap-2">
-          <progress
+          <Progress
             value={percent}
-            max={100}
             aria-label={t("media.uploading", { name: attachment.filename })}
-            className="h-1.5 flex-1 overflow-hidden rounded-full accent-primary"
+            className="flex-1"
           />
           <span className="text-xs tabular-nums" aria-hidden="true">
             {percent}%

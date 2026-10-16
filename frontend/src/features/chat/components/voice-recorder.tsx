@@ -10,7 +10,7 @@ import {
 
 import { Button } from "@/components/ui/button"
 import { toast } from "@/components/ui/toast"
-import { formatDuration } from "@/features/media"
+import { formatDuration, LocalAudioPlayer } from "@/features/media"
 import { realtime } from "@/lib/realtime"
 
 /** Formatos na ordem de preferência: Opus em WebM/Ogg; AAC em MP4 no Safari (AU-01). */
@@ -219,11 +219,10 @@ export function VoiceRecorder({
         >
           <Trash2Icon />
         </Button>
-        <audio
-          controls
+        <LocalAudioPlayer
           src={preview.url}
-          aria-label={t("audio.preview")}
-          className="h-10 min-w-0 flex-1"
+          label={t("audio.preview")}
+          className="min-w-0 flex-1"
         />
         <Button
           type="button"

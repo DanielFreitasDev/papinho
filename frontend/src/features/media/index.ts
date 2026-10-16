@@ -17,3 +17,6 @@ export {
   type Track,
 } from "./player"
 export { MiniPlayer } from "./components/mini-player"
+export { AudioControls, LocalAudioPlayer } from "./components/audio-controls"
+export { VideoPlayer } from "./components/video-player"
+export { useMediaElement, type MediaElementState } from "./use-media-element"

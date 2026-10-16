@@ -65,12 +65,36 @@ class LinkPreviewIT {
             exchange.getResponseBody().write(png.toByteArray());
             exchange.close();
         });
+        // oEmbed simulados (MD-05): o Vimeo "666" responde com um iframe de outro host, que deve ser ignorado.
+        SITE.createContext("/vimeo-oembed", exchange -> {
+            String query = java.net.URLDecoder.decode(exchange.getRequestURI().getRawQuery(), StandardCharsets.UTF_8);
+            String src = query.contains("/666") ? "https://evil.example/video/666"
+                    : "https://player.vimeo.com/video/76979871?h=8272103f6e";
+            oembed(exchange, "{\"type\":\"video\",\"title\":\"Curta no Vimeo\",\"html\":\"<iframe src=\\\""
+                    + src + "\\\" width=\\\"640\\\"></iframe><script>alert(1)</script>\"}");
+        });
+        SITE.createContext("/spotify-oembed", exchange -> oembed(exchange,
+                "{\"title\":\"Asa Branca\",\"html\":\"<iframe style=\\\"border-radius: 12px\\\" "
+                        + "src=\\\"https://open.spotify.com/embed/track/4uLU6hMCjMI75M1A2tKUQC?utm_source=oembed\\\">"
+                        + "</iframe>\"}"));
         SITE.start();
+    }
+
+    private static void oembed(com.sun.net.httpserver.HttpExchange exchange, String json) throws IOException {
+        byte[] body = json.getBytes(StandardCharsets.UTF_8);
+        exchange.getResponseHeaders().add("Content-Type", "application/json");
+        exchange.sendResponseHeaders(200, body.length);
+        exchange.getResponseBody().write(body);
+        exchange.close();
     }
 
     @DynamicPropertySource
     static void sitePort(DynamicPropertyRegistry registry) {
         registry.add("app.link-preview.test-allowed-ports", () -> SITE.getAddress().getPort());
+        registry.add("app.link-preview.vimeo-oembed",
+                () -> "http://127.0.0.1:" + SITE.getAddress().getPort() + "/vimeo-oembed");
+        registry.add("app.link-preview.spotify-oembed",
+                () -> "http://127.0.0.1:" + SITE.getAddress().getPort() + "/spotify-oembed");
     }
 
     @AfterAll
@@ -131,6 +155,28 @@ class LinkPreviewIT {
         assertThat(preview.get("embedSrc").asString())
                 .isEqualTo("https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ");
         assertThat(preview.get("available").asBoolean()).isTrue();
+    }
+
+    @Test
+    @DisplayName("Vimeo e Spotify pelo oEmbed: só o src do iframe em host permitido, nunca o HTML do provedor")
+    void shouldEmbedVimeoAndSpotifyThroughOembed() {
+        JsonNode vimeo = ana.json(ana.get(previewPath("https://vimeo.com/76979871")));
+        assertThat(vimeo.get("embedProvider").asString()).isEqualTo("VIMEO");
+        assertThat(vimeo.get("embedSrc").asString()).isEqualTo("https://player.vimeo.com/video/76979871?h=8272103f6e");
+        // O título pode vir da própria página quando há internet (no CI); sem rede, vem do oEmbed.
+        assertThat(vimeo.get("available").asBoolean()).isTrue();
+        assertThat(vimeo.toString()).doesNotContain("<script").doesNotContain("<iframe");
+
+        JsonNode spotify = ana.json(ana.get(
+                previewPath("https://open.spotify.com/intl-pt/track/4uLU6hMCjMI75M1A2tKUQC")));
+        assertThat(spotify.get("embedProvider").asString()).isEqualTo("SPOTIFY");
+        assertThat(spotify.get("embedSrc").asString())
+                .isEqualTo("https://open.spotify.com/embed/track/4uLU6hMCjMI75M1A2tKUQC?utm_source=oembed");
+        assertThat(spotify.get("available").asBoolean()).isTrue();
+
+        JsonNode foreign = ana.json(ana.get(previewPath("https://vimeo.com/666")));
+        assertThat(foreign.get("embedProvider").isNull()).as("iframe fora de player.vimeo.com").isTrue();
+        assertThat(foreign.get("embedSrc").isNull()).isTrue();
     }
 
     private static String previewPath(String url) {

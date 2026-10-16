@@ -121,14 +121,14 @@ public class LinkPreviewService {
             embedProvider = "YOUTUBE";
             embedSrc = "https://www.youtube-nocookie.com/embed/" + youtube.group(1);
         } else if (VIMEO.matcher(url).find()) {
-            OEmbed oembed = oembed("https://vimeo.com/api/oembed.json?url=", url, "player.vimeo.com");
+            OEmbed oembed = oembed(properties.vimeoOembed(), url, "player.vimeo.com");
             if (oembed != null) {
                 embedProvider = "VIMEO";
                 embedSrc = oembed.src();
                 title = oembed.title();
             }
         } else if (SPOTIFY.matcher(url).find()) {
-            OEmbed oembed = oembed("https://open.spotify.com/oembed?url=", url, "open.spotify.com");
+            OEmbed oembed = oembed(properties.spotifyOembed(), url, "open.spotify.com");
             if (oembed != null) {
                 embedProvider = "SPOTIFY";
                 embedSrc = oembed.src();
@@ -191,7 +191,7 @@ public class LinkPreviewService {
 
     private @Nullable OEmbed oembed(String endpoint, String url, String allowedHost) {
         try {
-            URI request = new URI(endpoint + URLEncoder.encode(url, StandardCharsets.UTF_8));
+            URI request = new URI(endpoint + "?url=" + URLEncoder.encode(url, StandardCharsets.UTF_8));
             Optional<SafeFetcher.Response> response = fetcher.get(request, "application/json", 64 * 1024);
             if (response.isEmpty()) {
                 return null;

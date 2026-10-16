@@ -12,8 +12,12 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * @param enabled liga a busca de prévias (desligada, o cliente mostra só o link)
  * @param cacheTtl validade de uma prévia em cache
  * @param testAllowedPorts só em testes: portas locais liberadas além de 80 e 443, com loopback permitido
+ * @param vimeoOembed endpoint oEmbed do Vimeo (MD-05); trocado só nos testes
+ * @param spotifyOembed endpoint oEmbed do Spotify (MD-05); trocado só nos testes
  */
 @ConfigurationProperties(prefix = "app.link-preview")
 public record LinkPreviewProperties(@DefaultValue("true") boolean enabled, @DefaultValue("24h") Duration cacheTtl,
-        @DefaultValue Set<Integer> testAllowedPorts) {
+        @DefaultValue Set<Integer> testAllowedPorts,
+        @DefaultValue("https://vimeo.com/api/oembed.json") String vimeoOembed,
+        @DefaultValue("https://open.spotify.com/oembed") String spotifyOembed) {
 }

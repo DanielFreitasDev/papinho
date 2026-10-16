@@ -14,6 +14,7 @@ import {
   XIcon,
 } from "lucide-react"
 
+import { QueryState } from "@/components/query-state"
 import { ConfirmDialog } from "@/components/confirm-dialog"
 import { UserAvatar } from "@/components/user-avatar"
 import { Badge } from "@/components/ui/badge"
@@ -241,6 +242,8 @@ export function GroupDetails({
           ) : null}
           {members.isPending ? (
             <Skeleton className="h-10 w-full" />
+          ) : members.isError ? (
+            <QueryState query={members}>{() => null}</QueryState>
           ) : (
             <ul className="flex flex-col">
               {members.data?.map((member) => (

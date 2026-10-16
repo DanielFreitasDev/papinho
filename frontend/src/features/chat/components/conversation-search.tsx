@@ -95,13 +95,15 @@ export function ConversationSearch({
     ? ""
     : results.isFetching
       ? t("common.loading")
-      : found.length === 0
-        ? t("search.noResults")
-        : t("search.position", {
-            current: index + 1,
-            total: found.length,
-            more: results.data?.hasMore ? "+" : "",
-          })
+      : results.isError
+        ? t("states.errorTitle")
+        : found.length === 0
+          ? t("search.noResults")
+          : t("search.position", {
+              current: index + 1,
+              total: found.length,
+              more: results.data?.hasMore ? "+" : "",
+            })
 
   return (
     <div

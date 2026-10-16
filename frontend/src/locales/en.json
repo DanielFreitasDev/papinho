@@ -488,7 +488,9 @@
     "silent": "Sent without notification",
     "remove": "Remove",
     "draftPreview": "Draft: {{text}}",
-    "accountDeleted": "Deleted account"
+    "accountDeleted": "Deleted account",
+    "scrollToEnd": "Go to the latest messages",
+    "scrollToStart": "Go to the oldest messages"
   },
   "moderation": {
     "report": "Report",

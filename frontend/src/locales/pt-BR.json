@@ -488,7 +488,9 @@
     "silent": "Enviada sem notificação",
     "remove": "Remover",
     "draftPreview": "Rascunho: {{text}}",
-    "accountDeleted": "Conta apagada"
+    "accountDeleted": "Conta apagada",
+    "scrollToEnd": "Ir para as mensagens mais recentes",
+    "scrollToStart": "Ir para as mensagens mais antigas"
   },
   "moderation": {
     "report": "Denunciar",

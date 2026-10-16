@@ -922,10 +922,7 @@ function LoadedConversation({
               {t("chat.jumpToUnread")}
             </Button>
           ) : null}
-          <MessageScrollerButton
-            direction="end"
-            aria-label={t("chat.messages")}
-          />
+          <MessageScrollerButton direction="end" />
         </MessageScroller>
         {selection !== null ? (
           <div className="flex items-center gap-2 border-t bg-background px-3 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">

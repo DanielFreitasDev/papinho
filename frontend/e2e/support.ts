@@ -43,7 +43,9 @@ export async function registerThroughUi(
   const dialog = page.getByRole("dialog", {
     name: "Guarde seus códigos de recuperação",
   })
-  await expect(dialog).toBeVisible()
+  // O cadastro faz 11 hashes Argon2 (senha e códigos): numa instância recém-iniciada e com a máquina cheia, passa
+  // dos 5 s padrão sem estar errado.
+  await expect(dialog).toBeVisible({ timeout: 15_000 })
   await expect(dialog.getByRole("listitem")).toHaveCount(10)
   const codes = await dialog.getByRole("listitem").allTextContents()
   await dialog.getByRole("button", { name: "Guardei os códigos" }).click()

@@ -89,6 +89,13 @@ test("online e leitura recíprocos e modo privado", async ({
   )
   await gil.page.mouse.move(0, 0)
   await expect(bubble).toHaveCSS("filter", /blur/)
+  // O foco do teclado em qualquer controle da mensagem revela; sair dela desfoca de novo.
+  await row(gil.page, "Li, mas você não sabe")
+    .getByRole("button", { name: "Ações da mensagem" })
+    .focus()
+  await expect(bubble).toHaveCSS("filter", "none")
+  await gil.page.getByRole("textbox", { name: "Mensagem" }).focus()
+  await expect(bubble).toHaveCSS("filter", /blur/)
   await gil.page.keyboard.press("Alt+Shift+P")
   await expect(gil.page.locator("html")).not.toHaveAttribute("data-blur", /.+/)
   await expect(bubble).toHaveCSS("filter", "none")
@@ -190,6 +197,24 @@ test("conversa trancada e bloqueio de tela", async ({
 
   // O atalho padrão também bloqueia.
   await page.keyboard.press("Alt+Shift+L")
+  await expect(lock).toBeVisible()
+  await lock.getByLabel("PIN").fill("1357")
+  await lock.getByRole("button", { name: "Desbloquear" }).click()
+  await expect(lock).toBeHidden()
+
+  // Gatilho "trocar de aba": a aba escondida bloqueia.
+  await page
+    .getByRole("switch", { name: "Bloquear ao trocar de aba ou de janela" })
+    .click()
+  await page.getByRole("button", { name: "Salvar", exact: true }).click()
+  await expect(page.getByText("Alterações salvas").first()).toBeVisible()
+  await page.evaluate(() => {
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      get: () => "hidden",
+    })
+    document.dispatchEvent(new Event("visibilitychange"))
+  })
   await expect(lock).toBeVisible()
   await lock.getByLabel("PIN").fill("1357")
   await lock.getByRole("button", { name: "Desbloquear" }).click()

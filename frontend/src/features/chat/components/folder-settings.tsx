@@ -5,6 +5,7 @@ import { PencilIcon, PlusIcon, Trash2Icon } from "lucide-react"
 
 import { ConfirmDialog } from "@/components/confirm-dialog"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   Dialog,
   DialogContent,
@@ -171,13 +172,11 @@ function FolderDialog({
                 key={conversation.id}
                 className="flex min-h-11 cursor-pointer items-center gap-3 rounded-md px-2 py-1 hover:bg-muted"
               >
-                <input
-                  type="checkbox"
-                  className="size-5 accent-primary"
+                <Checkbox
                   checked={selected.includes(conversation.id)}
-                  onChange={(event) =>
+                  onCheckedChange={(checked) =>
                     setSelected((current) =>
-                      event.target.checked
+                      checked
                         ? [...current, conversation.id]
                         : current.filter((id) => id !== conversation.id)
                     )

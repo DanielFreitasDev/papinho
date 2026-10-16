@@ -29,6 +29,7 @@ import { cn } from "cn"
 
 import { Bubble, BubbleContent, BubbleReactions } from "@/components/ui/bubble"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -202,12 +203,11 @@ function MessageRowView({
       onClick={selecting && confirmed ? () => onAction("select") : undefined}
     >
       {selecting && confirmed ? (
-        <input
-          type="checkbox"
-          className="size-5 shrink-0 accent-primary"
+        <Checkbox
+          className="shrink-0"
           checked={selected}
           aria-label={t("chat.selectMessage")}
-          onChange={() => onAction("select")}
+          onCheckedChange={() => onAction("select")}
           onClick={(event) => event.stopPropagation()}
         />
       ) : null}
@@ -517,12 +517,11 @@ function DeletedRow({
       onClick={selecting ? () => onAction("select") : undefined}
     >
       {selecting ? (
-        <input
-          type="checkbox"
-          className="size-5 shrink-0 accent-primary"
+        <Checkbox
+          className="shrink-0"
           checked={selected}
           aria-label={t("chat.selectMessage")}
-          onChange={() => onAction("select")}
+          onCheckedChange={() => onAction("select")}
           onClick={(event) => event.stopPropagation()}
         />
       ) : null}

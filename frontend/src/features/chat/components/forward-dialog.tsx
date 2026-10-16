@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
 
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   Dialog,
   DialogContent,
@@ -68,15 +69,13 @@ export function ForwardDialog({
                 key={conversation.id}
                 className="flex min-h-11 cursor-pointer items-center gap-3 rounded-md px-2 py-1 hover:bg-muted"
               >
-                <input
-                  type="checkbox"
-                  className="size-5 accent-primary"
+                <Checkbox
                   checked={targets.includes(conversation.id)}
                   disabled={
                     !targets.includes(conversation.id) &&
                     targets.length >= MAX_TARGETS
                   }
-                  onChange={() => toggle(conversation.id)}
+                  onCheckedChange={() => toggle(conversation.id)}
                 />
                 <ConversationAvatar
                   conversation={conversation}

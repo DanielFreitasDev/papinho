@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
 
 import { UserAvatar } from "@/components/user-avatar"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { contactQueries } from "@/features/contact"
@@ -54,11 +55,9 @@ export function ContactPicker({
               key={contact.userId}
               className="flex min-h-11 cursor-pointer items-center gap-3 rounded-md px-2 py-1 hover:bg-muted"
             >
-              <input
-                type="checkbox"
-                className="size-5 accent-primary"
+              <Checkbox
                 checked={selected.includes(contact.userId)}
-                onChange={() =>
+                onCheckedChange={() =>
                   onChange(
                     selected.includes(contact.userId)
                       ? selected.filter((id) => id !== contact.userId)

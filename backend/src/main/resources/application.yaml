@@ -58,6 +58,9 @@ server:
   compression:
     enabled: true
     additional-mime-types: application/problem+json
+  # Manifesto do PWA (NT-04) com o tipo certo: com nosniff, o navegador não adivinha.
+  mime-mappings:
+    webmanifest: application/manifest+json
   error:
     include-message: never
     include-stacktrace: never

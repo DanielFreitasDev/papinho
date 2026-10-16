@@ -137,7 +137,13 @@ Notificações: em Configurações > Notificações o botão pede a permissão d
 pelo WebSocket; com ele fechado, por **Web Push**, que passa pelo serviço de push do navegador (Google, Mozilla ou
 Apple) e por isso **exige internet** no servidor e no aparelho. O conteúdo vai cifrado de ponta a ponta até o
 navegador; "Ocultar conteúdo" (Privacidade) manda só "Nova mensagem". **No iPhone e no iPad** o push só funciona
-com o Papinho instalado na tela de início (Safari > Compartilhar > Adicionar à Tela de Início).
+com o Papinho instalado na tela de início (Safari > Compartilhar > Adicionar à Tela de Início). Cada navegador só
+recebe push enquanto a sessão em que ele ligou as notificações existir: encerrar a sessão, trocar a senha ou o admin
+desativar a conta cortam o push daquele aparelho.
+
+Segurança da conta: adicionar uma passkey ou ativar a verificação em duas etapas pede a senha digitada nos últimos
+5 minutos (o login por senha conta); assim, quem usar o aparelho destravado de alguém não deixa uma forma própria de
+entrar. Cada código do app autenticador vale uma vez só no login.
 
 ### App instalável e offline
 

@@ -775,6 +775,13 @@ public class MessageService {
         }
     }
 
+    /** Mensagens pelos ids, na mesma ordem (quem chama já checou o acesso). */
+    List<MessageView> views(UUID me, List<UUID> ids) {
+        Map<UUID, Message> found = messages.findAllById(ids).stream()
+                .collect(Collectors.toMap(Message::id, Function.identity()));
+        return toViews(me, ids.stream().map(found::get).filter(Objects::nonNull).toList());
+    }
+
     private List<Message> withoutHidden(UUID me, List<Message> page) {
         Set<UUID> mine = hidden.hiddenAmong(me, page.stream().map(Message::id).toList());
         return mine.isEmpty() ? page : page.stream().filter(m -> !mine.contains(m.id())).toList();

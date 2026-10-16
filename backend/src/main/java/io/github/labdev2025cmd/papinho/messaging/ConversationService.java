@@ -154,6 +154,13 @@ public class ConversationService {
                 .toList());
     }
 
+    /** Conversas trancadas que o token da requisição não abre: ficam fora da busca global (PV-03, GR-06). */
+    Set<UUID> hiddenLocked(UUID me) {
+        Set<UUID> hidden = new HashSet<>(locks.lockedConversations(me));
+        hidden.removeAll(locks.unlockedConversations(me));
+        return hidden;
+    }
+
     /** Uma conversa; trancada sem token de desbloqueio dá 403 (PV-03). */
     @Transactional(readOnly = true)
     public ConversationView view(UUID me, UUID conversationId) {

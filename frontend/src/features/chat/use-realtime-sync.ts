@@ -78,8 +78,9 @@ export function useRealtimeSync(meId: string) {
         clearActivity(conversationId, peers.peer.userId)
       }
     }
-    const offState = realtime.onState((state, reconnected) => {
-      if (state === "connected" && reconnected) {
+    const offState = realtime.onState((state) => {
+      // Também na primeira conexão: o que mudou entre buscar a tela e assinar a fila só chega assim (RT-01).
+      if (state === "connected") {
         void queryClient.invalidateQueries({ queryKey: chatKeys.conversations })
         syncOpen()
       }

@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
 import { MonitorSmartphoneIcon } from "lucide-react"
 
+import { QueryState } from "@/components/query-state"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -47,51 +48,56 @@ export function SessionsSettings() {
         ) : undefined
       }
     >
-      {sessions.isPending ? (
-        <Skeleton
-          role="status"
-          className="h-16 w-full"
-          aria-label={t("common.loading")}
-        />
-      ) : (
-        <ItemGroup>
-          {sessions.data?.map((session) => (
-            <Item key={session.id} variant="outline" size="sm">
-              <ItemMedia variant="icon">
-                <MonitorSmartphoneIcon />
-              </ItemMedia>
-              <ItemContent>
-                <ItemTitle>
-                  {session.device}
-                  {session.current ? (
-                    <Badge variant="secondary">{t("sessions.current")}</Badge>
-                  ) : null}
-                </ItemTitle>
-                <ItemDescription>
-                  {t("sessions.lastActive", {
-                    date: formatDateTime(session.lastAccessedAt),
-                    ip: session.approximateIp,
-                  })}
-                </ItemDescription>
-              </ItemContent>
-              {!session.current ? (
-                <ItemActions>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={async () => {
-                      await revoke.mutateAsync(session.id)
-                      toast.add({ title: t("sessions.revoked") })
-                    }}
-                  >
-                    {t("sessions.revoke")}
-                  </Button>
-                </ItemActions>
-              ) : null}
-            </Item>
-          ))}
-        </ItemGroup>
-      )}
+      <QueryState
+        query={sessions}
+        loading={
+          <Skeleton
+            role="status"
+            className="h-16 w-full"
+            aria-label={t("common.loading")}
+          />
+        }
+      >
+        {(list) => (
+          <ItemGroup>
+            {list.map((session) => (
+              <Item key={session.id} variant="outline" size="sm">
+                <ItemMedia variant="icon">
+                  <MonitorSmartphoneIcon />
+                </ItemMedia>
+                <ItemContent>
+                  <ItemTitle>
+                    {session.device}
+                    {session.current ? (
+                      <Badge variant="secondary">{t("sessions.current")}</Badge>
+                    ) : null}
+                  </ItemTitle>
+                  <ItemDescription>
+                    {t("sessions.lastActive", {
+                      date: formatDateTime(session.lastAccessedAt),
+                      ip: session.approximateIp,
+                    })}
+                  </ItemDescription>
+                </ItemContent>
+                {!session.current ? (
+                  <ItemActions>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={async () => {
+                        await revoke.mutateAsync(session.id)
+                        toast.add({ title: t("sessions.revoked") })
+                      }}
+                    >
+                      {t("sessions.revoke")}
+                    </Button>
+                  </ItemActions>
+                ) : null}
+              </Item>
+            ))}
+          </ItemGroup>
+        )}
+      </QueryState>
     </SettingsSection>
   )
 }

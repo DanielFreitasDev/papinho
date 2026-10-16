@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
 import { SearchIcon, UserPlusIcon } from "lucide-react"
 
+import { QueryState } from "@/components/query-state"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { toast } from "@/components/ui/toast"
@@ -64,77 +65,96 @@ export function AdminUsers() {
           onChange={(event) => setQuery(event.target.value)}
         />
       </InputGroup>
-      <ItemGroup>
-        {users.data?.items.map((user) => {
-          const self = user.id === me.data?.account.id
-          return (
-            <Item key={user.id} variant="outline" size="sm">
-              <ItemContent className="min-w-0">
-                <ItemTitle className="truncate">
-                  {user.displayName}
-                  {user.admin ? <Badge variant="secondary">admin</Badge> : null}
-                  {!user.enabled ? (
-                    <Badge variant="destructive">{t("admin.disabled")}</Badge>
-                  ) : null}
-                </ItemTitle>
-                <ItemDescription>
-                  @{user.username}
-                  {self ? ` (${t("admin.you")})` : ""}
-                </ItemDescription>
-              </ItemContent>
-              {!self ? (
-                <ItemActions className="flex-wrap">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      action.mutate({
-                        id: user.id,
-                        action: user.enabled ? "disable" : "enable",
-                      })
-                    }
-                  >
-                    {user.enabled ? t("admin.disable") : t("admin.enable")}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={async () => {
-                      const result = await action.mutateAsync({
-                        id: user.id,
-                        action: "reset-password",
-                      })
-                      if (result?.temporaryPassword) {
-                        setPassword({ user, value: result.temporaryPassword })
-                      }
-                    }}
-                  >
-                    {t("admin.resetPassword")}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() =>
-                      action.mutate(
-                        {
-                          id: user.id,
-                          action: user.admin ? "remove-admin" : "make-admin",
-                        },
-                        {
-                          onSuccess: () =>
-                            toast.add({ title: t("admin.roleChanged") }),
+      <QueryState
+        query={users}
+        isEmpty={(page) => page.items.length === 0}
+        empty={{ title: t("admin.noUsers") }}
+      >
+        {(page) => (
+          <ItemGroup>
+            {page.items.map((user) => {
+              const self = user.id === me.data?.account.id
+              return (
+                <Item key={user.id} variant="outline" size="sm">
+                  <ItemContent className="min-w-0">
+                    <ItemTitle className="truncate">
+                      {user.displayName}
+                      {user.admin ? (
+                        <Badge variant="secondary">admin</Badge>
+                      ) : null}
+                      {!user.enabled ? (
+                        <Badge variant="destructive">
+                          {t("admin.disabled")}
+                        </Badge>
+                      ) : null}
+                    </ItemTitle>
+                    <ItemDescription>
+                      @{user.username}
+                      {self ? ` (${t("admin.you")})` : ""}
+                    </ItemDescription>
+                  </ItemContent>
+                  {!self ? (
+                    <ItemActions className="flex-wrap">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          action.mutate({
+                            id: user.id,
+                            action: user.enabled ? "disable" : "enable",
+                          })
                         }
-                      )
-                    }
-                  >
-                    {user.admin ? t("admin.removeAdmin") : t("admin.makeAdmin")}
-                  </Button>
-                </ItemActions>
-              ) : null}
-            </Item>
-          )
-        })}
-      </ItemGroup>
+                      >
+                        {user.enabled ? t("admin.disable") : t("admin.enable")}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={async () => {
+                          const result = await action.mutateAsync({
+                            id: user.id,
+                            action: "reset-password",
+                          })
+                          if (result?.temporaryPassword) {
+                            setPassword({
+                              user,
+                              value: result.temporaryPassword,
+                            })
+                          }
+                        }}
+                      >
+                        {t("admin.resetPassword")}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
+                          action.mutate(
+                            {
+                              id: user.id,
+                              action: user.admin
+                                ? "remove-admin"
+                                : "make-admin",
+                            },
+                            {
+                              onSuccess: () =>
+                                toast.add({ title: t("admin.roleChanged") }),
+                            }
+                          )
+                        }
+                      >
+                        {user.admin
+                          ? t("admin.removeAdmin")
+                          : t("admin.makeAdmin")}
+                      </Button>
+                    </ItemActions>
+                  ) : null}
+                </Item>
+              )
+            })}
+          </ItemGroup>
+        )}
+      </QueryState>
       <Dialog
         open={password !== null}
         onOpenChange={(open) => !open && setPassword(null)}

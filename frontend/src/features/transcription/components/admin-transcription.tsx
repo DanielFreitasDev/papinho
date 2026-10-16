@@ -2,6 +2,7 @@ import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
 
+import { QueryState } from "@/components/query-state"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -38,7 +39,7 @@ export function AdminTranscription() {
   const actions = useAdminTranscription()
   const [kind, setKind] = useState<ProviderKind>("GROQ")
   if (!view.data) {
-    return null
+    return <QueryState query={view}>{() => null}</QueryState>
   }
   const defaults = [
     { value: "BROWSER", label: t("transcription.browser") },

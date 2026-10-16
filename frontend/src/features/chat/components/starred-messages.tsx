@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
 import { StarIcon } from "lucide-react"
 
+import { QueryState } from "@/components/query-state"
 import {
   Empty,
   EmptyDescription,
@@ -37,6 +38,9 @@ export function StarredMessages() {
         aria-label={t("common.loading")}
       />
     )
+  }
+  if (starred.isError) {
+    return <QueryState query={starred}>{() => null}</QueryState>
   }
   if (!starred.data || starred.data.length === 0) {
     return (

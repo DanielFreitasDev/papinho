@@ -9,6 +9,7 @@ import {
   UploadIcon,
 } from "lucide-react"
 
+import { QueryState } from "@/components/query-state"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -111,6 +112,9 @@ export function StickerManager({
           }}
         />
         <div className="flex max-h-[50dvh] flex-col gap-4 overflow-y-auto">
+          {packs.data ? null : (
+            <QueryState query={packs}>{() => null}</QueryState>
+          )}
           {packs.data?.map((pack) => (
             <section key={pack.id} className="flex flex-col gap-2">
               <div className="flex items-center gap-2">

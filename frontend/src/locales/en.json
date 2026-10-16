@@ -322,7 +322,8 @@
       "none": "No files uploaded yet",
       "userFiles_one": "{{count}} file · {{size}}",
       "userFiles_other": "{{count}} files · {{size}}"
-    }
+    },
+    "noUsers": "Nobody found"
   },
   "chat": {
     "conversations": "Chats",
@@ -1031,5 +1032,12 @@
   "connection": {
     "offline": "No connection. You see recent chats and your texts go out when the connection is back.",
     "reconnecting": "Reconnecting…"
+  },
+  "states": {
+    "forbiddenTitle": "No permission",
+    "forbiddenDescription": "Your account cannot access this part of Papinho.",
+    "offlineTitle": "No connection to the server",
+    "offlineDescription": "Check the internet or the local network and try again.",
+    "errorTitle": "Could not load"
   }
 }

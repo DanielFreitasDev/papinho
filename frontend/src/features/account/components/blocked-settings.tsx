@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
 
+import { QueryState } from "@/components/query-state"
 import { Button } from "@/components/ui/button"
 import {
   Item,
@@ -22,34 +23,40 @@ export function BlockedSettings() {
 
   return (
     <SettingsSection title={t("settings.blocked")}>
-      {blocked.data && blocked.data.length > 0 ? (
-        <ItemGroup>
-          {blocked.data.map((person) => (
-            <Item key={person.userId} variant="outline" size="sm">
-              <ItemContent className="min-w-0">
-                <ItemTitle className="truncate">{person.displayName}</ItemTitle>
-                <ItemDescription>
-                  @{person.username} ·{" "}
-                  {t("blocked.since", { date: formatDate(person.blockedAt) })}
-                </ItemDescription>
-              </ItemContent>
-              <ItemActions>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    block.mutate({ userId: person.userId, blocked: false })
-                  }
-                >
-                  {t("contacts.unblock")}
-                </Button>
-              </ItemActions>
-            </Item>
-          ))}
-        </ItemGroup>
-      ) : (
-        <p className="text-sm text-muted-foreground">{t("blocked.empty")}</p>
-      )}
+      <QueryState
+        query={blocked}
+        isEmpty={(list) => list.length === 0}
+        empty={{ title: t("blocked.empty") }}
+      >
+        {(list) => (
+          <ItemGroup>
+            {list.map((person) => (
+              <Item key={person.userId} variant="outline" size="sm">
+                <ItemContent className="min-w-0">
+                  <ItemTitle className="truncate">
+                    {person.displayName}
+                  </ItemTitle>
+                  <ItemDescription>
+                    @{person.username} ·{" "}
+                    {t("blocked.since", { date: formatDate(person.blockedAt) })}
+                  </ItemDescription>
+                </ItemContent>
+                <ItemActions>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      block.mutate({ userId: person.userId, blocked: false })
+                    }
+                  >
+                    {t("contacts.unblock")}
+                  </Button>
+                </ItemActions>
+              </Item>
+            ))}
+          </ItemGroup>
+        )}
+      </QueryState>
     </SettingsSection>
   )
 }

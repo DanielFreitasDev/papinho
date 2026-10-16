@@ -2,6 +2,7 @@ import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
 
+import { QueryState } from "@/components/query-state"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
@@ -28,6 +29,9 @@ const MODES: RegistrationMode[] = ["INVITE_ONLY", "OPEN", "CLOSED"]
 export function AdminSettingsForm() {
   const { t } = useTranslation()
   const settings = useQuery(adminQueries.settings())
+  if (!settings.data && !settings.isPending) {
+    return <QueryState query={settings}>{() => null}</QueryState>
+  }
   if (!settings.data) {
     return (
       <Skeleton

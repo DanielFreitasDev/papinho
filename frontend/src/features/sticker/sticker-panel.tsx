@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
 import { SettingsIcon } from "lucide-react"
 
+import { QueryState } from "@/components/query-state"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { mediaUrl } from "@/features/media"
@@ -45,6 +46,8 @@ export function StickerPanel({
     <div className="flex h-72 w-[min(20rem,calc(100vw-2rem))] flex-col gap-2 overflow-y-auto">
       {packs.isPending ? (
         <Skeleton className="h-full w-full" />
+      ) : packs.isError ? (
+        <QueryState query={packs}>{() => null}</QueryState>
       ) : (
         <>
           {favorites.data && favorites.data.length > 0 ? (

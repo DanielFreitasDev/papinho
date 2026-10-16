@@ -322,7 +322,8 @@
       "none": "Nenhum arquivo enviado ainda",
       "userFiles_one": "{{count}} arquivo · {{size}}",
       "userFiles_other": "{{count}} arquivos · {{size}}"
-    }
+    },
+    "noUsers": "Ninguém encontrado"
   },
   "chat": {
     "conversations": "Conversas",
@@ -1031,5 +1032,12 @@
   "connection": {
     "offline": "Sem conexão. Você vê as conversas recentes e os textos saem quando a conexão voltar.",
     "reconnecting": "Reconectando…"
+  },
+  "states": {
+    "forbiddenTitle": "Sem permissão",
+    "forbiddenDescription": "Sua conta não tem acesso a esta parte do Papinho.",
+    "offlineTitle": "Sem conexão com o servidor",
+    "offlineDescription": "Confira a internet ou a rede local e tente de novo.",
+    "errorTitle": "Não foi possível carregar"
   }
 }

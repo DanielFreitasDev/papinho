@@ -2,6 +2,7 @@ import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
 
+import { QueryState } from "@/components/query-state"
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field"
 import {
   Select,
@@ -25,7 +26,11 @@ export function TranscriptionSettings() {
   const save = useSavePreference()
   const [model, setModel] = useState<WhisperModel>(whisperModel())
   if (!options.data) {
-    return null
+    return (
+      <SettingsSection title={t("settings.transcription")}>
+        <QueryState query={options}>{() => null}</QueryState>
+      </SettingsSection>
+    )
   }
   const { preference, providers, instanceDefault } = options.data
   const defaultName =

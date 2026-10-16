@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
 import { BellRingIcon, InfoIcon, SmartphoneIcon } from "lucide-react"
 
+import { QueryState } from "@/components/query-state"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -145,7 +146,9 @@ export function NotificationSettings() {
               </li>
             ))}
           </ul>
-        ) : null}
+        ) : (
+          <QueryState query={preferences}>{() => null}</QueryState>
+        )}
         <p className="mt-3 text-xs text-muted-foreground">
           {t("notifications.perConversation")}
         </p>

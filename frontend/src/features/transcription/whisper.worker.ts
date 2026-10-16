@@ -4,8 +4,10 @@ import {
   pipeline,
   type AutomaticSpeechRecognitionPipeline,
 } from "@huggingface/transformers"
-import ortMjs from "onnxruntime-web/ort-wasm-simd-threaded.jsep.mjs?url"
-import ortWasm from "onnxruntime-web/ort-wasm-simd-threaded.jsep.wasm?url"
+import webgpuMjs from "onnxruntime-web/ort-wasm-simd-threaded.asyncify.mjs?url"
+import webgpuWasm from "onnxruntime-web/ort-wasm-simd-threaded.asyncify.wasm?url"
+import wasmMjs from "onnxruntime-web/ort-wasm-simd-threaded.mjs?url"
+import wasmWasm from "onnxruntime-web/ort-wasm-simd-threaded.wasm?url"
 
 import type { WorkerRequest, WorkerResponse } from "./protocol"
 
@@ -19,8 +21,14 @@ env.useBrowserCache = true
 // Com o cache de WASM, o Transformers.js reescreve o .mjs do runtime e o importa de uma URL blob:, que a CSP
 // (script-src 'self') recusa. Sem ele, o runtime vem direto do Papinho, já com cache HTTP de um ano.
 env.useWasmCache = false
+// O WebGPU do onnxruntime só existe no build "asyncify" (o único que exporta webgpuInit; o "jsep" falha com "no
+// available backend"), que também roda WASM. Sem WebGPU no navegador, o build simples, menor e só WASM, basta: a
+// mesma escolha que o Transformers.js faz quando usa a CDN.
+const webgpuApi = "gpu" in navigator
 if (env.backends.onnx.wasm) {
-  env.backends.onnx.wasm.wasmPaths = { mjs: ortMjs, wasm: ortWasm }
+  env.backends.onnx.wasm.wasmPaths = webgpuApi
+    ? { mjs: webgpuMjs, wasm: webgpuWasm }
+    : { mjs: wasmMjs, wasm: wasmWasm }
 }
 
 const scope = self as unknown as DedicatedWorkerGlobalScope
@@ -30,33 +38,41 @@ function post(message: WorkerResponse) {
   scope.postMessage(message)
 }
 
+function create(model: string, id: string, device: "webgpu" | "wasm") {
+  return pipeline("automatic-speech-recognition", model, {
+    device,
+    dtype:
+      device === "webgpu"
+        ? { encoder_model: "fp32", decoder_model_merged: "q4" }
+        : "q8",
+    progress_callback: (progress: {
+      status: string
+      file?: string
+      loaded?: number
+      total?: number
+    }) => {
+      if (progress.status === "progress" && progress.total) {
+        post({
+          type: "progress",
+          id,
+          file: progress.file ?? "",
+          loaded: progress.loaded ?? 0,
+          total: progress.total,
+        })
+      }
+    },
+  }) as Promise<AutomaticSpeechRecognitionPipeline>
+}
+
 async function load(model: string, id: string) {
   const key = model
   let running = loaded.get(key)
   if (!running) {
-    const webgpu = "gpu" in navigator && (await hasAdapter())
-    running = pipeline("automatic-speech-recognition", model, {
-      device: webgpu ? "webgpu" : "wasm",
-      dtype: webgpu
-        ? { encoder_model: "fp32", decoder_model_merged: "q4" }
-        : "q8",
-      progress_callback: (progress: {
-        status: string
-        file?: string
-        loaded?: number
-        total?: number
-      }) => {
-        if (progress.status === "progress" && progress.total) {
-          post({
-            type: "progress",
-            id,
-            file: progress.file ?? "",
-            loaded: progress.loaded ?? 0,
-            total: progress.total,
-          })
-        }
-      },
-    }) as Promise<AutomaticSpeechRecognitionPipeline>
+    const webgpu = webgpuApi && (await hasAdapter())
+    running = webgpu
+      ? // Adaptador presente não garante WebGPU funcionando (driver, memória): aí vale o WASM.
+        create(model, id, "webgpu").catch(() => create(model, id, "wasm"))
+      : create(model, id, "wasm")
     loaded.set(key, running)
     running.catch(() => loaded.delete(key))
   }

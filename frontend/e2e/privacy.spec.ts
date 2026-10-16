@@ -103,6 +103,39 @@ test("online e leitura recíprocos e modo privado", async ({
   await expect(bubble).toHaveCSS("filter", "none")
   await gil.page.getByRole("textbox", { name: "Mensagem" }).focus()
   await expect(bubble).toHaveCSS("filter", /blur/)
+
+  if (test.info().project.name.startsWith("mobile")) {
+    // Toque longo (toque de verdade pelo protocolo do Chromium) revela; solto, volta a desfocar depois de um tempo.
+    const box = (await bubble.boundingBox())!
+    const point = { x: box.x + box.width / 2, y: box.y + box.height / 2 }
+    const touch = await gil.page.context().newCDPSession(gil.page)
+    await touch.send("Input.dispatchTouchEvent", {
+      type: "touchStart",
+      touchPoints: [point],
+    })
+    await expect(bubble).toHaveCSS("filter", "none")
+    await touch.send("Input.dispatchTouchEvent", {
+      type: "touchEnd",
+      touchPoints: [],
+    })
+    await expect(bubble).toHaveCSS("filter", /blur/, { timeout: 6_000 })
+  } else {
+    // Com o mouse, revela só depois do atraso escolhido (3 s): um segundo depois ainda está desfocada.
+    await openPrivacySettings(gil.page)
+    await choose(
+      gil.page,
+      "Revelar com o mouse em cima",
+      "Depois de 3 segundos"
+    )
+    await gil.page.goto(gilChat)
+    await bubble.hover()
+    await gil.page.waitForTimeout(1_000)
+    await expect(bubble).toHaveCSS("filter", /blur/)
+    await expect(bubble).toHaveCSS("filter", "none", { timeout: 6_000 })
+    await gil.page.mouse.move(0, 0)
+    await expect(bubble).toHaveCSS("filter", /blur/)
+  }
+
   await gil.page.keyboard.press("Alt+Shift+P")
   await expect(gil.page.locator("html")).not.toHaveAttribute("data-blur", /.+/)
   await expect(bubble).toHaveCSS("filter", "none")

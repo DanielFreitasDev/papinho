@@ -325,9 +325,13 @@
     filter: blur(0.45rem);
     transition: filter 150ms ease 0ms;
   }
-  html[data-blur] [data-private]:hover {
-    filter: none;
-    transition-delay: var(--reveal-delay, 0ms);
+  /* Só com mouse: no toque, o navegador deixa o item tocado em :hover até tocar em outro lugar, e um toque curto
+     revelaria a mensagem de vez. No celular quem revela é o toque longo. */
+  @media (hover: hover) {
+    html[data-blur] [data-private]:hover {
+      filter: none;
+      transition-delay: var(--reveal-delay, 0ms);
+    }
   }
   html[data-blur] [data-private]:focus-within,
   html[data-blur] [data-private-scope]:focus-within [data-private],

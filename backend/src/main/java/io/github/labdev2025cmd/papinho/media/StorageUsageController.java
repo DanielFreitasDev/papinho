@@ -13,12 +13,12 @@ import org.springframework.web.bind.annotation.RestController;
 /** Uso de disco no painel do admin (AD-01): arquivos enviados, banco e espaço livre do volume. */
 @RestController
 @PreAuthorize("hasRole('ADMIN')")
-class StorageUsage {
+class StorageUsageController {
 
     private final JdbcTemplate jdbc;
     private final FileStorage storage;
 
-    StorageUsage(JdbcTemplate jdbc, FileStorage storage) {
+    StorageUsageController(JdbcTemplate jdbc, FileStorage storage) {
         this.jdbc = jdbc;
         this.storage = storage;
     }

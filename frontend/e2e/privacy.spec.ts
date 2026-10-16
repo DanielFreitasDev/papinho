@@ -1,7 +1,14 @@
 import type { Page } from "@playwright/test"
 
 import { expect, expectNoSeriousA11yViolations, test } from "./fixtures"
-import { openMenuItem, RUN, twoFriends } from "./support"
+import {
+  createInvite,
+  ensureAdmin,
+  openMenuItem,
+  registerThroughUi,
+  RUN,
+  twoFriends,
+} from "./support"
 
 function row(page: Page, text: string) {
   return page
@@ -222,4 +229,66 @@ test("conversa trancada e bloqueio de tela", async ({
 
   await gil.context.close()
   await hana.context.close()
+})
+
+/** Fase 5: bloqueio por inatividade e desbloqueio com passkey (PV-02). */
+test("bloqueio por inatividade e desbloqueio com passkey", async ({
+  page,
+  browserName,
+  pageErrors,
+}) => {
+  test.skip(
+    browserName !== "chromium",
+    "autenticador virtual só existe no Chromium (CDP)"
+  )
+  test.slow()
+  const cdp = await page.context().newCDPSession(page)
+  await cdp.send("WebAuthn.enable")
+  await cdp.send("WebAuthn.addVirtualAuthenticator", {
+    options: {
+      protocol: "ctap2",
+      transport: "internal",
+      hasResidentKey: true,
+      hasUserVerification: true,
+      isUserVerified: true,
+    },
+  })
+  const username = `ocioso.${RUN}${test.info().project.name.startsWith("mobile") ? "m" : "d"}`
+  const owner = await ensureAdmin(page.context().browser()!, pageErrors)
+  const invite = await createInvite(owner.page)
+  await owner.context.close()
+  await page.goto(invite)
+  await registerThroughUi(page, username, "Pessoa Ociosa")
+
+  await page.goto("/settings/security")
+  await page.getByLabel("Nome da passkey").fill("Notebook de teste")
+  await page.getByRole("button", { name: "Adicionar passkey" }).click()
+  await expect(page.getByText("Notebook de teste")).toBeVisible()
+
+  // Relógio controlado: a inatividade passa sem esperar minutos de verdade.
+  await page.clock.install()
+  await page.goto("/settings/privacy")
+  await page.getByLabel("Novo PIN").fill("8642")
+  await page.getByLabel("Repita para confirmar").fill("8642")
+  await page
+    .getByRole("combobox", { name: "Bloquear depois de um tempo sem uso" })
+    .click()
+  await page.getByRole("option", { name: "1 minuto", exact: true }).click()
+  await page
+    .getByRole("switch", { name: "Desbloquear também com passkey" })
+    .click()
+  await page.getByRole("button", { name: "Ligar o bloqueio" }).click()
+  await expect(page.getByText("Bloqueio de tela ligado")).toBeVisible()
+
+  const lock = page.getByRole("dialog", { name: "Papinho bloqueado" })
+  await expect(lock).toBeHidden()
+  await page.clock.fastForward("01:10")
+  await expect(lock).toBeVisible()
+  await lock.getByRole("button", { name: "Usar passkey" }).click()
+  await expect(lock).toBeHidden()
+  // Mesma conta, mesma tela: a passkey só confirmou quem já estava ali.
+  await expect(
+    page.getByRole("heading", { name: "Configurações" })
+  ).toBeVisible()
+  await expect(page.getByText("Bloqueio de tela ligado")).toHaveCount(0)
 })

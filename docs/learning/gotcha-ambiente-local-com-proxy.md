@@ -1,9 +1,10 @@
 ---
 name: Máquina local do dono — proxy no Maven, portas ocupadas e /tmp
-description: proxy do settings.xml virava argumento do vite; 5432 ocupada; /tmp some no reboot; conta do gh sem push
+description: proxy do settings.xml virava argumento do vite; 5432 ocupada; /tmp some no reboot; conta do gh sem push; internet só pelo proxy; 12 workers no e2e
 type: project
 category: gotcha
 date: 2026-10-16
+updated: 2026-10-16
 ---
 Diferenças da máquina local em relação ao sandbox de nuvem das passadas 1 a 6:
 
@@ -19,6 +20,13 @@ Diferenças da máquina local em relação ao sandbox de nuvem das passadas 1 a 
 - O `gh` está logado numa conta só com leitura no repositório: commits ficam locais até alguém com escrita dar
   `git push origin main`.
 - O servidor usa threads virtuais: `jstack` não as mostra; use `jcmd <pid> Thread.dump_to_file -format=text`.
+- A internet só sai pelo proxy local (`127.0.0.1:3128`, nas variáveis `*_proxy`); conexão direta não passa. O JVM
+  ignora essas variáveis. No e2e, o Chromium só precisa de internet no `whisper.spec.ts`, que recebe o proxy por
+  `PAPINHO_E2E_PROXY` (a instância local continua direta pelo `bypass`).
+- O Playwright usa por padrão metade dos núcleos (12 workers aqui; 2 no runner do CI): fluxos longos estouram os
+  30 s padrão e corridas de teste aparecem aqui antes do CI. Fluxo longo ganha `test.slow()`.
 
-**Evidência:** build falhando no `pnpm-build` e verde depois de `0434f61`; `403 Permission denied` no push;
-dump com `jcmd` mostrando requisições esperando o pool do Hikari durante um reinício do Docker (2026-10-16).
+**Evidência:** build falhando no `pnpm-build` e verde depois de `0434f61`; `403 Permission denied` no push (de novo
+na passada 8, também sem chave SSH autorizada); dump com `jcmd` mostrando requisições esperando o pool do Hikari
+durante um reinício do Docker (2026-10-16); `curl --noproxy '*'` para a internet sem resposta e 200 pelo proxy;
+`email.spec.ts` passando dos 30 s com 12 workers e verde com `test.slow()` (passada 8).

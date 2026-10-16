@@ -35,6 +35,10 @@ the product's own name-constrained CA) and may later deploy it on a VPS behind a
   (start that jar with `PAPINHO_RATE_LIMIT_MULTIPLIER=10`, as CI does; never in production).
   The UI-05 spec also runs in Firefox and WebKit (`playwright install chromium firefox webkit`); WebKit rejects
   `Secure` cookies on http://localhost, so it needs `PAPINHO_E2E_HTTPS_URL` pointing to the `lan` instance (same DB).
+  The real in-browser Whisper spec (AU-04) needs internet and downloads ~80 MB: `PAPINHO_E2E_WHISPER=1 pnpm e2e
+  whisper.spec.ts --project=desktop-chromium --project=whisper-webgpu` (WASM and software WebGPU); behind a proxy
+  add `PAPINHO_E2E_PROXY=http://host:port`. Never run two Playwright commands at once in `frontend/`: each one
+  clears `test-results/` (use `--output` for a parallel run).
 - LAN PKI: `java -jar backend/target/papinho.jar pki init|renew|status`; run with `--spring.profiles.active=lan`.
 - Install-script check: `scripts/verify-install-ca.sh` (Docker + a `lan` instance reachable as papinho.lan).
 
@@ -54,6 +58,10 @@ the product's own name-constrained CA) and may later deploy it on a VPS behind a
 - UI-05: no control with the browser's native look (no exceptions for `NativeSelect` or native date inputs).
   Use `SearchInput`, `PasswordInput`, `DatePicker`/`DateTimePicker`, `VideoPlayer`/`LocalAudioPlayer`, every
   `<form>` gets `noValidate`; ESLint enforces it outside `src/components/ui/` (tested in `frontend/lint/`).
+- A failed API action must be visible: never leave `await mutateAsync(...)` without try/catch; show
+  `errorMessage(error, t("common.genericError"))` in a toast (`type: "error"`) or in the screen's own error state.
+- Effects that reveal or hide content on `:hover` go inside `@media (hover: hover)`: on touch screens the tapped
+  element stays `:hover` until the next tap (PV-01 uses long press there).
 - Never mark a STATUS item `feito` without executed evidence; blocked items need the concrete reason.
 
 ## Guides (root; read only the relevant section)

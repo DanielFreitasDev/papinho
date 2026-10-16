@@ -60,6 +60,15 @@ capturas em Chromium, Firefox e WebKit, nos temas claro e escuro (ficam em `fron
 HTML do CI). O WebKit recusa cookies `Secure` em `http://localhost`, então roda contra uma instância HTTPS do perfil
 `lan` (a mesma base de dados): `PAPINHO_E2E_HTTPS_URL=https://127.0.0.1:8443`. Sem essa variável, o WebKit é pulado.
 
+O spec `whisper.spec.ts` transcreve um áudio de verdade com o Whisper no navegador: baixa ~80 MB do Hugging Face,
+então só roda com `PAPINHO_E2E_WHISPER=1` (e `PAPINHO_E2E_PROXY=http://host:porta` se a internet passa por um
+proxy). O projeto `desktop-chromium` cobre o WASM e o `whisper-webgpu` (que só existe com essa variável) cobre o
+WebGPU com o adaptador por software do Chromium, bem mais lento:
+
+```bash
+PAPINHO_E2E_WHISPER=1 PAPINHO_E2E_URL=http://localhost:8080 pnpm e2e whisper.spec.ts --project=desktop-chromium --project=whisper-webgpu
+```
+
 ## Configuração
 
 | Variável | Padrão | Uso |

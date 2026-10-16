@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,19 +25,23 @@ public class AdminUserService {
 
     private static final Logger log = LoggerFactory.getLogger(AdminUserService.class);
     private static final String PASSWORD_ALPHABET = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    /** Advisory lock das ações que tiram poder de admin: dois admins não se tiram ao mesmo tempo. */
+    static final long ADMIN_LOCK = 0x5041_5049_4E48_4F02L;
 
     private final UserAccountRepository users;
     private final ProfileService profiles;
     private final SessionService sessions;
     private final PasswordEncoder passwordEncoder;
+    private final JdbcTemplate jdbc;
     private final SecureRandom random = new SecureRandom();
 
     AdminUserService(UserAccountRepository users, ProfileService profiles, SessionService sessions,
-            PasswordEncoder passwordEncoder) {
+            PasswordEncoder passwordEncoder, JdbcTemplate jdbc) {
         this.users = users;
         this.profiles = profiles;
         this.sessions = sessions;
         this.passwordEncoder = passwordEncoder;
+        this.jdbc = jdbc;
     }
 
     @Transactional(readOnly = true)
@@ -57,6 +62,7 @@ public class AdminUserService {
         if (adminId.equals(userId)) {
             throw new SelfActionException();
         }
+        requireActiveAdmin(adminId);
         load(userId).changeRole(admin ? Role.ADMIN : Role.USER);
         sessions.revokeAllExcept(userId, null);
         log.info("User role changed by admin userId={} adminId={} admin={}", userId, adminId, admin);
@@ -68,6 +74,7 @@ public class AdminUserService {
         if (adminId.equals(userId)) {
             throw new SelfActionException();
         }
+        requireActiveAdmin(adminId);
         load(userId).disable();
         sessions.revokeAllExcept(userId, null);
         log.info("User disabled by admin userId={} adminId={}", userId, adminId);
@@ -95,6 +102,18 @@ public class AdminUserService {
         return password.toString();
     }
 
+    /**
+     * Ninguém tira o próprio poder, mas dois admins podiam tirar um ao outro ao mesmo tempo e deixar a instância sem
+     * admin. Com a trava, a segunda ação vê que quem age já não é admin ativo e é recusada.
+     */
+    private void requireActiveAdmin(UUID adminId) {
+        jdbc.queryForObject("select pg_advisory_xact_lock(?)", Object.class, ADMIN_LOCK);
+        UserAccount acting = load(adminId);
+        if (acting.role() != Role.ADMIN || !acting.enabled()) {
+            throw new NotActiveAdminException();
+        }
+    }
+
     private UserAccount load(UUID userId) {
         return users.findById(userId).orElseThrow(IdentityExceptions.NotFoundException::new);
     }
@@ -102,6 +121,12 @@ public class AdminUserService {
     /** Usuário como listado no painel do admin. */
     public record AdminUserView(UUID id, String username, String displayName, boolean admin, boolean enabled,
             Instant createdAt) {
+    }
+
+    static class NotActiveAdminException extends ApiException {
+        NotActiveAdminException() {
+            super(HttpStatus.FORBIDDEN, "forbidden", "Acting admin is no longer an active admin");
+        }
     }
 
     static class SelfActionException extends ApiException {

@@ -155,6 +155,33 @@ class IdentityIT {
     }
 
     @Test
+    @DisplayName("dois admins não tiram um ao outro ao mesmo tempo: a segunda ação vê que quem age já não é admin")
+    void shouldNotLeaveTheInstanceWithoutAdmins() throws Exception {
+        ApiClient ana = clients.create();
+        String anaId = Accounts.userId(Accounts.register(ana, "ana", null));
+        ApiClient bruno = clients.create();
+        String brunoId = Accounts.userId(Accounts.register(bruno, "bruno", Accounts.invite(ana)));
+        assertThat(ana.put("/api/v1/admin/users/" + brunoId + "/admin", null).getResponse().getStatus())
+                .isLessThan(300);
+        try (Connection holder = dataSource.getConnection(); Statement statement = holder.createStatement()) {
+            statement.execute("select pg_advisory_lock(" + AdminUserService.ADMIN_LOCK + ")");
+            CompletableFuture<MvcTestResult> anaRemovesBruno = CompletableFuture.supplyAsync(
+                    () -> ana.delete("/api/v1/admin/users/" + brunoId + "/admin", null));
+            try {
+                assertThatThrownBy(() -> anaRemovesBruno.get(500, TimeUnit.MILLISECONDS)).as("espera a trava")
+                        .isInstanceOf(TimeoutException.class);
+                // Enquanto isso, Bruno tira a Ana (a ação dele chegou primeiro e já gravou).
+                jdbc.update("update user_accounts set role = 'USER' where id = ?", java.util.UUID.fromString(anaId));
+            } finally {
+                statement.execute("select pg_advisory_unlock(" + AdminUserService.ADMIN_LOCK + ")");
+            }
+            assertProblem(anaRemovesBruno.get(10, TimeUnit.SECONDS), 403, "forbidden");
+        }
+        assertThat(jdbc.queryForObject("select role from user_accounts where id = ?", String.class,
+                java.util.UUID.fromString(brunoId))).as("ainda há um admin").isEqualTo("ADMIN");
+    }
+
+    @Test
     @DisplayName("cookie de sessão sai com __Host-, HttpOnly, Secure e SameSite=Lax")
     void shouldIssueHardenedSessionCookie() {
         ApiClient client = clients.create().bootstrap();

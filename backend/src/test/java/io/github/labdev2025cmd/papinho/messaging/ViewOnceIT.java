@@ -138,6 +138,25 @@ class ViewOnceIT {
         assertThat(StoredMedia.exists(storage, other)).as("arquivo apagado do armazenamento").isFalse();
     }
 
+    @Test
+    @DisplayName("foto e áudio de visualização única não aparecem na galeria (MD-03)")
+    void shouldKeepViewOnceOutOfGallery() {
+        String photo = Uploads.upload(ana, Images.png(40, 40), "unica.png", "image/png");
+        send(photo, true);
+        String voice = Uploads.upload(ana, Uploads.ogg(4096), "unica.ogg", "audio/ogg");
+        send(voice, true);
+        String common = send(Uploads.upload(ana, Images.png(40, 40), "comum.png", "image/png"), false).get("id")
+                .asString();
+
+        String gallery = "/api/v1/conversations/" + conversation + "/gallery?tab=";
+        for (ApiClient client : List.of(ana, bruno)) {
+            JsonNode media = client.json(client.get(gallery + "MEDIA")).get("messages");
+            assertThat(media.valueStream().map(m -> m.get("id").asString()).toList()).as("só a foto comum")
+                    .containsExactly(common);
+            assertThat(client.json(client.get(gallery + "AUDIO")).get("messages")).isEmpty();
+        }
+    }
+
     private JsonNode send(String attachmentId, boolean viewOnce) {
         Map<String, Object> request = new HashMap<>();
         request.put("clientMessageId", UUID.randomUUID());

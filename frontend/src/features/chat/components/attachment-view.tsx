@@ -12,6 +12,14 @@ import {
 } from "lucide-react"
 import { cn } from "cn"
 
+import {
+  Attachment as AttachmentCard,
+  AttachmentContent,
+  AttachmentDescription,
+  AttachmentMedia,
+  AttachmentTitle,
+  AttachmentTrigger,
+} from "@/components/ui/attachment"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import {
@@ -142,22 +150,31 @@ export function AttachmentView({
       )
     default:
       return (
-        <a
-          href={mediaUrl(attachment, "content", true)}
-          download={attachment.filename}
-          onClick={(event) => event.stopPropagation()}
-          className="flex min-w-0 items-center gap-3 rounded-md bg-black/5 p-2 outline-none hover:bg-black/10 focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-white/10"
-        >
-          <FileIcon aria-hidden="true" className="size-8 shrink-0" />
-          <span className="flex min-w-0 flex-1 flex-col">
-            <span className="truncate font-medium">{attachment.filename}</span>
-            <span className="text-xs opacity-80">
+        <AttachmentCard className="max-w-full focus-within:ring-3">
+          <AttachmentMedia>
+            <FileIcon aria-hidden="true" />
+          </AttachmentMedia>
+          <AttachmentContent>
+            <AttachmentTitle>{attachment.filename}</AttachmentTitle>
+            <AttachmentDescription>
               {formatBytes(attachment.size, i18n.language)}
+            </AttachmentDescription>
+          </AttachmentContent>
+          <DownloadIcon aria-hidden="true" className="mr-1 size-5 shrink-0" />
+          <AttachmentTrigger
+            render={
+              <a
+                href={mediaUrl(attachment, "content", true)}
+                download={attachment.filename}
+                onClick={(event) => event.stopPropagation()}
+              />
+            }
+          >
+            <span className="sr-only">
+              {attachment.filename} — {t("media.download")}
             </span>
-          </span>
-          <DownloadIcon aria-hidden="true" className="size-5 shrink-0" />
-          <span className="sr-only">{t("media.download")}</span>
-        </a>
+          </AttachmentTrigger>
+        </AttachmentCard>
       )
   }
 }

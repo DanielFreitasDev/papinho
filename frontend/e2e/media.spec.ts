@@ -154,6 +154,16 @@ test("fotos, documento e cancelamento de envio entre dois navegadores", async ({
     .getByRole("button", { name: "Enviar" })
     .click()
   const doc = hana.page.getByRole("link", { name: /ata da reunião\.pdf/ })
+  // O cartão é o Attachment oficial do shadcn, com nome e tamanho (A95).
+  const card = hana.page.locator('[data-slot="attachment"]', { has: doc })
+  await expect(
+    card.locator('[data-slot="attachment-title"]', {
+      hasText: "ata da reunião.pdf",
+    })
+  ).toBeVisible()
+  await expect(card.locator('[data-slot="attachment-description"]')).toHaveText(
+    /\d/
+  )
   await expect(doc).toBeVisible()
   const download = hana.page.waitForEvent("download")
   await doc.click()

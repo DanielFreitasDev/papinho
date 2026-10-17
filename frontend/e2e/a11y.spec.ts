@@ -99,6 +99,22 @@ test("celular deitado: sem rolagem horizontal e com o campo de mensagem à vista
   ).toBeVisible()
   await expect(page.getByRole("textbox", { name: "Mensagem" })).toBeInViewport()
   await expectNoHorizontalScroll(page)
+
+  // Recorte da câmera nas laterais (viewport-fit=cover): o conteúdo fica fora das áreas inseguras.
+  const cdp = await context.newCDPSession(page)
+  await cdp.send(
+    "Emulation.setSafeAreaInsetsOverride" as never,
+    {
+      insets: { left: 44, right: 32 },
+    } as never
+  )
+  for (const path of ["/", "/settings"]) {
+    await visit(page, path)
+    const box = (await page.locator("#root").boundingBox())!
+    expect(box.x, path).toBeGreaterThanOrEqual(44)
+    expect(box.x + box.width, path).toBeLessThanOrEqual(915 - 32)
+    await expectNoHorizontalScroll(page)
+  }
   await context.close()
 })
 

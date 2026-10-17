@@ -133,6 +133,9 @@
   }
   body {
     @apply bg-background text-foreground;
+    /* Celular deitado com recorte da câmera (viewport-fit=cover): o fundo vai até a borda, o conteúdo não. */
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
   }
   button:not(:disabled),
   [role="button"]:not(:disabled) {

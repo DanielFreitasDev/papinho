@@ -14,6 +14,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.jdbc.core.JdbcTemplate;
 
+import io.github.labdev2025cmd.papinho.media.FileStorage;
+import io.github.labdev2025cmd.papinho.media.StoredMedia;
 import io.github.labdev2025cmd.papinho.support.Accounts;
 import io.github.labdev2025cmd.papinho.support.ApiClient;
 import io.github.labdev2025cmd.papinho.support.Images;
@@ -34,6 +36,9 @@ class ViewOnceIT {
 
     @Autowired
     private JdbcTemplate jdbc;
+
+    @Autowired
+    private FileStorage storage;
 
     private ApiClient ana;
     private ApiClient bruno;
@@ -125,8 +130,12 @@ class ViewOnceIT {
         String other = Uploads.upload(ana, Images.png(40, 40), "outra.png", "image/png");
         String id = send(other, true).get("id").asString();
         jdbc.update("update messages set created_at = now() - interval '15 days' where id = ?", UUID.fromString(id));
+        assertThat(StoredMedia.exists(storage, other)).isTrue();
         job.purge();
         assertThat(bruno.post("/api/v1/messages/" + id + "/view-once", null)).hasStatus(410);
+        assertThat(jdbc.queryForObject("select count(*) from media_files where id = ?", Long.class,
+                UUID.fromString(other))).as("anexo da visualização única de 15 dias").isZero();
+        assertThat(StoredMedia.exists(storage, other)).as("arquivo apagado do armazenamento").isFalse();
     }
 
     private JsonNode send(String attachmentId, boolean viewOnce) {

@@ -320,7 +320,12 @@ class MessagingIT {
                 .filter(n -> n.get("id").asString().equals(reply)).findFirst().orElseThrow();
         assertThat(replyNode.get("replyTo").get("deleted").asBoolean()).isTrue();
         assertThat(replyNode.get("replyTo").get("body").asString()).isEmpty();
-        assertThat(ana.patch("/api/v1/messages/" + message, Map.of("body", "volta"))).hasStatus(403);
+        var revive = ana.patch("/api/v1/messages/" + message, Map.of("body", "volta"));
+        assertThat(revive).as("a autora edita a própria apagada").hasStatus(409);
+        assertThat(ana.json(revive).get("type").asString()).isEqualTo("urn:papinho:problem:message-not-editable");
+        assertThat(ana.delete("/api/v1/messages/" + message, null)).as("apagar de novo é idempotente").hasStatusOk();
+        assertThat(bruno.patch("/api/v1/messages/" + message, Map.of("body", "volta"))).as("outra pessoa")
+                .hasStatus(403);
         assertThat(bruno.put("/api/v1/messages/" + message + "/reaction", Map.of("emoji", "👍"))).hasStatus(400);
 
         JsonNode withPhoto = ana.json(ana.get(messages(conversation) + "?limit=1")).get("messages").get(0);

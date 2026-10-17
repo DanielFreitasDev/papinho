@@ -50,6 +50,13 @@ final class MessagingExceptions {
         }
     }
 
+    /** A autora tenta editar ou apagar de novo uma mensagem já apagada, ou um aviso do sistema (MS-05, MS-06). */
+    static class NotEditableException extends ApiException {
+        NotEditableException() {
+            super(HttpStatus.CONFLICT, "message-not-editable", "Deleted messages and system notices cannot change");
+        }
+    }
+
     /** Passou a janela configurada pelo admin para editar ou apagar para todos. */
     static class WindowExpiredException extends ApiException {
         WindowExpiredException() {

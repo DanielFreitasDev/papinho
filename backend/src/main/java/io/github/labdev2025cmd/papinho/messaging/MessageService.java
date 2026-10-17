@@ -796,8 +796,11 @@ public class MessageService {
     }
 
     private void requireAuthorWithin(UUID me, Message message, java.time.Duration window) {
-        if (!me.equals(message.senderId()) || message.deleted() || message.system()) {
+        if (!me.equals(message.senderId())) {
             throw new MessagingExceptions.NotAuthorException();
+        }
+        if (message.deleted() || message.system()) {
+            throw new MessagingExceptions.NotEditableException();
         }
         if (message.createdAt().plus(window).isBefore(clock.instant())) {
             throw new MessagingExceptions.WindowExpiredException();

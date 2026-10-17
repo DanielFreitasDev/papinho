@@ -88,8 +88,9 @@ class GroupIT {
 
         assertThat(dani.get(conversation(id))).as("IDOR").hasStatus(404);
         assertThat(dani.get("/api/v1/groups/" + id + "/members")).hasStatus(404);
-        assertThat(ana.patch("/api/v1/messages/" + notices.get(0).get("id").asString(), Map.of("body", "x")))
-                .as("aviso não se edita").hasStatus(403);
+        var notice = ana.patch("/api/v1/messages/" + notices.get(0).get("id").asString(), Map.of("body", "x"));
+        assertThat(notice).as("aviso não se edita").hasStatus(409);
+        assertThat(ana.json(notice).get("type").asString()).isEqualTo("urn:papinho:problem:message-not-editable");
     }
 
     @Test

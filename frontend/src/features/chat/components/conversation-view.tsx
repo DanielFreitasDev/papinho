@@ -178,6 +178,32 @@ export function ConversationView({
   )
 }
 
+function nextFrame() {
+  return new Promise<void>((resolve) =>
+    window.requestAnimationFrame(() => resolve())
+  )
+}
+
+/** Resolve quando o elemento passa 150 ms sem rolar (ou depois de 3 s). */
+function scrollIdle(element: HTMLElement) {
+  return new Promise<void>((resolve) => {
+    let idle = 0
+    const done = () => {
+      window.clearTimeout(idle)
+      window.clearTimeout(limit)
+      element.removeEventListener("scroll", restart)
+      resolve()
+    }
+    const restart = () => {
+      window.clearTimeout(idle)
+      idle = window.setTimeout(done, 150)
+    }
+    const limit = window.setTimeout(done, 3_000)
+    element.addEventListener("scroll", restart, { passive: true })
+    restart()
+  })
+}
+
 function LoadedConversation({
   conversation,
   cache,
@@ -336,19 +362,80 @@ function LoadedConversation({
         chatQueries.messages(conversation.id).queryKey
       )
       if (current?.messages.some((message) => message.id === messageId)) {
-        // Espera o React desenhar a página carregada antes de rolar.
-        window.requestAnimationFrame(() =>
-          scroller.scrollToMessage(messageId, {
-            align: "center",
-            behavior: "smooth",
-          })
-        )
+        await settleOn(messageId)
         return
       }
       if (!current?.hasOlder) {
         return
       }
       await loadOlder(queryClient, conversation.id)
+    }
+  }
+
+  /**
+   * Rola até a mensagem e só para com ela na área visível (MS-04). A lista usa content-visibility: itens ainda
+   * não desenhados ocupam a altura estimada e, ao entrar na tela no caminho da rolagem suave, assumem a real; o
+   * destino calculado no começo fica errado e a original parava centenas de px fora da tela. Quando a rolagem
+   * para, alinha de novo, sem animação, até a posição não mudar mais. Rolar com a mão interrompe.
+   */
+  async function settleOn(messageId: string) {
+    const item = () =>
+      document.querySelector<HTMLElement>(
+        `[data-message-id="${CSS.escape(messageId)}"]`
+      )
+    // Espera o React desenhar a página carregada (sob carga leva mais de um quadro): antes disso o
+    // scrollToMessage não acha o item e não faz nada.
+    for (let frame = 0; frame < 120 && !item(); frame++) {
+      await nextFrame()
+    }
+    const viewport = item()?.closest<HTMLElement>(
+      '[data-slot="message-scroller-viewport"]'
+    )
+    if (!viewport) {
+      return
+    }
+    await nextFrame()
+    scroller.scrollToMessage(messageId, { align: "center", behavior: "smooth" })
+    let interrupted = false
+    const interrupt = () => {
+      interrupted = true
+    }
+    // Só a rolagem da própria pessoa interrompe (roda do mouse, arrastar no toque, teclas de rolagem).
+    const events = ["wheel", "touchmove", "keydown"] as const
+    events.forEach((name) => viewport.addEventListener(name, interrupt))
+    try {
+      await scrollIdle(viewport)
+      // Corrige por até 3 s: o alvo precisa estar na área visível em duas medidas seguidas na mesma posição.
+      const deadline = performance.now() + 3_000
+      let previous: number | null = null
+      while (!interrupted && performance.now() < deadline) {
+        const element = item()
+        if (!element) {
+          return
+        }
+        const box = element.getBoundingClientRect()
+        const area = viewport.getBoundingClientRect()
+        const top = box.top - area.top
+        const visible =
+          top >= 0 &&
+          (box.height <= area.height
+            ? box.bottom <= area.bottom
+            : top < area.height)
+        if (visible && previous !== null && Math.abs(top - previous) < 1) {
+          return
+        }
+        if (!visible) {
+          scroller.scrollToMessage(messageId, {
+            align: "center",
+            behavior: "auto",
+          })
+        }
+        previous = visible ? top : null
+        await nextFrame()
+        await nextFrame()
+      }
+    } finally {
+      events.forEach((name) => viewport.removeEventListener(name, interrupt))
     }
   }
 

@@ -120,6 +120,33 @@ class DisappearingIT {
         assertThat(ana.get("/api/v1/media/" + photo + "/content")).as("arquivo removido").hasStatus(404);
     }
 
+    @Test
+    @DisplayName("com o job travado por outra instância (ShedLock), nada é apagado; solta a trava, apaga")
+    void shouldSkipPurgeWhileAnotherInstanceHoldsTheLock() {
+        String conversation = open(ana, "bruno");
+        String expired = send(ana, conversation, "vencida");
+        jdbc.update("update messages set expires_at = now() - interval '1 minute' where id = ?",
+                UUID.fromString(expired));
+        jdbc.update("""
+                insert into shedlock (name, lock_until, locked_at, locked_by)
+                values ('disappearing-messages', now() + interval '5 minutes', now(), 'outra-instancia')
+                on conflict (name) do update set lock_until = excluded.lock_until, locked_by = excluded.locked_by
+                """);
+        try {
+            job.purge();
+            assertThat(countMessage(expired)).as("outra instância está apagando").isOne();
+        } finally {
+            jdbc.update("update shedlock set lock_until = now() - interval '1 second' where name = ?",
+                    "disappearing-messages");
+        }
+        job.purge();
+        assertThat(countMessage(expired)).isZero();
+    }
+
+    private Integer countMessage(String id) {
+        return jdbc.queryForObject("select count(*) from messages where id = ?", Integer.class, UUID.fromString(id));
+    }
+
     private String open(ApiClient client, String username) {
         var result = client.post("/api/v1/conversations/direct", Map.of("username", username));
         assertThat(result).hasStatusOk();

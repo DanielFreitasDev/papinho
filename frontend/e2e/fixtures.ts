@@ -32,7 +32,10 @@ export async function watchErrors(page: Page, errors: string[]) {
       errors.push(`console: ${message.text()}`)
     }
   })
-  page.on("pageerror", (error) => errors.push(`pageerror: ${error.message}`))
+  // A pilha acompanha a mensagem: sem ela, uma promessa rejeitada (ex.: AbortError) não diz de onde veio.
+  page.on("pageerror", (error) =>
+    errors.push(`pageerror: ${error.message}\n${error.stack ?? ""}`)
+  )
   await page.addInitScript(() => {
     document.addEventListener("securitypolicyviolation", (event) => {
       // Origem (arquivo:linha) e o começo do trecho bloqueado ajudam a achar quem injetou o conteúdo.

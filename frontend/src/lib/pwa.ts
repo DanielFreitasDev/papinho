@@ -38,7 +38,9 @@ export function registerServiceWorker(onOpen: (path: string) => void) {
       onOpen(data.path)
     }
   })
-  registration = workbox.register()
+  // Registro que falha ou é interrompido (aba fechada no meio, AbortError no Firefox) não é erro da página: sem
+  // service worker o app segue sem notificações e sem offline.
+  registration = workbox.register().catch(() => undefined)
 }
 
 /** Registro do service worker, quando há (para o Web Push e as notificações). */

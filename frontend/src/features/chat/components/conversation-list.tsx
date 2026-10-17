@@ -13,7 +13,7 @@ import {
 import { cn } from "cn"
 
 import { SearchInput } from "@/components/search-input"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import { QueryError } from "@/components/query-state"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -99,9 +99,12 @@ export function ConversationList({
   }
   if (conversations.isError) {
     return (
-      <Alert variant="destructive" className="m-3">
-        <AlertDescription>{t("errors.genericDescription")}</AlertDescription>
-      </Alert>
+      <QueryError
+        error={conversations.error}
+        retrying={conversations.isFetching}
+        onRetry={() => void conversations.refetch()}
+        className="px-3"
+      />
     )
   }
   const requestCount = pending.data?.length ?? 0

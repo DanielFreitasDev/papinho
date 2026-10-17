@@ -15,6 +15,7 @@ import {
 } from "lucide-react"
 
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { QueryError } from "@/components/query-state"
 import { Button, buttonVariants } from "@/components/ui/button"
 import {
   Empty,
@@ -139,6 +140,29 @@ export function ConversationView({
     const notFound =
       conversation.error instanceof ApiError &&
       conversation.error.status === 404
+    if (!notFound) {
+      // Sem permissão, sem conexão ou erro do servidor, com "Tentar de novo" (UI-03).
+      return (
+        <div className="flex flex-1 flex-col items-center justify-center p-6">
+          <h1 className="sr-only">{t("errors.genericTitle")}</h1>
+          <QueryError
+            error={error}
+            retrying={conversation.isFetching || cache.isFetching}
+            onRetry={() => {
+              if (conversation.isError) {
+                void conversation.refetch()
+              }
+              if (cache.isError) {
+                void cache.refetch()
+              }
+            }}
+          />
+          <Link to="/" className="text-sm underline-offset-4 hover:underline">
+            {t("common.goHome")}
+          </Link>
+        </div>
+      )
+    }
     return (
       <div className="flex flex-1 items-center justify-center p-6">
         <Empty>
@@ -147,9 +171,7 @@ export function ConversationView({
               <MessageCircleIcon />
             </EmptyMedia>
             <EmptyTitle>
-              <h1>
-                {notFound ? t("chat.notFound") : t("errors.genericTitle")}
-              </h1>
+              <h1>{t("chat.notFound")}</h1>
             </EmptyTitle>
             <EmptyDescription>
               <Link to="/">{t("common.goHome")}</Link>

@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/empty"
 import { Spinner } from "@/components/ui/spinner"
 import { ApiError, errorMessage } from "@/lib/api-client"
+import { cn } from "cn"
 
 export type QueryProblem = "forbidden" | "offline" | "error"
 
@@ -70,43 +71,12 @@ export function QueryState<T>({
     )
   }
   if (query.isError || query.data === undefined) {
-    const problem = queryProblem(query.error)
-    const icon =
-      problem === "forbidden" ? (
-        <LockIcon />
-      ) : problem === "offline" ? (
-        <WifiOffIcon />
-      ) : (
-        <CircleAlertIcon />
-      )
     return (
-      <Empty role="alert" className="py-6">
-        <EmptyHeader>
-          <EmptyMedia variant="icon">{icon}</EmptyMedia>
-          <EmptyTitle>{t(`states.${problem}Title`)}</EmptyTitle>
-          <EmptyDescription>
-            {problem === "error"
-              ? errorMessage(query.error, t("errors.genericDescription"))
-              : t(`states.${problem}Description`)}
-          </EmptyDescription>
-        </EmptyHeader>
-        {problem === "forbidden" ? null : (
-          <EmptyContent>
-            <Button
-              variant="outline"
-              disabled={query.isFetching}
-              onClick={() => void query.refetch()}
-            >
-              {query.isFetching ? (
-                <Spinner data-icon="inline-start" />
-              ) : (
-                <RotateCwIcon data-icon="inline-start" />
-              )}
-              {t("common.retry")}
-            </Button>
-          </EmptyContent>
-        )}
-      </Empty>
+      <QueryError
+        error={query.error}
+        retrying={query.isFetching}
+        onRetry={() => void query.refetch()}
+      />
     )
   }
   if (empty && isEmpty?.(query.data)) {
@@ -123,4 +93,56 @@ export function QueryState<T>({
     )
   }
   return <>{children(query.data)}</>
+}
+
+/**
+ * Falha de carregamento (UI-03) para telas com o próprio carregando e vazio: sem permissão (sem botão), sem
+ * conexão ou erro do servidor, os dois com "Tentar de novo".
+ */
+export function QueryError({
+  error,
+  retrying,
+  onRetry,
+  className,
+}: {
+  error: unknown
+  retrying: boolean
+  onRetry: () => void
+  className?: string
+}) {
+  const { t } = useTranslation()
+  const problem = queryProblem(error)
+  const icon =
+    problem === "forbidden" ? (
+      <LockIcon />
+    ) : problem === "offline" ? (
+      <WifiOffIcon />
+    ) : (
+      <CircleAlertIcon />
+    )
+  return (
+    <Empty role="alert" className={cn("py-6", className)}>
+      <EmptyHeader>
+        <EmptyMedia variant="icon">{icon}</EmptyMedia>
+        <EmptyTitle>{t(`states.${problem}Title`)}</EmptyTitle>
+        <EmptyDescription>
+          {problem === "error"
+            ? errorMessage(error, t("errors.genericDescription"))
+            : t(`states.${problem}Description`)}
+        </EmptyDescription>
+      </EmptyHeader>
+      {problem === "forbidden" ? null : (
+        <EmptyContent>
+          <Button variant="outline" disabled={retrying} onClick={onRetry}>
+            {retrying ? (
+              <Spinner data-icon="inline-start" />
+            ) : (
+              <RotateCwIcon data-icon="inline-start" />
+            )}
+            {t("common.retry")}
+          </Button>
+        </EmptyContent>
+      )}
+    </Empty>
+  )
 }

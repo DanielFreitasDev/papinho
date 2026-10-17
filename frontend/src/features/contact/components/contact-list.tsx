@@ -11,7 +11,7 @@ import {
 
 import { ConfirmDialog } from "@/components/confirm-dialog"
 import { UserAvatar } from "@/components/user-avatar"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import { QueryError } from "@/components/query-state"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -95,9 +95,12 @@ export function ContactList({
   }
   if (contacts.isError) {
     return (
-      <Alert variant="destructive" className="m-3">
-        <AlertDescription>{t("errors.genericDescription")}</AlertDescription>
-      </Alert>
+      <QueryError
+        error={contacts.error}
+        retrying={contacts.isFetching}
+        onRetry={() => void contacts.refetch()}
+        className="px-3"
+      />
     )
   }
   if (contacts.data.length === 0) {

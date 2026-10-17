@@ -55,6 +55,7 @@ class ScheduledIT {
         JsonNode created = ana.json(ana.post(path() + "/scheduled", Map.of("body", "Parabéns!", "sendAt",
                 Instant.now().plusSeconds(3600).toString(), "silent", true)));
         String id = created.get("id").asString();
+        assertThat(java.util.UUID.fromString(id).version()).as("IDs internos em UUID v7 (ID-01)").isEqualTo(7);
         assertThat(ana.json(ana.get(path() + "/scheduled"))).hasSize(1);
         assertThat(bruno.json(bruno.get(path() + "/scheduled"))).as("só quem agendou").isEmpty();
         assertThat(bruno.delete("/api/v1/scheduled/" + id, null)).hasStatus(404);

@@ -19,6 +19,7 @@ import io.github.labdev2025cmd.papinho.media.MediaService;
 import io.github.labdev2025cmd.papinho.media.MediaView;
 import io.github.labdev2025cmd.papinho.messaging.MessagingExceptions.InvalidMessageException;
 import io.github.labdev2025cmd.papinho.messaging.MessagingExceptions.NotFoundException;
+import io.github.labdev2025cmd.papinho.shared.id.Uuids;
 
 /**
  * Figurinhas (MS-10): pacotes enviados pelos usuários da instância, em WebP (estáticas ou animadas), e as
@@ -72,7 +73,7 @@ public class StickerService {
         if (clean.isEmpty() || clean.length() > 64) {
             throw new InvalidMessageException("pack name");
         }
-        UUID id = UUID.randomUUID();
+        UUID id = Uuids.v7();
         jdbc.update("insert into sticker_packs (id, owner_id, name, created_at) values (:id, :me, :name, :now)",
                 new MapSqlParameterSource("id", id).addValue("me", me).addValue("name", clean)
                         .addValue("now", clock.instant().atOffset(ZoneOffset.UTC)));
@@ -97,7 +98,7 @@ public class StickerService {
         if (cleanEmoji != null && cleanEmoji.length() > 32) {
             throw new InvalidMessageException("emoji");
         }
-        UUID id = UUID.randomUUID();
+        UUID id = Uuids.v7();
         jdbc.update("""
                 insert into stickers (id, pack_id, media_id, emoji, position, created_at)
                 values (:id, :packId, :mediaId, :emoji,

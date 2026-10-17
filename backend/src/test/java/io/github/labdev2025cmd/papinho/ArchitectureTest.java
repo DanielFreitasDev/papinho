@@ -46,4 +46,21 @@ class ArchitectureTest {
             .should().dependOnClassesThat().resideInAnyPackage("jakarta.servlet..")
             .because("serviços não conhecem HTTP")
             .allowEmptyShould(true);
+
+    /** Nomes que não são identificadores: arquivo temporário, boundary do multipart e chaves efêmeras. */
+    private static final java.util.Set<String> RANDOM_UUID_ALLOWED = java.util.Set.of(
+            "io.github.labdev2025cmd.papinho.media.internal.FilesystemFileStorage",
+            "io.github.labdev2025cmd.papinho.transcription.internal.OpenAiCompatibleClient",
+            "io.github.labdev2025cmd.papinho.messaging.GifService",
+            "io.github.labdev2025cmd.papinho.notification.PushSessions");
+
+    @ArchTest
+    static final ArchRule idsAreUuidV7 = noClasses().that(new com.tngtech.archunit.base.DescribedPredicate<
+            com.tngtech.archunit.core.domain.JavaClass>("não são exceções conhecidas") {
+        @Override
+        public boolean test(com.tngtech.archunit.core.domain.JavaClass javaClass) {
+            return !RANDOM_UUID_ALLOWED.contains(javaClass.getName());
+        }
+    }).should().callMethod(java.util.UUID.class, "randomUUID")
+            .because("IDs internos e chaves de arquivo são UUID v7 (ID-01, ADR 0006): use Uuids.v7()");
 }

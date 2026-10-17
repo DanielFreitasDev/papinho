@@ -29,6 +29,7 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 import io.github.labdev2025cmd.papinho.privacy.PrivacyExceptions.ConversationNotFoundException;
 import io.github.labdev2025cmd.papinho.privacy.PrivacyExceptions.InvalidPrivacyException;
 import io.github.labdev2025cmd.papinho.privacy.PrivacyExceptions.WrongLockCodeException;
+import io.github.labdev2025cmd.papinho.shared.id.Uuids;
 import io.github.labdev2025cmd.papinho.shared.security.RateLimiter;
 
 /**
@@ -82,7 +83,7 @@ public class ConversationLocks {
         }
         rateLimiter.consume(RateLimiter.Policy.UNLOCK_BY_USER, "chat:" + userId);
         UUID codeId = matchingCodes(userId, code).stream().findFirst().orElseGet(() -> {
-            UUID id = UUID.randomUUID();
+            UUID id = Uuids.v7();
             jdbc.update("insert into lock_codes (id, user_id, code_hash, created_at) values (:id, :userId, :hash, :now)",
                     new MapSqlParameterSource("id", id).addValue("userId", userId)
                             .addValue("hash", encoder.encode(code)).addValue("now", now()));

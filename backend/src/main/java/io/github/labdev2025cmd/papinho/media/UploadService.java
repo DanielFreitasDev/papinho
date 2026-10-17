@@ -30,6 +30,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import io.github.labdev2025cmd.papinho.admin.InstanceSettingsService;
+import io.github.labdev2025cmd.papinho.shared.id.Uuids;
 import io.github.labdev2025cmd.papinho.shared.security.RateLimiter;
 
 /**
@@ -96,7 +97,7 @@ public class UploadService {
             throw new MediaExceptions.TooLargeException();
         }
         long quota = settings.current().userQuotaBytes();
-        UUID id = UUID.randomUUID();
+        UUID id = Uuids.v7();
         Instant now = clock.instant();
         MediaUpload upload = transactions.execute(status -> {
             // Dois uploads da mesma pessoa ao mesmo tempo leriam o mesmo uso e passariam os dois da cota.

@@ -20,6 +20,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import io.github.labdev2025cmd.papinho.messaging.MessagingExceptions.InvalidMessageException;
 import io.github.labdev2025cmd.papinho.messaging.MessagingExceptions.NotFoundException;
 import io.github.labdev2025cmd.papinho.shared.error.ApiException;
+import io.github.labdev2025cmd.papinho.shared.id.Uuids;
 
 /**
  * Mensagens agendadas (MS-11): texto que sai na hora marcada pelo mesmo caminho do envio normal, com as mesmas
@@ -57,11 +58,11 @@ public class ScheduledMessageService {
         if (!sendAt.isAfter(now) || sendAt.isAfter(now.plus(MAX_AHEAD))) {
             throw new InvalidMessageException("schedule time");
         }
-        UUID id = UUID.randomUUID();
+        UUID id = Uuids.v7();
         jdbc.update("insert into scheduled_messages (id, conversation_id, sender_id, client_message_id, body, silent, "
                 + "send_at, created_at) values (:id, :conversationId, :me, :clientMessageId, :body, :silent, "
                 + ":sendAt, :now)", new MapSqlParameterSource("id", id).addValue("conversationId", conversationId)
-                .addValue("me", me).addValue("clientMessageId", UUID.randomUUID()).addValue("body", body)
+                .addValue("me", me).addValue("clientMessageId", Uuids.v7()).addValue("body", body)
                 .addValue("silent", silent).addValue("sendAt", sendAt.atOffset(ZoneOffset.UTC))
                 .addValue("now", now.atOffset(ZoneOffset.UTC)));
         return new ScheduledView(id, conversationId, body, sendAt, silent, null);

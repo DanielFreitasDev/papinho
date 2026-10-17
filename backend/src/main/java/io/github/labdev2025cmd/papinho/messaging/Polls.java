@@ -17,6 +17,8 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Component;
 
+import io.github.labdev2025cmd.papinho.shared.id.Uuids;
+
 /** Opções e votos das enquetes (MS-09), gravados ao lado da mensagem. */
 @Component
 class Polls {
@@ -39,7 +41,7 @@ class Polls {
             jdbc.update("""
                     insert into poll_options (id, message_id, position, text)
                     values (:id, :messageId, :position, :text)
-                    """, new MapSqlParameterSource("id", UUID.randomUUID()).addValue("messageId", messageId)
+                    """, new MapSqlParameterSource("id", Uuids.v7()).addValue("messageId", messageId)
                     .addValue("position", i).addValue("text", options.get(i)));
         }
     }

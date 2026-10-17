@@ -31,7 +31,9 @@ public final class Uploads {
                 .header("Tus-Resumable", "1.0.0").header("Upload-Offset", 0)
                 .contentType("application/offset+octet-stream").content(content));
         assertThat(done).as(ApiClient.text(done)).hasStatus(204);
-        return done.getResponse().getHeader("Papinho-Media-Id");
+        String id = done.getResponse().getHeader("Papinho-Media-Id");
+        assertThat(UUID.fromString(id).version()).as("IDs internos em UUID v7 (ID-01)").isEqualTo(7);
+        return id;
     }
 
     /** Envia uma mensagem com anexo (texto pode ser vazio). */

@@ -25,6 +25,7 @@ import io.github.labdev2025cmd.papinho.media.MediaService;
 import io.github.labdev2025cmd.papinho.media.MediaView;
 import io.github.labdev2025cmd.papinho.shared.crypto.SecretCipher;
 import io.github.labdev2025cmd.papinho.shared.error.ApiException;
+import io.github.labdev2025cmd.papinho.shared.id.Uuids;
 import io.github.labdev2025cmd.papinho.shared.security.RateLimiter;
 import io.github.labdev2025cmd.papinho.transcription.internal.OpenAiCompatibleClient;
 import tools.jackson.databind.json.JsonMapper;
@@ -147,7 +148,7 @@ public class TranscriptionService {
 
     @Transactional
     public AdminProvider create(ProviderKind kind) {
-        return toAdmin(providers.save(new TranscriptionProvider(UUID.randomUUID(), kind, clock.instant())));
+        return toAdmin(providers.save(new TranscriptionProvider(Uuids.v7(), kind, clock.instant())));
     }
 
     @Transactional

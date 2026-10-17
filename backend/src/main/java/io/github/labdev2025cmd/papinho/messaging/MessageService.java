@@ -31,6 +31,7 @@ import io.github.labdev2025cmd.papinho.messaging.MessagingExceptions.InvalidMess
 import io.github.labdev2025cmd.papinho.messaging.MessagingExceptions.NotFoundException;
 import io.github.labdev2025cmd.papinho.profile.ProfileService;
 import io.github.labdev2025cmd.papinho.profile.ProfileView;
+import io.github.labdev2025cmd.papinho.shared.id.Uuids;
 import io.github.labdev2025cmd.papinho.shared.security.RateLimiter;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -270,7 +271,7 @@ public class MessageService {
             }
             UUID direct = conversations.directWith(me, recipient);
             sequences.lock(direct);
-            Message copy = append(me, direct, MessageKind.USER, UUID.randomUUID(), original.body(), null,
+            Message copy = append(me, direct, MessageKind.USER, Uuids.v7(), original.body(), null,
                     original.forwardCount(), original.attachment(), original.stickerId());
             if (ttl != null) {
                 copy.expireAt(copy.createdAt().plusSeconds(ttl));
@@ -359,7 +360,7 @@ public class MessageService {
             sequences.lock(target);
             boolean broadcast = conversations.find(target).kind() == ConversationKind.BROADCAST;
             for (Message source : sources) {
-                Message copy = append(me, target, MessageKind.USER, UUID.randomUUID(), source.body(), null,
+                Message copy = append(me, target, MessageKind.USER, Uuids.v7(), source.body(), null,
                         source.forwardCount() + 1, source.attachment(), source.stickerId());
                 created.add(copy);
                 if (broadcast) {
@@ -749,7 +750,7 @@ public class MessageService {
     void appendSystem(UUID conversationId, UUID actor, SystemNotice notice) {
         Instant now = clock.instant();
         long seq = sequences.next(conversationId, now);
-        messages.saveAndFlush(new Message(conversationId, seq, MessageKind.SYSTEM, actor, UUID.randomUUID(),
+        messages.saveAndFlush(new Message(conversationId, seq, MessageKind.SYSTEM, actor, Uuids.v7(),
                 json.writeValueAsString(notice), null, 0, null, now));
         conversations.membersOf(conversationId).stream().filter(m -> m.userId().equals(actor)).findFirst()
                 .ifPresent(m -> m.advanceRead(seq));

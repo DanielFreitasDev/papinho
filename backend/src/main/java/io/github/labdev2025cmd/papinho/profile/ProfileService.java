@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 import io.github.labdev2025cmd.papinho.media.FileStorage;
 import io.github.labdev2025cmd.papinho.media.ImageProcessing;
 import io.github.labdev2025cmd.papinho.shared.error.ApiException;
+import io.github.labdev2025cmd.papinho.shared.id.Uuids;
 
 /** Casos de uso do perfil (ID-02). */
 @Service
@@ -90,7 +91,7 @@ public class ProfileService {
         try {
             byte[] large = ImageProcessing.squareJpeg(image, PHOTO_SIZE);
             byte[] thumb = ImageProcessing.thumbnail(large, THUMB_SIZE);
-            String key = "profiles/" + userId + "/" + UUID.randomUUID();
+            String key = "profiles/" + userId + "/" + Uuids.v7();
             storage.write(key, new ByteArrayInputStream(large));
             storage.write(key + "-thumb", new ByteArrayInputStream(thumb));
             String previous = profile.photoKey();

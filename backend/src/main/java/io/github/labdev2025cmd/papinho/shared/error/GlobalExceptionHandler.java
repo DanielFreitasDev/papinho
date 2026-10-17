@@ -59,13 +59,31 @@ class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     ResponseEntity<ProblemDetail> handleUnexpected(Exception exception) {
-        log.error("Unexpected error while handling request", exception);
         Locale locale = LocaleContextHolder.getLocale();
+        if (invalidText(exception)) {
+            // Texto que o PostgreSQL não guarda (o NUL, U+0000): erro de quem pediu, não do servidor.
+            ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST,
+                    messageSource.getMessage("problem.invalid-text.detail", null, locale));
+            problem.setTitle(messageSource.getMessage("problem.invalid-text.title", null, locale));
+            problem.setType(URI.create("urn:papinho:problem:invalid-text"));
+            return ResponseEntity.badRequest().body(problem);
+        }
+        log.error("Unexpected error while handling request", exception);
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR,
                 messageSource.getMessage("problem.internal.detail", null, locale));
         problem.setTitle(messageSource.getMessage("problem.internal.title", null, locale));
         problem.setType(URI.create("urn:papinho:problem:internal"));
         return ResponseEntity.internalServerError().body(problem);
+    }
+
+    /** SQLState 22021 (character_not_in_repertoire): o banco recusou um caractere do texto enviado. */
+    private static boolean invalidText(Throwable exception) {
+        for (Throwable cause = exception; cause != null; cause = cause.getCause()) {
+            if (cause instanceof java.sql.SQLException sql && "22021".equals(sql.getSQLState())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** Erros de validação: lista cada campo inválido com a mensagem já traduzida. */

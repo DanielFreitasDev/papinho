@@ -55,6 +55,30 @@ class ProblemDetailsIT {
                 .doesNotContain("/srv/").doesNotContain("\tat ");
     }
 
+    @Test
+    @DisplayName("caractere NUL em texto vira 400 invalid-text, não 500 (SG-01)")
+    void shouldRefuseNulCharacter() {
+        ApiClient ana = clients.create();
+        Accounts.register(ana, "ana", null);
+        ApiClient bruno = clients.create();
+        Accounts.register(bruno, "bruno", Accounts.invite(ana));
+        String conversation = ana.json(ana.post("/api/v1/conversations/direct", java.util.Map.of("username",
+                "bruno"))).get("id").asString();
+        String nul = "a\u0000b";
+        expect(ana, ana.post("/api/v1/conversations/" + conversation + "/messages", java.util.Map.of(
+                "clientMessageId", java.util.UUID.randomUUID(), "body", nul)), 400, "invalid-text", "Texto inválido");
+        expect(ana, ana.put("/api/v1/conversations/" + conversation + "/draft", java.util.Map.of("body", nul)), 400,
+                "invalid-text", "Texto inválido");
+        expect(ana, ana.post("/api/v1/stickers/packs", java.util.Map.of("name", nul)), 400, "invalid-text",
+                "Texto inválido");
+        expect(ana, ana.post("/api/v1/folders", java.util.Map.of("name", nul, "conversationIds", java.util.List.of())),
+                400, "invalid-text", "Texto inválido");
+        expect(ana, ana.perform(MockMvcRequestBuilders.get("/api/v1/search/messages").queryParam("q", nul)), 400,
+                "invalid-text", "Texto inválido");
+        assertThat(ana.post("/api/v1/conversations/" + conversation + "/messages", java.util.Map.of(
+                "clientMessageId", java.util.UUID.randomUUID(), "body", "texto normal"))).hasStatus(201);
+    }
+
     private static void expect(ApiClient client, MvcTestResult result, int status, String slug, String title) {
         assertThat(result).as(ApiClient.text(result)).hasStatus(status)
                 .hasContentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON);

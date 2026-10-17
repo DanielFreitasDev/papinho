@@ -535,6 +535,29 @@ class IdentityIT {
     }
 
     @Test
+    @DisplayName("conta excluída mantém o @usuario atual e os antigos reservados por 30 dias, sem dono (ID-03)")
+    void shouldKeepUsernamesReservedAfterDeletion() {
+        ApiClient ana = clients.create();
+        Accounts.register(ana, "ana", null);
+        ana.put("/api/v1/admin/settings", settings("OPEN", 0));
+        ApiClient bruno = clients.create().bootstrap();
+        assertThat(register(bruno, "bruno")).hasStatus(201);
+        assertThat(bruno.put("/api/v1/account/username", Map.of("username", "bruno.novo"))).hasStatusOk();
+        assertThat(bruno.delete("/api/v1/account", Map.of("password", Accounts.PASSWORD))).hasStatus(204);
+
+        ApiClient impostor = clients.create().bootstrap();
+        assertThat(register(impostor, "bruno.novo")).as("@usuario atual da conta excluída").hasStatus(409);
+        assertThat(register(impostor, "bruno")).as("nome antigo da conta excluída").hasStatus(409);
+        assertThat(ana.put("/api/v1/account/username", Map.of("username", "bruno"))).hasStatus(409);
+        assertThat(jdbc.queryForObject("select count(*) from username_reservations where user_id is null",
+                Integer.class)).isEqualTo(2);
+
+        jdbc.update("update username_reservations set reserved_until = ?", java.sql.Timestamp.from(Instant.now()
+                .minusSeconds(60)));
+        assertThat(register(impostor, "bruno.novo")).as("reserva vencida libera o nome").hasStatus(201);
+    }
+
+    @Test
     @DisplayName("sessões: lista com a atual marcada, revoga uma e encerra as outras")
     void shouldManageSessions() {
         ApiClient laptop = clients.create();

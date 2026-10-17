@@ -3,6 +3,8 @@ package io.github.labdev2025cmd.papinho.identity;
 import java.time.Instant;
 import java.util.UUID;
 
+import org.jspecify.annotations.Nullable;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -20,8 +22,9 @@ class UsernameReservation {
     @Column(length = Username.MAX_LENGTH)
     private String username;
 
-    @Column(nullable = false)
-    private UUID userId;
+    /** Nulo depois que a conta dona é excluída: o nome segue reservado para ninguém até vencer. */
+    @Column
+    private @Nullable UUID userId;
 
     @Column(nullable = false)
     private Instant reservedUntil;
@@ -38,12 +41,8 @@ class UsernameReservation {
         this.reservedUntil = reservedUntil;
     }
 
-    UUID userId() {
-        return userId;
-    }
-
     boolean blocks(UUID candidate, Instant now) {
-        return reservedUntil.isAfter(now) && !userId.equals(candidate);
+        return reservedUntil.isAfter(now) && !candidate.equals(userId);
     }
 
     void renew(UUID owner, Instant until) {

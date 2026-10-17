@@ -1,5 +1,6 @@
 package io.github.labdev2025cmd.papinho.identity;
 
+import java.time.Clock;
 import java.util.UUID;
 
 import org.slf4j.Logger;
@@ -18,7 +19,8 @@ import io.github.labdev2025cmd.papinho.shared.security.RateLimiter;
 /**
  * Excluir a própria conta (BK-02, LGPD). Exige a senha. Some tudo o que é só da pessoa (perfil e foto, contatos,
  * preferências, passkeys, sessões, conversas da lista dela); as mensagens que ela mandou continuam com quem
- * recebeu, como "Conta apagada". O último admin não sai enquanto houver outras pessoas na instância.
+ * recebeu, como "Conta apagada". O último admin não sai enquanto houver outras pessoas na instância. O
+ * {@code @usuario} fica reservado, sem dono, pelo mesmo prazo de uma troca (ID-03).
  */
 @Service
 public class AccountDeletionService {
@@ -26,23 +28,27 @@ public class AccountDeletionService {
     private static final Logger log = LoggerFactory.getLogger(AccountDeletionService.class);
 
     private final UserAccountRepository users;
+    private final UsernameReservationRepository reservations;
     private final ProfileService profiles;
     private final SessionService sessions;
     private final PasswordEncoder passwordEncoder;
     private final RateLimiter rateLimiter;
     private final ApplicationEventPublisher events;
     private final JdbcTemplate jdbc;
+    private final Clock clock;
 
-    AccountDeletionService(UserAccountRepository users, ProfileService profiles, SessionService sessions,
-            PasswordEncoder passwordEncoder, RateLimiter rateLimiter, ApplicationEventPublisher events,
-            JdbcTemplate jdbc) {
+    AccountDeletionService(UserAccountRepository users, UsernameReservationRepository reservations,
+            ProfileService profiles, SessionService sessions, PasswordEncoder passwordEncoder, RateLimiter rateLimiter,
+            ApplicationEventPublisher events, JdbcTemplate jdbc, Clock clock) {
         this.users = users;
+        this.reservations = reservations;
         this.profiles = profiles;
         this.sessions = sessions;
         this.passwordEncoder = passwordEncoder;
         this.rateLimiter = rateLimiter;
         this.events = events;
         this.jdbc = jdbc;
+        this.clock = clock;
     }
 
     @Transactional
@@ -68,6 +74,12 @@ public class AccountDeletionService {
         }
         // Passkeys ficam nas tabelas do Spring Security, ligadas pelo id da conta como nome do usuário.
         jdbc.update("delete from user_entities where name = ?", userId.toString());
+        // A chave estrangeira solta o dono (ON DELETE SET NULL): os nomes antigos seguem reservados até vencer.
+        UsernameReservation current = reservations.findById(account.username().value())
+                .orElseGet(() -> new UsernameReservation(account.username(), userId, clock.instant()));
+        current.renew(userId, clock.instant().plus(IdentityService.USERNAME_RESERVATION));
+        reservations.save(current);
+        reservations.flush();
         users.delete(account);
         users.flush();
         sessions.revokeAllExcept(userId, null);

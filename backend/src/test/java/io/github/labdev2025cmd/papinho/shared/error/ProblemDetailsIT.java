@@ -13,6 +13,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import io.github.labdev2025cmd.papinho.support.Accounts;
 import io.github.labdev2025cmd.papinho.support.ApiClient;
 import io.github.labdev2025cmd.papinho.support.IntegrationTest;
+import io.github.labdev2025cmd.papinho.support.TestSupportConfiguration;
 import io.github.labdev2025cmd.papinho.support.TestSupportConfiguration.ApiClients;
 import tools.jackson.databind.JsonNode;
 
@@ -40,6 +41,18 @@ class ProblemDetailsIT {
         MvcTestResult english = ana.perform(MockMvcRequestBuilders.get("/api/v1/conversations/nao-e-uuid")
                 .header(HttpHeaders.ACCEPT_LANGUAGE, "en"));
         assertThat(ana.json(english).get("title").asString()).isEqualTo("Invalid request");
+    }
+
+    @Test
+    @DisplayName("erro inesperado vira 500 internal sem mensagem, classe nem pilha da exceção (SG-01)")
+    void shouldHideInternalErrors() {
+        ApiClient ana = clients.create();
+        Accounts.register(ana, "ana", null);
+        MvcTestResult failed = ana.get(TestSupportConfiguration.FailingController.PATH);
+        expect(ana, failed, 500, "internal", "Erro interno");
+        assertThat(ApiClient.text(failed)).doesNotContain("SegredoInterno").doesNotContain("hunter2")
+                .doesNotContain("IllegalStateException").doesNotContain("java.").doesNotContain("org.")
+                .doesNotContain("/srv/").doesNotContain("\tat ");
     }
 
     private static void expect(ApiClient client, MvcTestResult result, int status, String slug, String title) {

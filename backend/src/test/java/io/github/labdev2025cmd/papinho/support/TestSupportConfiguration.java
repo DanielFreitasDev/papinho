@@ -22,6 +22,22 @@ public class TestSupportConfiguration {
         return new RecordingPushGateway();
     }
 
+    /**
+     * Rota só dos testes (o scan de componentes a acha no classpath de teste) que falha de um jeito inesperado,
+     * para provar o 500 em Problem Details (SG-01).
+     */
+    @org.springframework.web.bind.annotation.RestController
+    public static class FailingController {
+
+        public static final String PATH = "/api/v1/test-only/failure";
+        public static final String SECRET = "org.example.SegredoInterno: senha=hunter2 em /srv/papinho";
+
+        @org.springframework.web.bind.annotation.GetMapping(PATH)
+        String fail() {
+            throw new IllegalStateException(SECRET);
+        }
+    }
+
     /** Cria "navegadores" independentes, cada um com seus cookies e seu IP. */
     @FunctionalInterface
     public interface ApiClients {

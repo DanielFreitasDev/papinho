@@ -2,21 +2,34 @@ package io.github.labdev2025cmd.papinho.shared.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.Map;
+import java.util.UUID;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 
+import io.github.labdev2025cmd.papinho.support.Accounts;
+import io.github.labdev2025cmd.papinho.support.ApiClient;
 import io.github.labdev2025cmd.papinho.support.IntegrationTest;
+import io.github.labdev2025cmd.papinho.support.TestSupportConfiguration.ApiClients;
+import io.github.labdev2025cmd.papinho.support.TestSupportConfiguration.FailingController;
 
 /** Cadeia de segurança real contra o PostgreSQL do Testcontainers: deny by default, Problem Details e cabeçalhos. */
 @IntegrationTest
 class SecurityIT {
+
+    @Autowired
+    private ApiClients clients;
 
     @Autowired
     private MockMvcTester mvc;
@@ -129,5 +142,32 @@ class SecurityIT {
     void shouldHashPasswordsWithArgon2() {
         assertThat(passwordEncoder).isInstanceOf(Argon2PasswordEncoder.class);
         assertThat(passwordEncoder.encode("uma senha bem longa")).startsWith("$argon2id$");
+    }
+
+    @Test
+    @ExtendWith(OutputCaptureExtension.class)
+    @DisplayName("logs de cadastro, login, envio e erro não têm @usuario, senha nem texto da mensagem (SG-01)")
+    void shouldKeepPersonalDataOutOfLogs(CapturedOutput output) {
+        ApiClient ana = clients.create();
+        Accounts.register(ana, "ana.registrada", null);
+        ApiClient bruno = clients.create();
+        Accounts.register(bruno, "bruno.registrado",
+                Accounts.invite(ana));
+        ana.post("/api/v1/auth/logout", null);
+        ana.clearCookies();
+        ana.bootstrap();
+        assertThat(ana.post("/api/v1/auth/login", Map.of("username", "ana.registrada", "password",
+                "senha errada de verdade"))).hasStatus(401);
+        assertThat(ana.post("/api/v1/auth/login", Map.of("username", "ana.registrada", "password",
+                Accounts.PASSWORD))).hasStatusOk();
+        String conversation = ana.json(ana.post("/api/v1/conversations/direct",
+                Map.of("username", "bruno.registrado"))).get("id").asString();
+        assertThat(ana.post("/api/v1/conversations/" + conversation + "/messages", Map.of(
+                "clientMessageId", UUID.randomUUID(), "body", "corpo-secreto-da-mensagem"))).hasStatus(201);
+        ana.get(FailingController.PATH);
+
+        assertThat(output.getAll()).doesNotContain(Accounts.PASSWORD)
+                .doesNotContain("senha errada de verdade").doesNotContain("ana.registrada")
+                .doesNotContain("bruno.registrado").doesNotContain("corpo-secreto-da-mensagem");
     }
 }

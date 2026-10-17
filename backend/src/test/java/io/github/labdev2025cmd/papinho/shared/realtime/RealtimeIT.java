@@ -83,6 +83,7 @@ class RealtimeIT {
         Browser ana = Browser.register(base(), "ana", null);
         WebSocketHttpHeaders headers = new WebSocketHttpHeaders();
         headers.add("Cookie", ana.cookieHeader());
+        headers.add("Origin", base());
         BlockingQueue<String> errors = new LinkedBlockingQueue<>();
         StompSessionHandlerAdapter recorder = new StompSessionHandlerAdapter() {
             @Override
@@ -320,9 +321,11 @@ class RealtimeIT {
         Browser ana = Browser.register(base(), "ana", null);
         WebSocketHttpHeaders headers = new WebSocketHttpHeaders();
         headers.add("Cookie", ana.cookieHeader());
-        headers.add("Origin", "https://evil.example");
         StompHeaders connect = new StompHeaders();
         connect.add("X-XSRF-TOKEN", ana.cookies.get("XSRF-TOKEN"));
+        assertThatThrownBy(() -> stomp.connectAsync(ws(), headers, connect, new StompSessionHandlerAdapter() {
+        }).get(5, TimeUnit.SECONDS)).as("sem Origin (só quem não é navegador)").hasMessageContaining("403");
+        headers.add("Origin", "https://evil.example");
         assertThatThrownBy(() -> stomp.connectAsync(ws(), headers, connect, new StompSessionHandlerAdapter() {
         }).get(5, TimeUnit.SECONDS)).hasMessageContaining("403");
         headers.set("Origin", base());
@@ -455,6 +458,7 @@ class RealtimeIT {
     private Connection connect(Browser browser) throws Exception {
         WebSocketHttpHeaders headers = new WebSocketHttpHeaders();
         headers.add("Cookie", browser.cookieHeader());
+        headers.add("Origin", base());
         StompHeaders connect = new StompHeaders();
         connect.add("X-XSRF-TOKEN", browser.cookies.get("XSRF-TOKEN"));
         BlockingQueue<JsonNode> events = new LinkedBlockingQueue<>();

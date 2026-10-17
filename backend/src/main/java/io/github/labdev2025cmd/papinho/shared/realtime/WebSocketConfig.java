@@ -1,5 +1,6 @@
 package io.github.labdev2025cmd.papinho.shared.realtime;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
@@ -40,9 +41,32 @@ class WebSocketConfig implements WebSocketMessageBrokerConfigurer, DisposableBea
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        // Sem setAllowedOrigins: só a mesma origem pode abrir o WebSocket (proteção contra CSWSH).
-        // O id da sessão HTTP vai para os atributos para derrubar o WebSocket quando ela acabar.
-        registry.addEndpoint("/ws").addInterceptors(new HttpSessionHandshakeInterceptor());
+        // Sem setAllowedOrigins: só a mesma origem pode abrir o WebSocket (proteção contra CSWSH), e sem Origin
+        // nenhum (navegador sempre manda) também não. O id da sessão HTTP vai para os atributos para derrubar o
+        // WebSocket quando ela acabar.
+        registry.addEndpoint("/ws").addInterceptors(new RequireOrigin(), new HttpSessionHandshakeInterceptor());
+    }
+
+    /** Recusa o handshake sem cabeçalho Origin: só um cliente que não é navegador o omite. */
+    private static final class RequireOrigin implements org.springframework.web.socket.server.HandshakeInterceptor {
+
+        @Override
+        public boolean beforeHandshake(org.springframework.http.server.ServerHttpRequest request,
+                org.springframework.http.server.ServerHttpResponse response,
+                org.springframework.web.socket.WebSocketHandler handler, java.util.Map<String, Object> attributes) {
+            if (request.getHeaders().getOrigin() == null) {
+                response.setStatusCode(org.springframework.http.HttpStatus.FORBIDDEN);
+                return false;
+            }
+            return true;
+        }
+
+        @Override
+        public void afterHandshake(org.springframework.http.server.ServerHttpRequest request,
+                org.springframework.http.server.ServerHttpResponse response,
+                org.springframework.web.socket.WebSocketHandler handler, @Nullable Exception exception) {
+            // nada a fazer
+        }
     }
 
     @Override

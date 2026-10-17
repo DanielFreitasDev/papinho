@@ -15,7 +15,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpMethod;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
@@ -83,6 +85,20 @@ class AccountDataIT {
         assertThat(raw).doesNotContain("password").doesNotContain("argon").doesNotContain("secret_hash")
                 .doesNotContain("totp_secret").doesNotContain("p256dh");
         assertThat(zip.keySet()).anyMatch(name -> name.startsWith("arquivos/") && name.endsWith("nota.png"));
+        assertThat(unzip(bruno.get("/api/v1/account/export")).keySet()).containsOnly("dados.json");
+    }
+
+    @Test
+    @DisplayName("com arquivos, a exportação leva a foto de perfil; sem foto, não há a entrada")
+    void shouldExportProfilePhoto() throws IOException {
+        assertThat(unzip(bruno.get("/api/v1/account/export?files=true")).keySet())
+                .noneMatch(name -> name.startsWith("perfil/"));
+        assertThat(bruno.multipart(HttpMethod.PUT, "/api/v1/profile/photo", new MockMultipartFile("photo",
+                "foto.jpg", "image/jpeg", Images.jpegWithExif(64, 64)))).hasStatusOk();
+        byte[] stored = bruno.get("/api/v1/users/" + brunoId + "/photo").getResponse().getContentAsByteArray();
+
+        Map<String, byte[]> zip = unzip(bruno.get("/api/v1/account/export?files=true"));
+        assertThat(zip.get("perfil/foto.jpg")).isEqualTo(stored);
         assertThat(unzip(bruno.get("/api/v1/account/export")).keySet()).containsOnly("dados.json");
     }
 

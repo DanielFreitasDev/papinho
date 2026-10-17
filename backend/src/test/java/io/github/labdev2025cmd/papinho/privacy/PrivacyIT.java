@@ -451,6 +451,23 @@ class PrivacyIT {
                 .get("grant").isNull()).as("quem não trancou não recebe grant").isTrue();
     }
 
+    @Test
+    @DisplayName("conversa trancada: a favorita dela some da lista de favoritas sem o token (PV-03)")
+    void shouldHideStarredOfLockedConversation() throws Exception {
+        String conversation = acceptedConversation();
+        String secret = send(bruno, conversation, "favoritasecreta");
+        assertThat(ana.put("/api/v1/messages/" + secret + "/star", null)).hasStatusOk();
+        assertThat(ApiClient.text(ana.get("/api/v1/messages/starred"))).contains("favoritasecreta");
+        String token = ana.json(ana.put("/api/v1/privacy/locked-conversations/" + conversation,
+                Map.of("code", "4321"))).get("token").asString();
+
+        MvcTestResult hidden = ana.get("/api/v1/messages/starred");
+        assertThat(hidden).hasStatusOk();
+        assertThat(ApiClient.text(hidden)).as("sem o token").doesNotContain("favoritasecreta");
+        assertThat(withToken(ana, "/api/v1/messages/starred", token).getResponse().getContentAsString())
+                .as("com o token").contains("favoritasecreta");
+    }
+
     private String acceptedConversation() {
         bruno.post("/api/v1/contacts", Map.of("username", "ana"));
         return ana.json(ana.post("/api/v1/conversations/direct", Map.of("username", "bruno"))).get("id").asString();

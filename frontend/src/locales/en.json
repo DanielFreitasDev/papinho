@@ -357,6 +357,7 @@
     "conversationActions": "Chat actions: {{name}}",
     "messages": "Messages",
     "loadOlder": "Load earlier messages",
+    "loadNewer": "Load newer messages",
     "noMessages": "No messages yet",
     "noMessagesDescription": "Say hi to {{name}}.",
     "composerLabel": "Message",

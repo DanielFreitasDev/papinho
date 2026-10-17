@@ -6,7 +6,8 @@ const TOTAL = Number(process.env.PAPINHO_E2E_PERF_MESSAGES ?? 2000)
 /**
  * Medição da lista de mensagens com milhares de itens (UI-04). Opcional e lento (semeia pela API): roda só com
  * PAPINHO_E2E_PERF=1, contra uma instância com PAPINHO_RATE_LIMIT_MULTIPLIER alto. Mede abrir a conversa, subir
- * até a primeira mensagem carregando as páginas antigas e as tarefas longas do navegador no caminho.
+ * até a primeira mensagem carregando as páginas antigas, as tarefas longas do navegador no caminho e o tamanho do
+ * DOM e do heap no fim, com limites para cada um (A31, A86).
  */
 test("lista com milhares de mensagens", async ({ page }) => {
   test.skip(!process.env.PAPINHO_E2E_PERF, "só com PAPINHO_E2E_PERF=1")
@@ -93,6 +94,15 @@ test("lista com milhares de mensagens", async ({ page }) => {
     messages: document.querySelectorAll('[data-slot="message"]').length,
     nodes: document.getElementsByTagName("*").length,
     longTasks: (window as unknown as { longTasks: number[] }).longTasks,
+    // Só o Chromium expõe o heap do JS (performance.memory).
+    heapMB: Math.round(
+      ((
+        performance as unknown as {
+          memory?: { usedJSHeapSize: number }
+        }
+      ).memory?.usedJSHeapSize ?? 0) /
+        2 ** 20
+    ),
   }))
   const longest = Math.max(0, ...result.longTasks)
   console.log(
@@ -103,10 +113,30 @@ test("lista com milhares de mensagens", async ({ page }) => {
       scrollSteps: pages,
       messagesInDom: result.messages,
       domNodes: result.nodes,
+      heapMB: result.heapMB,
       longTasks: result.longTasks.length,
       longestTaskMs: Math.round(longest),
     })
   )
-  expect(result.messages).toBeGreaterThanOrEqual(TOTAL)
+  await expect(
+    page.locator('[data-slot="message"]').filter({ hasText: `perf ${RUN} #0 ` })
+  ).toHaveCount(1)
   expect(openMs).toBeLessThan(5_000)
+  // A31: o DOM não cresce com o histórico (a lista desenha só uma janela) e nenhuma página trava a rolagem.
+  expect(result.messages).toBeLessThanOrEqual(200)
+  expect(result.nodes).toBeLessThan(8_000)
+  expect(longest).toBeLessThan(500)
+  expect(scrollMs).toBeLessThan(TOTAL * 15)
+  expect(result.heapMB).toBeLessThan(300)
+
+  // Voltar ao fim traz as mais novas de volta, com a janela ainda limitada.
+  await page
+    .getByRole("button", { name: "Ir para as mensagens mais recentes" })
+    .click()
+  await expect(
+    page.locator('[data-slot="message"]').filter({ hasText: `#${TOTAL - 1} ` })
+  ).toBeInViewport({ timeout: 10_000 })
+  expect(
+    await page.locator('[data-slot="message"]').count()
+  ).toBeLessThanOrEqual(200)
 })

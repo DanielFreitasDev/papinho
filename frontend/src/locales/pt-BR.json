@@ -357,6 +357,7 @@
     "conversationActions": "Ações da conversa: {{name}}",
     "messages": "Mensagens",
     "loadOlder": "Carregar mensagens anteriores",
+    "loadNewer": "Carregar mensagens mais recentes",
     "noMessages": "Nenhuma mensagem ainda",
     "noMessagesDescription": "Diga oi para {{name}}.",
     "composerLabel": "Mensagem",

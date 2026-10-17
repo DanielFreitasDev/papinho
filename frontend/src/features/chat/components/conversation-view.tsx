@@ -1,7 +1,15 @@
-import { Fragment, useEffect, useMemo, useRef, useState } from "react"
+import {
+  Fragment,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 import { Link, useNavigate } from "@tanstack/react-router"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
+import { cn } from "cn"
 import {
   ArrowLeftIcon,
   CalendarClockIcon,
@@ -57,6 +65,16 @@ import {
   useSendMessage,
 } from "../api"
 import type { ConversationCache } from "../cache"
+import {
+  revealNewer,
+  revealOlder,
+  tailWindow,
+  trimWindow,
+  windowAround,
+  windowRange,
+  WINDOW_MAX,
+  type MessageWindow,
+} from "../message-window"
 import { groupQueries } from "../groups"
 import { describeNotice } from "../system-notice"
 import { clearReplyDraft, peekReplyDraft, setReplyDraft } from "../reply-drafts"
@@ -379,13 +397,90 @@ function LoadedConversation({
     [cache.messages]
   )
 
+  // Só uma janela das mensagens carregadas vai para o DOM (UI-04): milhares de linhas pesavam na rolagem.
+  const seqs = useMemo(() => display.map((message) => message.seq), [display])
+  const [messageWindow, setMessageWindow] = useState<MessageWindow>(() =>
+    tailWindow(seqs, unread?.seq ?? null)
+  )
+  const { start, end } = windowRange(seqs, messageWindow)
+  // A âncora da primeira não lida só vale na abertura: o MessageScroller rola até toda âncora que entra no DOM,
+  // e a janela tira e devolve a mesma linha ao rolar.
+  const [openingWindow] = useState(messageWindow)
+  const viewportRef = useRef<HTMLDivElement>(null)
+  // Quando o alto da janela muda (corte ou linhas reveladas acima), esta mensagem volta ao mesmo lugar da tela,
+  // sem depender do overflow-anchor, que o WebKit não tem.
+  const keepInPlace = useRef<ReturnType<typeof visibleRow>>(null)
+  // A janela atual para o salto, que continua depois de esperar as páginas antigas.
+  const windowRef = useRef(messageWindow)
+  useLayoutEffect(() => {
+    windowRef.current = messageWindow
+    const viewport = viewportRef.current
+    const kept = keepInPlace.current
+    keepInPlace.current = null
+    if (
+      kept &&
+      viewport &&
+      kept.element.isConnected &&
+      viewport.scrollTop === kept.scrollTop
+    ) {
+      const moved = kept.element.getBoundingClientRect().top - kept.top
+      if (Math.abs(moved) > 0.5) {
+        viewport.scrollTop += moved
+      }
+    }
+  })
+  // Borda revelada por último: a pessoa está lendo daquele lado.
+  const lastEdge = useRef<"start" | "end">("end")
+  // Janela grande demais: corta do lado oposto a quem está lendo. A posição da rolagem não diz o lado: as linhas
+  // recém-reveladas ainda têm a altura estimada do content-visibility. No fim da lista, mantém as mais novas.
+  useEffect(() => {
+    const viewport = viewportRef.current
+    if (!viewport || end - start <= WINDOW_MAX) {
+      return
+    }
+    const atEnd =
+      viewport.scrollHeight - viewport.clientHeight - viewport.scrollTop < 2
+    const keep = atEnd ? "end" : lastEdge.current
+    const next = trimWindow(seqs, messageWindow, keep)
+    if (!next) {
+      return
+    }
+    // As linhas de baixo da tela ainda trocam a altura estimada pela real: a referência é uma visível que fica.
+    const kept = new Set(
+      display
+        .slice(windowRange(seqs, next).start, end)
+        .map((message) => message.id ?? message.key)
+    )
+    keepInPlace.current =
+      keep === "end" ? visibleRow(viewport, (id) => kept.has(id)) : null
+    setMessageWindow(next)
+  }, [display, end, messageWindow, seqs, start])
+
   async function jumpTo(messageId: string) {
     // Resultados da busca podem estar bem para trás: carrega até 100 páginas antigas.
     for (let page = 0; page < 100; page++) {
       const current = queryClient.getQueryData<ConversationCache>(
         chatQueries.messages(conversation.id).queryKey
       )
-      if (current?.messages.some((message) => message.id === messageId)) {
+      const target = current?.messages.find(
+        (message) => message.id === messageId
+      )
+      if (current && target) {
+        const loaded = [
+          ...current.messages.map((message) => message.seq),
+          ...current.pending.map(() => null),
+        ]
+        // Fora da janela desenhada, ou numa janela que ainda vai ser cortada (o corte segue a posição de antes do
+        // salto e levaria o alvo): a janela passa a ser a vizinhança da mensagem.
+        const range = windowRange(loaded, windowRef.current)
+        const index = loaded.indexOf(target.seq)
+        if (
+          index < range.start ||
+          index >= range.end ||
+          range.end - range.start > WINDOW_MAX
+        ) {
+          setMessageWindow(windowAround(loaded, target.seq))
+        }
         await settleOn(messageId)
         return
       }
@@ -932,15 +1027,33 @@ function LoadedConversation({
         ) : null}
         <MessageScroller className="chat-wallpaper min-h-0 flex-1">
           <MessageScrollerViewport
+            ref={viewportRef}
             aria-label={t("chat.messages")}
             preserveScrollOnPrepend
             className="px-2 md:px-4"
           >
             <MessageScrollerContent className="gap-1 py-3">
-              {cache.hasOlder ? (
-                <LoadOlder
+              {start > 0 || cache.hasOlder ? (
+                <LoadMore
+                  edge="start"
+                  revision={`${start}:${end}:${display.length}`}
                   label={t("chat.loadOlder")}
-                  onLoad={() => loadOlder(queryClient, conversation.id)}
+                  onLoad={() => {
+                    lastEdge.current = "start"
+                    const older = revealOlder(seqs, messageWindow)
+                    // Sem overflow-anchor (WebKit), as linhas que entram acima empurrariam a tela para baixo.
+                    const hold = () => {
+                      const viewport = viewportRef.current
+                      keepInPlace.current = viewport && visibleRow(viewport)
+                    }
+                    if (older.loadPage) {
+                      setMessageWindow(older.window)
+                      return loadOlder(queryClient, conversation.id).then(hold)
+                    }
+                    hold()
+                    setMessageWindow(older.window)
+                    return Promise.resolve()
+                  }}
                 />
               ) : null}
               {display.length === 0 ? (
@@ -955,8 +1068,8 @@ function LoadedConversation({
                   </EmptyHeader>
                 </Empty>
               ) : null}
-              {display.map((message, index) => {
-                const previous = display[index - 1]
+              {display.slice(start, end).map((message, offset) => {
+                const previous = display[start + offset - 1]
                 const newDay =
                   !previous ||
                   dayKey(previous.createdAt) !== dayKey(message.createdAt)
@@ -1011,7 +1124,9 @@ function LoadedConversation({
                     ) : null}
                     <MessageScrollerItem
                       messageId={message.id ?? message.key}
-                      scrollAnchor={unreadHere}
+                      scrollAnchor={
+                        unreadHere && messageWindow === openingWindow
+                      }
                     >
                       <MessageRow
                         message={message}
@@ -1044,6 +1159,18 @@ function LoadedConversation({
                   </Fragment>
                 )
               })}
+              {end < display.length ? (
+                <LoadMore
+                  edge="end"
+                  revision={`${start}:${end}:${display.length}`}
+                  label={t("chat.loadNewer")}
+                  onLoad={() => {
+                    lastEdge.current = "end"
+                    setMessageWindow((window) => revealNewer(seqs, window))
+                    return Promise.resolve()
+                  }}
+                />
+              ) : null}
             </MessageScrollerContent>
           </MessageScrollerViewport>
           {unread && firstUnreadId ? (
@@ -1056,7 +1183,15 @@ function LoadedConversation({
               {t("chat.jumpToUnread")}
             </Button>
           ) : null}
-          <MessageScrollerButton direction="end" />
+          <MessageScrollerButton
+            direction="end"
+            onClick={() =>
+              // Fora do fim do histórico, volta para as últimas antes de rolar.
+              setMessageWindow((window) =>
+                window.toSeq === null ? window : tailWindow(seqs)
+              )
+            }
+          />
         </MessageScroller>
         {selection !== null ? (
           <div className="flex items-center gap-2 border-t bg-background px-3 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
@@ -1376,15 +1511,46 @@ function toDisplay(
 }
 
 /**
- * Páginas antigas (UI-04): carregam sozinhas quando o topo chega perto da tela, uma de cada vez; o botão fica para
- * o teclado e para quem prefere pedir.
+ * Primeira linha visível da lista (entre as que {@code stays} aceita), com a posição na tela: depois do próximo
+ * commit, a rolagem a devolve ao mesmo lugar. Só vale com a rolagem ainda onde estava: se a pessoa rolou depois,
+ * ou se o navegador já compensou sozinho (overflow-anchor), não mexe.
  */
-function LoadOlder({
+function visibleRow(
+  viewport: HTMLElement,
+  stays: (id: string) => boolean = () => true
+) {
+  const top = viewport.getBoundingClientRect().top
+  const element = [
+    ...viewport.querySelectorAll<HTMLElement>("[data-message-id]"),
+  ].find(
+    (item) =>
+      stays(item.dataset.messageId ?? "") &&
+      item.getBoundingClientRect().bottom > top
+  )
+  return element
+    ? {
+        element,
+        top: element.getBoundingClientRect().top,
+        scrollTop: viewport.scrollTop,
+      }
+    : null
+}
+
+/**
+ * Bordas da janela (UI-04): ao chegar perto da tela, revelam mais mensagens já carregadas ou buscam a página
+ * antiga, uma de cada vez; o botão fica para o teclado e para quem prefere pedir.
+ */
+function LoadMore({
+  edge,
   label,
   onLoad,
+  revision,
 }: {
+  edge: "start" | "end"
   label: string
   onLoad: () => Promise<unknown>
+  /** Muda a cada janela ou página nova: o observador recomeça depois do commit, com a posição já corrigida. */
+  revision: string
 }) {
   const sentinel = useRef<HTMLDivElement>(null)
   const latest = useRef(onLoad)
@@ -1403,19 +1569,25 @@ function LoadOlder({
           loading.current = true
           void latest.current().finally(() => {
             loading.current = false
-            // Observar de novo dá um aviso com a posição atual: se o topo ainda está perto, carrega a próxima.
-            observer.unobserve(element)
-            observer.observe(element)
           })
         }
       },
-      { rootMargin: "600px 0px 0px 0px" }
+      {
+        // A margem só vale contra a área que rola; contra a página, a borda só reagia já dentro da tela.
+        root: element.closest('[data-slot="message-scroller-viewport"]'),
+        rootMargin:
+          edge === "start" ? "600px 0px 0px 0px" : "0px 0px 600px 0px",
+      }
     )
+    // O primeiro aviso traz a posição atual: se a borda ainda está perto depois do commit, revela a próxima.
     observer.observe(element)
     return () => observer.disconnect()
-  }, [])
+  }, [edge, revision])
   return (
-    <div ref={sentinel} className="flex justify-center pb-2">
+    <div
+      ref={sentinel}
+      className={cn("flex justify-center", edge === "start" ? "pb-2" : "pt-2")}
+    >
       <Button variant="outline" size="sm" onClick={() => void latest.current()}>
         {label}
       </Button>

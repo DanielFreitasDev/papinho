@@ -140,11 +140,12 @@ export function ContactList({
                 <button
                   type="button"
                   onClick={() => onOpen(contact)}
-                  aria-label={t("chat.startConversation", {
-                    name: contact.label,
-                  })}
                   className="flex min-w-0 flex-col rounded-md text-left outline-none after:absolute after:inset-0 focus-visible:ring-3 focus-visible:ring-ring/50"
                 >
+                  {/* O nome acessível começa pela ação e contém o texto visível (WCAG 2.5.3, AR-01). */}
+                  <span className="sr-only">
+                    {t("contacts.startConversation")}{" "}
+                  </span>
                   <ItemTitle className="truncate" data-private="names">
                     {contact.label}
                   </ItemTitle>

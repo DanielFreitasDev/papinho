@@ -137,7 +137,8 @@
     "alreadyContact": "Already in your contacts",
     "thisIsYou": "This is you",
     "blocked": "You blocked this person",
-    "actions": "Contact actions"
+    "actions": "Contact actions",
+    "startConversation": "Chat with"
   },
   "invite": {
     "title": "Invite friends",
@@ -345,7 +346,6 @@
     "decline": "Decline",
     "declined": "Request declined",
     "blockAndDecline": "Block",
-    "startConversation": "Chat with {{name}}",
     "unreadCount_one": "{{count}} unread message",
     "unreadCount_other": "{{count}} unread messages",
     "unreadMarker_one": "{{count}} unread message",

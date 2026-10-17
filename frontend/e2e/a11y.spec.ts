@@ -11,6 +11,7 @@ import {
   PASSWORD,
   RUN,
   ensureAdmin,
+  openContactsTab,
   openMenuItem,
   twoFriends,
 } from "./support"
@@ -95,6 +96,29 @@ test("celular deitado: sem rolagem horizontal e com o campo de mensagem à vista
   await expect(page.getByRole("textbox", { name: "Mensagem" })).toBeInViewport()
   await expectNoHorizontalScroll(page)
   await context.close()
+})
+
+/** A aba Contatos com um contato, nos dois temas (AR-01, AR-03): o nome acessível contém o texto visível. */
+test("aba Contatos sem violações críticas ou sérias", async ({
+  browser,
+  pageErrors,
+}) => {
+  test.slow()
+  const tag = `${RUN}${test.info().project.name.startsWith("mobile") ? "m" : "d"}k`
+  const { gil, hana } = await twoFriends(browser, pageErrors, tag, "Contato")
+  const page = gil.page
+  await page.goto("/")
+  await openContactsTab(page)
+  const contact = page.getByRole("button", {
+    name: new RegExp(`Conversar com ${hana.name}`),
+  })
+  await expect(contact).toBeVisible()
+  await expectNoSeriousA11yViolations(page)
+  await page.emulateMedia({ colorScheme: "dark" })
+  await expect(page.locator("html")).toHaveClass(/dark/)
+  await expectNoSeriousA11yViolations(page)
+  await gil.context.close()
+  await hana.context.close()
 })
 
 /** Fase 7: entrar, abrir uma conversa, mandar mensagem e usar o menu só com o teclado (AR-03). */

@@ -137,7 +137,8 @@
     "alreadyContact": "Já está nos seus contatos",
     "thisIsYou": "Este é você",
     "blocked": "Você bloqueou esta pessoa",
-    "actions": "Ações do contato"
+    "actions": "Ações do contato",
+    "startConversation": "Conversar com"
   },
   "invite": {
     "title": "Convidar amigos",
@@ -345,7 +346,6 @@
     "decline": "Recusar",
     "declined": "Solicitação recusada",
     "blockAndDecline": "Bloquear",
-    "startConversation": "Conversar com {{name}}",
     "unreadCount_one": "{{count}} mensagem não lida",
     "unreadCount_other": "{{count}} mensagens não lidas",
     "unreadMarker_one": "{{count}} mensagem não lida",

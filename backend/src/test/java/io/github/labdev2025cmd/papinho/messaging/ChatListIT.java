@@ -92,6 +92,35 @@ class ChatListIT {
     }
 
     @Test
+    @DisplayName("sair e voltar a um grupo fixado não fura o limite de 3 fixadas (GR-05)")
+    void shouldNotExceedPinLimitAfterLeavingAndRejoiningGroup() {
+        String brunoId = bruno.json(bruno.get("/api/v1/auth/session")).get("me").get("account").get("id")
+                .asString();
+        ana.post("/api/v1/contacts", Map.of("username", "bruno"));
+        String group = ana.json(ana.post("/api/v1/groups", Map.of("name", "Fixado", "memberIds",
+                List.of(brunoId)))).get("id").asString();
+        String code = ana.json(ana.get("/api/v1/groups/" + group + "/invite")).get("code").asString();
+        List<String> directs = List.of("carla", "davi", "edu").stream().map(name -> {
+            Accounts.register(clients.create(), name, Accounts.invite(ana));
+            String id = open(bruno, name);
+            send(bruno, id, "oi " + name);
+            return id;
+        }).toList();
+        assertThat(bruno.put(path(group) + "/pin", null)).hasStatus(204);
+        assertThat(bruno.put(path(directs.get(0)) + "/pin", null)).hasStatus(204);
+        assertThat(bruno.put(path(directs.get(1)) + "/pin", null)).hasStatus(204);
+        assertThat(bruno.put(path(directs.get(2)) + "/pin", null)).hasStatus(409);
+
+        assertThat(bruno.post("/api/v1/groups/" + group + "/leave", null)).hasStatus(204);
+        assertThat(bruno.put(path(directs.get(2)) + "/pin", null)).hasStatus(204);
+        assertThat(bruno.post("/api/v1/groups/invites/" + code + "/join", null)).hasStatusOk();
+        long pinned = StreamSupport.stream(bruno.json(bruno.get("/api/v1/conversations")).spliterator(), false)
+                .filter(item -> !item.get("organization").get("pinnedAt").isNull()).count();
+        assertThat(pinned).as("fixadas na lista depois de voltar ao grupo").isEqualTo(3);
+        assertThat(organization(bruno, group).get("pinnedAt").isNull()).as("o grupo volta sem fixar").isTrue();
+    }
+
+    @Test
     @DisplayName("silencia por 8 h, 1 semana ou sempre, com menções; favorita; quem é de fora recebe 404")
     void shouldMuteAndFavorite() {
         String conversation = open(ana, "bruno");

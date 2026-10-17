@@ -382,6 +382,7 @@ public class GroupService {
         if (approve) {
             request.rejoin(sequences.current(groupId), clock.instant());
             members.flush();
+            members.clearPins(groupId, List.of(userId));
             messages.appendSystem(groupId, me, notice("group.added", me, List.of(userId), null));
             notifyMembers(groupId, Set.of());
         } else {
@@ -405,6 +406,7 @@ public class GroupService {
             }
         }
         members.flush();
+        members.clearPins(groupId, userIds);
     }
 
     /** Grupo sem admin ativo: o membro mais antigo vira admin (como no WhatsApp). */

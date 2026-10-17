@@ -43,7 +43,8 @@ the product's own name-constrained CA) and may later deploy it on a VPS behind a
 - Install-script check: `scripts/verify-install-ca.sh` (Docker + a `lan` instance reachable as papinho.lan).
 
 ## Conventions and constraints
-- Commits: `COMMITS.md` (Conventional Commits, pt-BR subject, atomic). This project is authorized to commit
+- Commits: `COMMITS.md` (Conventional Commits, pt-BR subject ≤ 72 chars, atomic); enable the check once per clone
+  with `git config core.hooksPath .githooks` (CI runs `scripts/check-commit-subject.sh` on new commits). This project is authorized to commit
   and push to `main` (PROMPT.md §4); never `--force`, `--no-verify`, amend/rebase pushed commits, or blind `git add -A`.
 - Never commit secrets, real `.env`, build output, `node_modules`, or anything from the PKI directory
   (`~/.papinho/pki` by default; `data/` is ignored too).

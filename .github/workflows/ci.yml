@@ -14,6 +14,25 @@ permissions:
   contents: read
 
 jobs:
+  # COMMITS.md: assunto com no máximo 72 caracteres; só os commits novos (o histórico enviado não é reescrito).
+  commits:
+    name: Assunto dos commits (até 72 caracteres)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Conferir os assuntos novos
+        env:
+          BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+        run: |
+          if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
+            exit 0
+          fi
+          scripts/check-commit-subject.sh --range "$BASE..$HEAD"
+
   backend:
     name: Backend (./mvnw verify)
     runs-on: ubuntu-latest

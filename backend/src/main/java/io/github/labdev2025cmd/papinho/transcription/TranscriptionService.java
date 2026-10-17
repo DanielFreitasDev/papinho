@@ -120,7 +120,7 @@ public class TranscriptionService {
             try (InputStream in = content.resource().getInputStream()) {
                 text = client.transcribe(provider.baseUrl(), key, provider.model(),
                         provider.kind() == ProviderKind.WHISPER ? provider.hotwords() : null, content.filename(),
-                        content.contentType(), in);
+                        content.contentType(), in, content.resource().contentLength());
             }
         } catch (IOException failed) {
             // Só o provedor e o motivo técnico; nunca a chave nem o conteúdo.

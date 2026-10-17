@@ -44,24 +44,33 @@ public class OpenAiCompatibleClient {
         }
     }
 
+    /**
+     * Transcreve o áudio, enviado em streaming: o multipart é a concatenação dos campos com o próprio
+     * {@code audio}, com {@code Content-Length} conhecido. Nada do arquivo fica inteiro na memória, nem um áudio
+     * de 1 GB do Whisper próprio.
+     */
     public String transcribe(String baseUrl, @Nullable String apiKey, String model, @Nullable String hotwords,
-            String filename, String contentType, InputStream audio) throws IOException {
+            String filename, String contentType, InputStream audio, long audioLength) throws IOException {
         String boundary = "papinho-" + UUID.randomUUID();
-        ByteArrayOutputStream body = new ByteArrayOutputStream();
-        field(body, boundary, "model", model);
-        field(body, boundary, "response_format", "json");
+        ByteArrayOutputStream head = new ByteArrayOutputStream();
+        field(head, boundary, "model", model);
+        field(head, boundary, "response_format", "json");
         if (hotwords != null && !hotwords.isBlank()) {
-            field(body, boundary, "hotwords", hotwords);
+            field(head, boundary, "hotwords", hotwords);
         }
-        body.writeBytes(("--" + boundary + "\r\nContent-Disposition: form-data; name=\"file\"; filename=\""
+        head.writeBytes(("--" + boundary + "\r\nContent-Disposition: form-data; name=\"file\"; filename=\""
                 + filename.replace("\"", "") + "\"\r\nContent-Type: " + contentType + "\r\n\r\n")
                 .getBytes(StandardCharsets.UTF_8));
-        audio.transferTo(body);
-        body.writeBytes(("\r\n--" + boundary + "--\r\n").getBytes(StandardCharsets.UTF_8));
+        byte[] tail = ("\r\n--" + boundary + "--\r\n").getBytes(StandardCharsets.UTF_8);
+        HttpRequest.BodyPublisher body = HttpRequest.BodyPublishers.concat(
+                HttpRequest.BodyPublishers.ofByteArray(head.toByteArray()),
+                HttpRequest.BodyPublishers.fromPublisher(HttpRequest.BodyPublishers.ofInputStream(() -> audio),
+                        audioLength),
+                HttpRequest.BodyPublishers.ofByteArray(tail));
         HttpRequest.Builder request = HttpRequest.newBuilder(endpoint(baseUrl, "/v1/audio/transcriptions"))
                 .timeout(Duration.ofMinutes(5)).header("User-Agent", userAgent)
                 .header("Content-Type", "multipart/form-data; boundary=" + boundary)
-                .POST(HttpRequest.BodyPublishers.ofByteArray(body.toByteArray()));
+                .POST(body);
         if (apiKey != null && !apiKey.isBlank()) {
             request.header("Authorization", "Bearer " + apiKey);
         }

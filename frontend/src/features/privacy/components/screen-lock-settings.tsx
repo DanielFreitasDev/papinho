@@ -67,7 +67,8 @@ function NewLock() {
   const [triggers, setTriggers] = useState<Triggers>({
     idleMinutes: null,
     lockOnHidden: false,
-    shortcut: "Alt+Shift+L",
+    // Tudo desligado por padrão (PV-02): o atalho só existe se a pessoa gravar um.
+    shortcut: null,
     allowPasskey: false,
   })
   const [error, setError] = useState<string | null>(null)

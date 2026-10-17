@@ -298,7 +298,18 @@ test("conversa trancada e bloqueio de tela", async ({
     page.getByRole("heading", { name: "Configurações" })
   ).toBeVisible()
 
-  // O atalho padrão também bloqueia.
+  // Tudo desligado por padrão (PV-02): sem atalho gravado, a tecla não bloqueia.
+  const shortcut = page.getByRole("button", { name: "Atalho para bloquear" })
+  await expect(shortcut).toHaveText("Sem atalho")
+  await page.keyboard.press("Alt+Shift+L")
+  await page.waitForTimeout(500)
+  await expect(lock).toBeHidden()
+  // Com o atalho gravado e salvo, ele bloqueia.
+  await shortcut.click()
+  await page.keyboard.press("Alt+Shift+L")
+  await expect(shortcut).toHaveText("Alt+Shift+L")
+  await page.getByRole("button", { name: "Salvar", exact: true }).click()
+  await expect(page.getByText("Alterações salvas")).toBeVisible()
   await page.keyboard.press("Alt+Shift+L")
   await expect(lock).toBeVisible()
   await lock.getByLabel("PIN").fill("1357")

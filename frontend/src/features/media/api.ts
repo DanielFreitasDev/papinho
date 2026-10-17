@@ -12,12 +12,25 @@ const CHUNK_SIZE = 50 * 1024 * 1024
 
 export type MediaKind = "IMAGE" | "VIDEO" | "AUDIO" | "DOCUMENT"
 
+/**
+ * Endereço do arquivo. O anexo de uma conversa trancada vem com um grant que vai na URL: o `<img>` não manda o
+ * cabeçalho do token (PV-03).
+ */
 export function mediaUrl(
-  id: string,
+  media: string | { id: string; grant?: string | null },
   part: "content" | "thumbnail" = "content",
   download = false
 ) {
-  return `/api/v1/media/${id}/${part}${download ? "?download=true" : ""}`
+  const { id, grant } = typeof media === "string" ? { id: media } : media
+  const params = new URLSearchParams()
+  if (download) {
+    params.set("download", "true")
+  }
+  if (grant) {
+    params.set("grant", grant)
+  }
+  const query = params.toString()
+  return `/api/v1/media/${id}/${part}${query ? `?${query}` : ""}`
 }
 
 /** Tipo provável pelo arquivo local, só para a prévia enquanto envia; o servidor decide pelo conteúdo. */

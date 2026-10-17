@@ -2,9 +2,11 @@ import type { Page } from "@playwright/test"
 
 import { expect, expectNoSeriousA11yViolations, test } from "./fixtures"
 import {
+  attach,
   createInvite,
   ensureAdmin,
   openMenuItem,
+  pngFile,
   registerThroughUi,
   RUN,
   twoFriends,
@@ -196,6 +198,7 @@ test("conversa trancada e bloqueio de tela", async ({
   const page = gil.page
   const chat = page.url()
   await send(page, "Segredo guardado")
+  await attach(page, [await pngFile(page, "#2563eb", "trancada.png")])
   // A conversa ainda não trancada fica guardada para o offline (NT-05).
   await expect.poll(() => offlineText(page)).toContain("Segredo guardado")
 
@@ -241,6 +244,19 @@ test("conversa trancada e bloqueio de tela", async ({
   await page.getByLabel("Código", { exact: true }).fill("2468")
   await page.getByRole("button", { name: "Abrir" }).click()
   await expect(row(page, "Segredo guardado")).toBeVisible()
+  // O anexo da trancada só abre com o grant que veio com a mensagem (PV-03).
+  const photo = page.getByRole("button", { name: "Abrir imagem trancada.png" })
+  await expect
+    .poll(() =>
+      photo
+        .locator("img")
+        .last()
+        .evaluate((img: HTMLImageElement) => img.naturalWidth)
+    )
+    .toBeGreaterThan(0)
+  expect(await photo.locator("img").last().getAttribute("src")).toContain(
+    "grant="
+  )
 
   // Na lista principal ela não aparece; só a entrada da pasta.
   await page.goto("/")

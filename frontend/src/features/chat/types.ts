@@ -102,6 +102,8 @@ export type Attachment = {
   height: number | null
   thumbhash: string | null
   hasThumbnail: boolean
+  /** Só em conversa que a pessoa trancou: vai na URL do conteúdo (PV-03). */
+  grant?: string | null
 }
 
 /** Arquivo ainda no aparelho, mostrado enquanto envia. */

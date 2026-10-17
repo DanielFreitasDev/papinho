@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.jspecify.annotations.Nullable;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -44,7 +45,7 @@ public class MediaService {
     /** Metadados para quem pode ver o arquivo; 404 para os demais (não revela que existe). */
     @Transactional(readOnly = true)
     public MediaView view(UUID viewer, UUID id) {
-        return requireReadable(viewer, id).toView();
+        return requireReadable(viewer, id, null).toView();
     }
 
     /** Arquivo que {@code owner} enviou e pode anexar a uma mensagem. */
@@ -67,7 +68,13 @@ public class MediaService {
     /** Conteúdo (ou miniatura) para quem pode ver. */
     @Transactional(readOnly = true)
     public Content content(UUID viewer, UUID id, boolean thumbnail) throws IOException {
-        MediaFile file = requireReadable(viewer, id);
+        return content(viewer, id, thumbnail, null);
+    }
+
+    /** Conteúdo com o grant de anexo de conversa trancada, quando a URL o traz (PV-03). */
+    @Transactional(readOnly = true)
+    public Content content(UUID viewer, UUID id, boolean thumbnail, @Nullable String grant) throws IOException {
+        MediaFile file = requireReadable(viewer, id, grant);
         if (thumbnail && !file.hasThumbnail()) {
             throw new MediaExceptions.NotFoundException();
         }
@@ -168,9 +175,9 @@ public class MediaService {
     public record OwnedFile(UUID id, String filename) {
     }
 
-    private MediaFile requireReadable(UUID viewer, UUID id) {
+    private MediaFile requireReadable(UUID viewer, UUID id, @Nullable String grant) {
         MediaFile file = files.findById(id).orElseThrow(MediaExceptions.NotFoundException::new);
-        if (policies.stream().anyMatch(p -> p.restricted(id))) {
+        if (policies.stream().anyMatch(p -> p.restricted(id) || p.lockedWithoutGrant(viewer, id, grant))) {
             throw new MediaExceptions.NotFoundException();
         }
         if (viewer.equals(file.ownerId()) || policies.stream().anyMatch(p -> p.canRead(viewer, id))) {

@@ -102,7 +102,7 @@ export function AttachmentView({
           ) : null}
           <img
             src={mediaUrl(
-              attachment.id,
+              attachment,
               attachment.hasThumbnail ? "thumbnail" : "content"
             )}
             alt=""
@@ -117,9 +117,9 @@ export function AttachmentView({
     case "VIDEO":
       return (
         <VideoPlayer
-          src={mediaUrl(attachment.id)}
+          src={mediaUrl(attachment)}
           label={attachment.filename}
-          downloadUrl={mediaUrl(attachment.id, "content", true)}
+          downloadUrl={mediaUrl(attachment, "content", true)}
           privateMedia
         />
       )
@@ -135,7 +135,7 @@ export function AttachmentView({
       }
       return (
         <LocalAudioPlayer
-          src={mediaUrl(attachment.id)}
+          src={mediaUrl(attachment)}
           label={attachment.filename}
           className="w-64 max-w-full"
         />
@@ -143,7 +143,7 @@ export function AttachmentView({
     default:
       return (
         <a
-          href={mediaUrl(attachment.id, "content", true)}
+          href={mediaUrl(attachment, "content", true)}
           download={attachment.filename}
           onClick={(event) => event.stopPropagation()}
           className="flex min-w-0 items-center gap-3 rounded-md bg-black/5 p-2 outline-none hover:bg-black/10 focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-white/10"

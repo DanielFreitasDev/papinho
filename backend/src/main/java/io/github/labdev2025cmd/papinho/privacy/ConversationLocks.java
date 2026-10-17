@@ -37,7 +37,9 @@ import io.github.labdev2025cmd.papinho.shared.security.RateLimiter;
  * ao trancar outra conversa reaproveita o código, que passa a ser compartilhado. As conversas trancadas saem da
  * lista e a API só devolve o conteúdo delas com um token de desbloqueio válido no cabeçalho
  * {@value #HEADER}: o token cobre os códigos digitados, vale {@link #IDLE} desde o último uso e no máximo
- * {@link #MAX_LIFETIME}, e fica só na memória (reiniciar o servidor tranca tudo de novo).
+ * {@link #MAX_LIFETIME}, e fica só na memória (reiniciar o servidor tranca tudo de novo). Os anexos dessas
+ * conversas abrem com um grant assinado por arquivo e pessoa (o {@code <img>} não manda cabeçalhos), que vem nas
+ * mensagens servidas com o token e vale {@link #MAX_LIFETIME}; a chave da assinatura também só existe na memória.
  */
 @Service
 public class ConversationLocks {
@@ -50,6 +52,7 @@ public class ConversationLocks {
 
     private final Map<String, Grant> grants = new ConcurrentHashMap<>();
     private final SecureRandom random = new SecureRandom();
+    private final javax.crypto.spec.SecretKeySpec mediaKey;
     private final NamedParameterJdbcTemplate jdbc;
     private final PasswordEncoder encoder;
     private final ConversationMembership membership;
@@ -63,6 +66,46 @@ public class ConversationLocks {
         this.membership = membership;
         this.rateLimiter = rateLimiter;
         this.clock = clock;
+        byte[] key = new byte[32];
+        random.nextBytes(key);
+        this.mediaKey = new javax.crypto.spec.SecretKeySpec(key, "HmacSHA256");
+    }
+
+    /** Grant de {@code userId} para abrir o anexo {@code mediaId} de uma conversa trancada: "validade.assinatura". */
+    public String mediaGrant(UUID userId, UUID mediaId) {
+        long expires = clock.instant().plus(MAX_LIFETIME).getEpochSecond();
+        return expires + "." + sign(userId, mediaId, expires);
+    }
+
+    /** O grant é desta pessoa, deste arquivo e ainda vale? */
+    public boolean validMediaGrant(UUID userId, UUID mediaId, @Nullable String grant) {
+        if (grant == null) {
+            return false;
+        }
+        int dot = grant.indexOf('.');
+        long expires;
+        try {
+            expires = Long.parseLong(grant.substring(0, Math.max(dot, 0)));
+        } catch (NumberFormatException invalid) {
+            return false;
+        }
+        if (expires < clock.instant().getEpochSecond()) {
+            return false;
+        }
+        return MessageDigest.isEqual(sign(userId, mediaId, expires).getBytes(java.nio.charset.StandardCharsets.US_ASCII),
+                grant.substring(dot + 1).getBytes(java.nio.charset.StandardCharsets.US_ASCII));
+    }
+
+    private String sign(UUID userId, UUID mediaId, long expires) {
+        try {
+            javax.crypto.Mac mac = javax.crypto.Mac.getInstance("HmacSHA256");
+            mac.init(mediaKey);
+            byte[] signature = mac.doFinal((userId + ":" + mediaId + ":" + expires).getBytes(
+                    java.nio.charset.StandardCharsets.US_ASCII));
+            return Base64.getUrlEncoder().withoutPadding().encodeToString(signature);
+        } catch (java.security.GeneralSecurityException exception) {
+            throw new IllegalStateException(exception);
+        }
     }
 
     /**

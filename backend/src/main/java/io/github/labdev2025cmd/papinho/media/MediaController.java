@@ -5,6 +5,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.UUID;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.core.io.Resource;
 import org.springframework.http.CacheControl;
 import org.springframework.http.ContentDisposition;
@@ -44,14 +45,15 @@ class MediaController {
     }
 
     @GetMapping("/{id}/content")
-    ResponseEntity<Resource> content(@PathVariable UUID id, @RequestParam(defaultValue = "false") boolean download)
-            throws IOException {
-        return respond(media.content(CurrentUser.id(), id, false), download);
+    ResponseEntity<Resource> content(@PathVariable UUID id, @RequestParam(defaultValue = "false") boolean download,
+            @RequestParam(required = false) @Nullable String grant) throws IOException {
+        return respond(media.content(CurrentUser.id(), id, false, grant), download);
     }
 
     @GetMapping("/{id}/thumbnail")
-    ResponseEntity<Resource> thumbnail(@PathVariable UUID id) throws IOException {
-        return respond(media.content(CurrentUser.id(), id, true), false);
+    ResponseEntity<Resource> thumbnail(@PathVariable UUID id, @RequestParam(required = false) @Nullable String grant)
+            throws IOException {
+        return respond(media.content(CurrentUser.id(), id, true, grant), false);
     }
 
     private static ResponseEntity<Resource> respond(MediaService.Content content, boolean download) {

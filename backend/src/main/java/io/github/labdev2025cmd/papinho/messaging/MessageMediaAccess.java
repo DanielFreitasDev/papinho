@@ -1,9 +1,11 @@
 package io.github.labdev2025cmd.papinho.messaging;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,6 +30,18 @@ class MessageMediaAccess implements MediaAccessPolicy {
     @Transactional(readOnly = true)
     public boolean canRead(UUID viewer, UUID mediaId) {
         return messages.attachmentVisibleTo(viewer, mediaId) || groups.photoVisibleTo(viewer, mediaId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean lockedWithoutGrant(UUID viewer, UUID mediaId, @Nullable String grant) {
+        Set<UUID> hidden = locks.hiddenConversations(viewer);
+        if (hidden.isEmpty() || messages.attachmentsIn(hidden, List.of(mediaId)).isEmpty()) {
+            return false;
+        }
+        boolean elsewhere = messages.attachmentVisibleOutside(viewer, mediaId, hidden)
+                || groups.photoVisibleTo(viewer, mediaId);
+        return !elsewhere && !locks.validMediaGrant(viewer, mediaId, grant);
     }
 
     @Override

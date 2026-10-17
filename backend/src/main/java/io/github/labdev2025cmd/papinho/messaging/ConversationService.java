@@ -135,6 +135,15 @@ public class ConversationService {
                 """, params);
     }
 
+    /** Conversas que {@code me} trancou (os anexos delas saem com grant, PV-03). */
+    Set<UUID> lockedBy(UUID me) {
+        return locks.lockedConversations(me);
+    }
+
+    String mediaGrant(UUID me, UUID mediaId) {
+        return locks.mediaGrant(me, mediaId);
+    }
+
     /** "Mensagens salvas" (MS-12): a conversa consigo mesmo, criada na primeira vez. */
     @Transactional
     public ConversationView openSelf(UUID me) {

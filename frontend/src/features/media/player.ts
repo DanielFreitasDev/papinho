@@ -5,6 +5,8 @@ import { mediaUrl } from "./api"
 /** Faixa de áudio tocável (mensagem de voz ou arquivo de áudio). */
 export type Track = {
   mediaId: string
+  /** Grant do anexo de conversa trancada (PV-03). */
+  grant?: string | null
   conversationId: string
   messageId: string
   title: string
@@ -79,7 +81,7 @@ class AudioPlayer {
       void audio.play().catch(() => undefined)
       return
     }
-    audio.src = mediaUrl(track.mediaId)
+    audio.src = mediaUrl({ id: track.mediaId, grant: track.grant })
     audio.playbackRate = this.state.rate
     this.set({ current: track, queue, position: 0, duration: 0 })
     void audio.play().catch(() => this.set({ playing: false }))

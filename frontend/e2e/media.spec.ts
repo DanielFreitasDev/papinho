@@ -1,42 +1,7 @@
 import type { Locator, Page } from "@playwright/test"
 
 import { expect, expectNoSeriousA11yViolations, test } from "./fixtures"
-import { RUN, twoFriends } from "./support"
-
-/** PNG desenhado num canvas do próprio navegador. */
-async function pngFile(page: Page, color: string, name: string) {
-  const dataUrl = await page.evaluate((fill) => {
-    const canvas = document.createElement("canvas")
-    canvas.width = 320
-    canvas.height = 200
-    const context = canvas.getContext("2d")!
-    context.fillStyle = fill
-    context.fillRect(0, 0, 320, 200)
-    return canvas.toDataURL("image/png")
-  }, color)
-  return {
-    name,
-    mimeType: "image/png",
-    buffer: Buffer.from(dataUrl.split(",")[1], "base64"),
-  }
-}
-
-async function attach(
-  page: Page,
-  files: Awaited<ReturnType<typeof pngFile>>[],
-  caption?: string
-) {
-  const chooser = page.waitForEvent("filechooser")
-  await page.getByRole("button", { name: "Anexar arquivo" }).click()
-  await (await chooser).setFiles(files)
-  const dialog = page.getByRole("dialog", { name: /Enviar \d arquivo/ })
-  await expect(dialog).toBeVisible()
-  if (caption) {
-    await dialog.getByLabel("Legenda (opcional)").fill(caption)
-  }
-  await dialog.getByRole("button", { name: "Enviar" }).click()
-  await expect(dialog).toBeHidden()
-}
+import { attach, pngFile, RUN, twoFriends } from "./support"
 
 /** Cola (ClipboardEvent) ou solta (DragEvent) uma imagem PNG gerada no navegador sobre o elemento. */
 async function dispatchFile(

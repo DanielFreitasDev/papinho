@@ -47,9 +47,12 @@ por mensagens e presença sem criar ciclo entre módulos do Spring Modulith.
 
 - Boas: nenhuma regra depende do cliente; o módulo novo não cria ciclo; reiniciar o servidor nunca deixa uma
   conversa trancada aberta.
-- Ruins: anexos de uma conversa trancada continuam acessíveis por id para quem participa (o `<img>` não manda
-  cabeçalhos); o id só chega junto das mensagens, que exigem o token. Com várias instâncias, o token precisaria
-  ir para um armazenamento compartilhado. O "Bloquear tela" não protege contra quem tem acesso às ferramentas
+- Anexos (achado A70 da auditoria de 2026-10-17): o `<img>` não manda cabeçalhos, então as mensagens servidas
+  com o token trazem, em cada anexo, um grant assinado (HMAC com chave que só existe na memória) para aquela
+  pessoa e aquele arquivo, válido por 1 hora; a URL do conteúdo leva `?grant=`. Sem ele, o arquivo que só aparece
+  em conversas trancadas e fechadas responde 404, inclusive para quem o enviou.
+- Ruins: com várias instâncias, o token e a chave dos grants precisariam ir para um armazenamento compartilhado.
+  Um grant copiado vale até vencer, mesmo depois de trancar a pasta de novo. O "Bloquear tela" não protege contra quem tem acesso às ferramentas
   do navegador, como documentado na própria tela.
 
 ## Alternativas consideradas

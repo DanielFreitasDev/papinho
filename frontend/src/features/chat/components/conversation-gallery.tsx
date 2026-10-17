@@ -124,6 +124,7 @@ function GalleryTabContent({
     .filter((message) => message.attachment?.kind === "AUDIO")
     .map((message) => ({
       mediaId: message.attachment!.id,
+      grant: message.attachment!.grant,
       conversationId,
       messageId: message.id,
       title: `${t("media.kind.AUDIO")} · ${formatDate(message.createdAt)}`,
@@ -201,7 +202,7 @@ function MediaTile({
           className="relative block aspect-square w-full overflow-hidden rounded-md bg-black outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
         >
           <video
-            src={`${mediaUrl(attachment.id)}#t=0.1`}
+            src={`${mediaUrl(attachment)}#t=0.1`}
             preload="metadata"
             muted
             playsInline
@@ -228,9 +229,9 @@ function MediaTile({
             </DialogTitle>
             {playing ? (
               <VideoPlayer
-                src={mediaUrl(attachment.id)}
+                src={mediaUrl(attachment)}
                 label={attachment.filename}
-                downloadUrl={mediaUrl(attachment.id, "content", true)}
+                downloadUrl={mediaUrl(attachment, "content", true)}
                 autoPlay
               />
             ) : null}
@@ -248,7 +249,7 @@ function MediaTile({
     >
       <img
         src={mediaUrl(
-          attachment.id,
+          attachment,
           attachment.hasThumbnail ? "thumbnail" : "content"
         )}
         alt=""

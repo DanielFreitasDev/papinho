@@ -98,7 +98,7 @@ export function ImageViewer({
           </Button>
           {current ? (
             <a
-              href={mediaUrl(current.id, "content", true)}
+              href={mediaUrl(current, "content", true)}
               download={current.filename}
               aria-label={t("media.download")}
               className={buttonVariants({
@@ -129,7 +129,7 @@ export function ImageViewer({
           {current ? (
             <img
               key={current.id}
-              src={mediaUrl(current.id)}
+              src={mediaUrl(current)}
               alt={current.filename}
               width={current.width ?? undefined}
               height={current.height ?? undefined}

@@ -4,6 +4,8 @@ import java.util.Collection;
 import java.util.Set;
 import java.util.UUID;
 
+import org.jspecify.annotations.Nullable;
+
 /**
  * Quem pode abrir um arquivo além de quem o enviou. Implementada pelo módulo de mensagens (o arquivo está numa
  * mensagem de uma conversa da pessoa), sem que a mídia dependa dele.
@@ -17,6 +19,14 @@ public interface MediaAccessPolicy {
      * os outros o leem pelas rotas normais de mídia.
      */
     default boolean restricted(UUID mediaId) {
+        return false;
+    }
+
+    /**
+     * O arquivo só aparece para {@code viewer} em conversas trancadas e fechadas, e {@code grant} não o abre
+     * (PV-03): nem quem enviou o lê sem o grant que vem nas mensagens destrancadas.
+     */
+    default boolean lockedWithoutGrant(UUID viewer, UUID mediaId, @Nullable String grant) {
         return false;
     }
 

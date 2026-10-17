@@ -259,6 +259,7 @@ function MessageRowView({
                           (item) => item.mediaId === message.attachment!.id
                         ) ?? {
                           mediaId: message.attachment.id,
+                          grant: message.attachment.grant,
                           conversationId: "",
                           messageId: message.id ?? message.key,
                           title: senderName,

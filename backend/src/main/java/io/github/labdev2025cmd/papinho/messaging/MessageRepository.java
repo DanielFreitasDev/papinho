@@ -51,6 +51,15 @@ interface MessageRepository extends JpaRepository<Message, UUID> {
             """, nativeQuery = true)
     boolean attachmentVisibleTo(UUID viewer, UUID mediaId);
 
+    /** Como {@link #attachmentVisibleTo}, fora das conversas dadas (as trancadas e fechadas para {@code viewer}). */
+    @Query(value = """
+            select exists (select 1 from messages m
+              join conversation_members cm on cm.conversation_id = m.conversation_id
+             where m.attachment_id = :mediaId and not m.view_once and m.conversation_id not in (:excluded)
+               and cm.user_id = :viewer and cm.state in ('ACTIVE', 'REQUEST'))
+            """, nativeQuery = true)
+    boolean attachmentVisibleOutside(UUID viewer, UUID mediaId, java.util.Collection<UUID> excluded);
+
     /** Entre os arquivos dados, os anexados a mensagens destas conversas. */
     @Query(value = "select distinct m.attachment_id from messages m where m.conversation_id in (:conversationIds) "
             + "and m.attachment_id in (:mediaIds)", nativeQuery = true)

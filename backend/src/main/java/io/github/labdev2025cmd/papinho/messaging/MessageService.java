@@ -930,6 +930,7 @@ public class MessageService {
         Map<UUID, UUID> stickerMedia = stickers.mediaOf(page.stream().map(Message::stickerId)
                 .filter(Objects::nonNull).collect(Collectors.toSet()));
         Instant now = clock.instant();
+        Set<UUID> locked = attachmentIds.isEmpty() ? Set.of() : conversations.lockedBy(me);
         return page.stream().map(m -> {
             Message reply = m.replyToId() == null ? null : replies.get(m.replyToId());
             ReplyPreview replyTo = reply == null ? null
@@ -945,7 +946,8 @@ public class MessageService {
                     m.clientMessageId(), m.body(), m.createdAt(), replyTo, m.forwardCount(),
                     m.forwardCount() >= FORWARDED_MANY, m.pinnedAt(),
                     reactionsByMessage.getOrDefault(m.id(), List.of()), starred.contains(m.id()),
-                    attachment == null ? null : AttachmentView.of(attachment), m.editedAt(), m.deleted(),
+                    attachment == null ? null : AttachmentView.of(attachment, locked.contains(m.conversationId())
+                            ? conversations.mediaGrant(me, attachment.id()) : null), m.editedAt(), m.deleted(),
                     m.expiresAt(), PollView.of(pollsById.get(m.id()), me, now), viewOnce, m.silent(),
                     m.stickerId() == null || !stickerMedia.containsKey(m.stickerId()) ? null
                             : new StickerRef(m.stickerId(), stickerMedia.get(m.stickerId())));
@@ -1028,13 +1030,17 @@ public class MessageService {
     public record PollOptionView(UUID id, String text, long votes, List<UUID> voters) {
     }
 
-    /** Anexo como o cliente o vê; o conteúdo vem de {@code /api/v1/media/{id}/content}. */
+    /**
+     * Anexo como o cliente o vê; o conteúdo vem de {@code /api/v1/media/{id}/content}. Em conversa que a pessoa
+     * trancou, {@code grant} vai na URL do conteúdo (PV-03).
+     */
     public record AttachmentView(UUID id, String kind, String contentType, long size, String filename,
-            @Nullable Integer width, @Nullable Integer height, @Nullable String thumbhash, boolean hasThumbnail) {
+            @Nullable Integer width, @Nullable Integer height, @Nullable String thumbhash, boolean hasThumbnail,
+            @Nullable String grant) {
 
-        static AttachmentView of(MediaView view) {
+        static AttachmentView of(MediaView view, @Nullable String grant) {
             return new AttachmentView(view.id(), view.kind().name(), view.contentType(), view.size(),
-                    view.filename(), view.width(), view.height(), view.thumbhash(), view.hasThumbnail());
+                    view.filename(), view.width(), view.height(), view.thumbhash(), view.hasThumbnail(), grant);
         }
     }
 

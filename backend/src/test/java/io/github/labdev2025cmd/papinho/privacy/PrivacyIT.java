@@ -390,6 +390,45 @@ class PrivacyIT {
                 .as("com o token").contains("agendadasecreta");
     }
 
+    @Test
+    @DisplayName("conversa trancada: o anexo só abre com o grant que vem na mensagem destrancada (PV-03)")
+    void shouldRequireGrantForLockedAttachments() throws Exception {
+        String conversation = acceptedConversation();
+        String photo = io.github.labdev2025cmd.papinho.support.Uploads.upload(bruno, Images.png(32, 32),
+                "trancada.png", "image/png");
+        io.github.labdev2025cmd.papinho.support.Uploads.send(bruno, conversation, photo, "");
+        String own = io.github.labdev2025cmd.papinho.support.Uploads.upload(ana, Images.png(32, 32), "minha.png",
+                "image/png");
+        io.github.labdev2025cmd.papinho.support.Uploads.send(ana, conversation, own, "");
+        String token = ana.json(ana.put("/api/v1/privacy/locked-conversations/" + conversation,
+                Map.of("code", "4321"))).get("token").asString();
+
+        assertThat(ana.get("/api/v1/media/" + photo + "/content")).as("pelo id, sem grant").hasStatus(404);
+        assertThat(ana.get("/api/v1/media/" + photo + "/thumbnail")).hasStatus(404);
+        assertThat(ana.get("/api/v1/media/" + own + "/content")).as("nem o próprio arquivo").hasStatus(404);
+        assertThat(bruno.get("/api/v1/media/" + photo + "/content")).as("para o Bruno não está trancada")
+                .hasStatusOk();
+
+        JsonNode page = ana.json(withToken(ana, path(conversation) + "/messages", token)).get("messages");
+        Map<String, String> grants = new HashMap<>();
+        page.forEach(m -> {
+            if (m.hasNonNull("attachment")) {
+                grants.put(m.get("attachment").get("id").asString(), m.get("attachment").get("grant").asString());
+            }
+        });
+        assertThat(grants).containsKeys(photo, own);
+        assertThat(ana.get("/api/v1/media/" + photo + "/content?grant=" + grants.get(photo))).hasStatusOk();
+        assertThat(ana.get("/api/v1/media/" + photo + "/thumbnail?grant=" + grants.get(photo))).hasStatusOk();
+        assertThat(ana.get("/api/v1/media/" + own + "/content?grant=" + grants.get(own))).hasStatusOk();
+        assertThat(ana.get("/api/v1/media/" + photo + "/content?grant=" + grants.get(own)))
+                .as("grant de outro arquivo").hasStatus(404);
+        assertThat(bruno.get("/api/v1/media/" + own + "/content?grant=" + grants.get(own)))
+                .as("o grant é da Ana, mas o Bruno não precisa").hasStatusOk();
+        assertThat(ana.get("/api/v1/media/" + photo + "/content?grant=1.abc")).hasStatus(404);
+        assertThat(bruno.json(bruno.get(path(conversation) + "/messages")).get("messages").get(0).get("attachment")
+                .get("grant").isNull()).as("quem não trancou não recebe grant").isTrue();
+    }
+
     private String acceptedConversation() {
         bruno.post("/api/v1/contacts", Map.of("username", "ana"));
         return ana.json(ana.post("/api/v1/conversations/direct", Map.of("username", "bruno"))).get("id").asString();

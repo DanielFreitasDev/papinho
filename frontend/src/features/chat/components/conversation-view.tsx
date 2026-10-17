@@ -379,6 +379,7 @@ function LoadedConversation({
         .filter((message) => message.attachment?.kind === "AUDIO")
         .map((message) => ({
           mediaId: message.attachment!.id,
+          grant: message.attachment!.grant,
           conversationId: conversation.id,
           messageId: message.id,
           title: `${nameOf(message.senderId)} · ${t("media.kind.AUDIO")}`,

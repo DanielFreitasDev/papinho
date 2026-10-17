@@ -79,6 +79,27 @@ class ProblemDetailsIT {
                 "clientMessageId", java.util.UUID.randomUUID(), "body", "texto normal"))).hasStatus(201);
     }
 
+    @Test
+    @DisplayName("mensagens de validação vêm dos bundles do projeto nos dois idiomas, não do Hibernate Validator")
+    void shouldTranslateValidationMessages() {
+        ApiClient client = clients.create().bootstrap();
+        java.util.Map<String, Object> body = java.util.Map.of("username", "", "displayName", "X", "password",
+                Accounts.PASSWORD);
+        MvcTestResult pt = client.post("/api/v1/auth/register", body);
+        assertThat(pt).hasStatus(400);
+        assertThat(violation(client, pt, "username")).isEqualTo("não pode ficar em branco");
+        MvcTestResult en = client.perform(MockMvcRequestBuilders.post("/api/v1/auth/register")
+                .header(HttpHeaders.ACCEPT_LANGUAGE, "en").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"username\":\"\",\"displayName\":\"X\",\"password\":\"" + Accounts.PASSWORD + "\"}"));
+        assertThat(violation(client, en, "username")).isEqualTo("cannot be blank");
+    }
+
+    private static String violation(ApiClient client, MvcTestResult result, String field) {
+        return client.json(result).get("violations").valueStream()
+                .filter(v -> v.get("field").asString().equals(field)).findFirst().orElseThrow()
+                .get("message").asString();
+    }
+
     private static void expect(ApiClient client, MvcTestResult result, int status, String slug, String title) {
         assertThat(result).as(ApiClient.text(result)).hasStatus(status)
                 .hasContentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON);

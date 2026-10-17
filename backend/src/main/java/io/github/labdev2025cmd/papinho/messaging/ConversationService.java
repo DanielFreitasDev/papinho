@@ -119,6 +119,22 @@ public class ConversationService {
         return conversation.id();
     }
 
+    /**
+     * A conta vai ser apagada (BK-02): o id dela sai da chave das conversas individuais (que ficam com a outra
+     * pessoa) e dos avisos de grupo, onde vira o UUID nulo; o nome no aviso continua como era.
+     */
+    @org.springframework.context.event.EventListener
+    @Transactional
+    void on(io.github.labdev2025cmd.papinho.identity.AccountDeleting event) {
+        Map<String, Object> params = Map.of("id", event.userId().toString(), "pattern", "%" + event.userId() + "%",
+                "nil", new UUID(0, 0).toString());
+        jdbc.update("update conversations set direct_key = null where direct_key like :pattern", params);
+        jdbc.update("""
+                update messages set body = replace(body, :id, :nil)
+                 where kind = 'SYSTEM' and body like :pattern
+                """, params);
+    }
+
     /** "Mensagens salvas" (MS-12): a conversa consigo mesmo, criada na primeira vez. */
     @Transactional
     public ConversationView openSelf(UUID me) {

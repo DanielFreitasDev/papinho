@@ -5,7 +5,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.zip.ZipEntry;
@@ -162,6 +164,26 @@ class AccountDataIT {
         var login = clients.create().bootstrap().post("/api/v1/auth/login",
                 Map.of("username", "bruno", "password", Accounts.PASSWORD));
         assertThat(login).hasStatus(401);
+        assertThat(columnsMentioning(brunoId)).as("o id da conta apagada não fica em nenhuma coluna").isEmpty();
+    }
+
+    /** Colunas uuid e de texto do banco que ainda contêm o valor (a varredura da auditoria). */
+    private List<String> columnsMentioning(String value) {
+        List<String> found = new ArrayList<>();
+        jdbc.query("""
+                select table_name, column_name from information_schema.columns
+                 where table_schema = 'public' and data_type in ('uuid', 'text', 'character varying')
+                   and table_name not like 'flyway%'
+                """, row -> {
+            String table = row.getString(1);
+            String column = row.getString(2);
+            Integer count = jdbc.queryForObject("select count(*) from \"" + table + "\" where \"" + column
+                    + "\"::text like ?", Integer.class, "%" + value + "%");
+            if (count != null && count > 0) {
+                found.add(table + "." + column);
+            }
+        });
+        return found;
     }
 
     @Test

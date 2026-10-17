@@ -62,6 +62,9 @@ class MediaIT {
     @Autowired
     private org.springframework.core.env.Environment environment;
 
+    @Autowired
+    private io.github.labdev2025cmd.papinho.support.SwitchableScanner scanner;
+
     private ApiClient ana;
     private String brunoId;
     private ApiClient bruno;
@@ -78,6 +81,32 @@ class MediaIT {
         Accounts.register(carla, "carla", Accounts.invite(ana));
         conversation = ana.json(ana.post("/api/v1/conversations/direct", Map.of("username", "bruno")))
                 .get("id").asString();
+    }
+
+    @Test
+    @DisplayName("antivírus fora do ar: 503 em Problem Details e o upload completo é descartado (MD-06)")
+    void shouldAnswerServiceUnavailableWhenScannerIsDown() {
+        byte[] content = "conteúdo qualquer".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        var created = ana.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                .post("/api/v1/uploads").header("Tus-Resumable", "1.0.0").header("Upload-Length", content.length)
+                .header("Upload-Metadata", "filename " + java.util.Base64.getEncoder().encodeToString("a.txt"
+                        .getBytes(java.nio.charset.StandardCharsets.UTF_8))));
+        assertThat(created).hasStatus(201);
+        String location = created.getResponse().getHeader(org.springframework.http.HttpHeaders.LOCATION);
+        scanner.down(true);
+        try {
+            var done = ana.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                    .request(org.springframework.http.HttpMethod.PATCH, location).header("Tus-Resumable", "1.0.0")
+                    .header("Upload-Offset", 0).contentType("application/offset+octet-stream").content(content));
+            assertThat(done).hasStatus(503);
+            assertThat(ana.json(done).get("type").asString()).isEqualTo("urn:papinho:problem:media-scanner-unavailable");
+            assertThat(ana.json(done).get("detail").asString()).contains("antivírus");
+        } finally {
+            scanner.down(false);
+        }
+        assertThat(ana.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.head(location)
+                .header("Tus-Resumable", "1.0.0"))).as("upload descartado").hasStatus(404);
+        assertThat(jdbc.queryForObject("select count(*) from media_files", Integer.class)).isZero();
     }
 
     @Test

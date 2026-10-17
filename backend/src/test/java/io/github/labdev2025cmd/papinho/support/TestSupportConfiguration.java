@@ -22,6 +22,13 @@ public class TestSupportConfiguration {
         return new RecordingPushGateway();
     }
 
+    /** Antivírus que o teste pode derrubar; aceita tudo enquanto está no ar (o padrão sem ClamAV). */
+    @Bean
+    @org.springframework.context.annotation.Primary
+    SwitchableScanner switchableScanner() {
+        return new SwitchableScanner();
+    }
+
     /**
      * Rota só dos testes (o scan de componentes a acha no classpath de teste) que falha de um jeito inesperado,
      * para provar o 500 em Problem Details (SG-01).

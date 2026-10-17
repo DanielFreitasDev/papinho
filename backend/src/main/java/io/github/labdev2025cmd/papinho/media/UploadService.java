@@ -211,7 +211,16 @@ public class UploadService {
             // Grande demais para recodificar em memória: vai como documento, com os metadados tirados em fluxo.
             kind = MediaKind.DOCUMENT;
         }
-        if (!scanner.isClean(file)) {
+        boolean clean;
+        try {
+            clean = scanner.isClean(file);
+        } catch (IOException unavailable) {
+            // Sem antivírus não há como aceitar: o envio sai e a pessoa tenta de novo mais tarde.
+            log.warn("Antivirus unavailable, upload {} discarded: {}", upload.id(), unavailable.toString());
+            discard(upload.id(), file);
+            throw new MediaExceptions.ScannerUnavailableException();
+        }
+        if (!clean) {
             discard(upload.id(), file);
             throw new MediaExceptions.MalwareException();
         }

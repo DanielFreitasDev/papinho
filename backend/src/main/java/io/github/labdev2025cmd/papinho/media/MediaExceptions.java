@@ -68,6 +68,13 @@ final class MediaExceptions {
         }
     }
 
+    /** O antivírus ligado não respondeu (MD-06): nada é aceito sem a análise. */
+    static class ScannerUnavailableException extends ApiException {
+        ScannerUnavailableException() {
+            super(HttpStatus.SERVICE_UNAVAILABLE, "media-scanner-unavailable", "Antivirus unavailable");
+        }
+    }
+
     static class NotAttachableException extends ApiException {
         NotAttachableException() {
             super(HttpStatus.BAD_REQUEST, "media-not-attachable", "Media not owned by sender");

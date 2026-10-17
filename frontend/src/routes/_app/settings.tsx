@@ -36,7 +36,7 @@ function SettingsLayout() {
             <Link
               key={section.to}
               to={section.to}
-              className="inline-flex min-h-7 items-center rounded-md px-2.5 text-sm text-foreground/90 transition-colors hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none data-[status=active]:bg-background data-[status=active]:font-medium data-[status=active]:text-foreground data-[status=active]:shadow-sm"
+              className="inline-flex min-h-7 items-center rounded-md px-2.5 text-sm text-foreground/90 transition-colors hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none data-[status=active]:bg-background data-[status=active]:font-medium data-[status=active]:text-foreground data-[status=active]:shadow-sm pointer-coarse:min-h-11"
             >
               {t(section.key)}
             </Link>

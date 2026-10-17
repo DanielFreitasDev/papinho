@@ -285,6 +285,33 @@ class IdentityIT {
     }
 
     @Test
+    @org.junit.jupiter.api.extension.ExtendWith(org.springframework.boot.test.system.OutputCaptureExtension.class)
+    @DisplayName("cadastros simultâneos com o mesmo @usuario: um entra, os outros recebem 409 e o nome não vai ao log")
+    void shouldResolveConcurrentRegistrationsWithSameUsername(
+            org.springframework.boot.test.system.CapturedOutput output) throws Exception {
+        ApiClient admin = clients.create();
+        Accounts.register(admin, "ana", null);
+        admin.put("/api/v1/admin/settings", settings("OPEN", 30));
+        java.util.List<ApiClient> people = java.util.stream.IntStream.range(0, 6)
+                .mapToObj(i -> clients.create().bootstrap()).toList();
+        java.util.List<Integer> statuses;
+        try (var executor = java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor()) {
+            var results = new java.util.ArrayList<java.util.concurrent.Future<Integer>>();
+            for (int i = 0; i < people.size(); i++) {
+                ApiClient person = people.get(i);
+                String name = i % 2 == 0 ? "mesmo.nome0" : "MESMO.NOME0";
+                results.add(executor.submit(() -> register(person, name).getResponse().getStatus()));
+            }
+            statuses = new java.util.ArrayList<>();
+            for (var result : results) {
+                statuses.add(result.get(60, TimeUnit.SECONDS));
+            }
+        }
+        assertThat(statuses).as("status de cada cadastro").containsOnly(201, 409).containsOnlyOnce(201);
+        assertThat(output.getAll()).as("log").doesNotContainIgnoringCase("mesmo.nome0");
+    }
+
+    @Test
     @DisplayName("senha com menos de 12 caracteres é recusada")
     void shouldRejectShortPassword() {
         ApiClient client = clients.create().bootstrap();

@@ -16,6 +16,10 @@ spring:
     url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/papinho}
     username: ${DATABASE_USERNAME:papinho}
     password: ${DATABASE_PASSWORD:}
+    hikari:
+      data-source-properties:
+        # Sem o "Detail: Key (username)=(...)" do PostgreSQL nas exceções e nos logs: são dados pessoais.
+        logServerErrorDetail: false
   jpa:
     open-in-view: false
     hibernate:

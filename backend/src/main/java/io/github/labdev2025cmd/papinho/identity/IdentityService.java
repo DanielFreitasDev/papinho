@@ -12,6 +12,7 @@ import java.util.UUID;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -108,7 +109,7 @@ public class IdentityService {
         Instant now = clock.instant();
         ensureAvailable(username, null, now);
 
-        UserAccount account = users.saveAndFlush(new UserAccount(username, passwordEncoder.encode(password),
+        UserAccount account = saveUnique(new UserAccount(username, passwordEncoder.encode(password),
                 firstUser ? Role.ADMIN : Role.USER, now));
         profiles.create(account.id(), displayName);
         List<String> codes = replaceRecoveryCodes(account.id());
@@ -199,7 +200,7 @@ public class IdentityService {
         reservations.findById(target.value()).ifPresent(reservations::delete);
         reservations.flush();
         account.changeUsername(target, now);
-        users.flush();
+        saveUnique(account);
         UsernameReservation reservation = reservations.findById(previous.value())
                 .orElseGet(() -> new UsernameReservation(previous, userId, now.plus(USERNAME_RESERVATION)));
         reservation.renew(userId, now.plus(USERNAME_RESERVATION));
@@ -336,6 +337,18 @@ public class IdentityService {
             return true;
         } catch (IdentityExceptions.UsernameUnavailableException | InvalidUsernameException exception) {
             return false;
+        }
+    }
+
+    /**
+     * Grava a conta conferindo a unicidade do {@code @usuario} no banco: entre o {@link #ensureAvailable} e o
+     * INSERT/UPDATE, outro cadastro ou troca simultânea pode ter levado o nome (ID-01).
+     */
+    private UserAccount saveUnique(UserAccount account) {
+        try {
+            return users.saveAndFlush(account);
+        } catch (DataIntegrityViolationException taken) {
+            throw new IdentityExceptions.UsernameUnavailableException();
         }
     }
 

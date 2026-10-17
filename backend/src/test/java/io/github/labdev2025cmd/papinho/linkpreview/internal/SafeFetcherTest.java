@@ -47,12 +47,26 @@ class SafeFetcherTest {
             }
             exchange.close();
         });
+        server.createContext("/drip", exchange -> {
+            exchange.getResponseHeaders().add("Content-Type", "text/html");
+            exchange.sendResponseHeaders(200, 0);
+            try (var out = exchange.getResponseBody()) {
+                for (int i = 0; i < 60; i++) {
+                    out.write('<');
+                    out.flush();
+                    Thread.sleep(250);
+                }
+            } catch (IOException | InterruptedException aborted) {
+                // O cliente desistiu.
+            }
+        });
         server.createContext("/loop", exchange -> redirect(exchange, "/loop"));
         server.createContext("/to-ok", exchange -> redirect(exchange, "/ok"));
         server.createContext("/to-other-loopback",
                 exchange -> redirect(exchange, "http://127.0.0.2:" + port + "/ok"));
         server.createContext("/to-name", exchange -> redirect(exchange, "http://localhost:" + port + "/ok"));
         server.createContext("/to-file", exchange -> redirect(exchange, "file:///etc/passwd"));
+        server.setExecutor(java.util.concurrent.Executors.newCachedThreadPool());
         server.start();
     }
 
@@ -68,7 +82,11 @@ class SafeFetcherTest {
     }
 
     private static SafeFetcher fetcher() {
-        return new SafeFetcher(new AddressPolicy() {
+        return new SafeFetcher(policy(), "Papinho-test");
+    }
+
+    private static AddressPolicy policy() {
+        return new AddressPolicy() {
             @Override
             public boolean allowed(InetAddress address) {
                 return address.getHostAddress().equals("127.0.0.1");
@@ -78,7 +96,7 @@ class SafeFetcherTest {
             public boolean allowsPort(int candidate) {
                 return candidate == port;
             }
-        }, "Papinho-test");
+        };
     }
 
     private static URI url(String path) {
@@ -125,6 +143,17 @@ class SafeFetcherTest {
             int before = HITS.get();
             assertThat(fetcher.get(URI.create("http://localhost:" + port + "/ok"), "text/html", 1024)).isEmpty();
             assertThat(HITS.get()).isEqualTo(before);
+        }
+    }
+
+    @Test
+    @DisplayName("corpo que chega aos poucos é abortado no prazo total, apesar do timeout por leitura")
+    void shouldAbortDripAtTotalDeadline() throws IOException {
+        try (SafeFetcher fetcher = new SafeFetcher(policy(), "Papinho-test", java.time.Duration.ofSeconds(1))) {
+            long start = System.nanoTime();
+            assertThat(fetcher.get(url("/drip"), "text/html", 1024)).isEmpty();
+            assertThat(java.time.Duration.ofNanos(System.nanoTime() - start)).as("15 s de gotejamento")
+                    .isLessThan(java.time.Duration.ofSeconds(4));
         }
     }
 

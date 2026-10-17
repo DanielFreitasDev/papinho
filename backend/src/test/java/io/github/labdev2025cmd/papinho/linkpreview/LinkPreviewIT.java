@@ -77,6 +77,21 @@ class LinkPreviewIT {
                 "{\"title\":\"Asa Branca\",\"html\":\"<iframe style=\\\"border-radius: 12px\\\" "
                         + "src=\\\"https://open.spotify.com/embed/track/4uLU6hMCjMI75M1A2tKUQC?utm_source=oembed\\\">"
                         + "</iframe>\"}"));
+        // Site que goteja: 1 byte a cada 500 ms por 40 s, como quem quer prender a busca (MD-04).
+        SITE.createContext("/goteja", exchange -> {
+            exchange.getResponseHeaders().add("Content-Type", "text/html");
+            exchange.sendResponseHeaders(200, 0);
+            try (var out = exchange.getResponseBody()) {
+                for (int i = 0; i < 80; i++) {
+                    out.write('<');
+                    out.flush();
+                    Thread.sleep(500);
+                }
+            } catch (IOException | InterruptedException aborted) {
+                // O Papinho desistiu da busca.
+            }
+        });
+        SITE.setExecutor(java.util.concurrent.Executors.newCachedThreadPool());
         SITE.start();
     }
 
@@ -91,6 +106,7 @@ class LinkPreviewIT {
     @DynamicPropertySource
     static void sitePort(DynamicPropertyRegistry registry) {
         registry.add("app.link-preview.test-allowed-ports", () -> SITE.getAddress().getPort());
+        registry.add("app.link-preview.fetch-timeout", () -> "3s");
         registry.add("app.link-preview.vimeo-oembed",
                 () -> "http://127.0.0.1:" + SITE.getAddress().getPort() + "/vimeo-oembed");
         registry.add("app.link-preview.spotify-oembed",
@@ -104,6 +120,9 @@ class LinkPreviewIT {
 
     @Autowired
     private ApiClients clients;
+
+    @Autowired
+    private javax.sql.DataSource dataSource;
 
     private ApiClient ana;
 
@@ -177,6 +196,31 @@ class LinkPreviewIT {
         JsonNode foreign = ana.json(ana.get(previewPath("https://vimeo.com/666")));
         assertThat(foreign.get("embedProvider").isNull()).as("iframe fora de player.vimeo.com").isTrue();
         assertThat(foreign.get("embedSrc").isNull()).isTrue();
+    }
+
+    @Test
+    @DisplayName("site que goteja não prende a busca além do prazo total nem segura conexão do banco (MD-04)")
+    void shouldBoundSlowFetchesWithoutHoldingConnections() throws Exception {
+        String url = "http://127.0.0.1:" + SITE.getAddress().getPort() + "/goteja";
+        var pool = dataSource.unwrap(com.zaxxer.hikari.HikariDataSource.class).getHikariPoolMXBean();
+        int parallel = 12;
+        long start = System.nanoTime();
+        try (var executor = java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor()) {
+            var results = new java.util.ArrayList<java.util.concurrent.Future<JsonNode>>();
+            for (int i = 0; i < parallel; i++) {
+                String each = url + "?n=" + i;
+                results.add(executor.submit(() -> ana.json(ana.get(previewPath(each)))));
+            }
+            Thread.sleep(1500);
+            assertThat(pool.getActiveConnections()).as("conexões presas durante as buscas").isLessThanOrEqualTo(1);
+            for (var result : results) {
+                assertThat(result.get(30, java.util.concurrent.TimeUnit.SECONDS).get("available").asBoolean())
+                        .isFalse();
+            }
+        }
+        long seconds = java.time.Duration.ofNanos(System.nanoTime() - start).toSeconds();
+        // 4 buscas por vez no mesmo site (setMaxConnPerRoute) e prazo de 3 s: 3 rodadas, bem antes dos 40 s.
+        assertThat(seconds).as("tempo total das prévias em gotejamento").isLessThan(15);
     }
 
     private static String previewPath(String url) {

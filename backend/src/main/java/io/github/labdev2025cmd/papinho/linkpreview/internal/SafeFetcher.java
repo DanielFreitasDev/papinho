@@ -6,9 +6,14 @@ import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.UnknownHostException;
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hc.client5.http.DnsResolver;
 import org.apache.hc.client5.http.SystemDefaultDnsResolver;
@@ -31,18 +36,29 @@ import org.jspecify.annotations.Nullable;
  * <li>o DNS é resolvido aqui e todo endereço passa pela {@link AddressPolicy}; a conexão usa exatamente os
  * endereços checados (sem nova resolução, o que impede DNS rebinding);</li>
  * <li>redirecionamentos seguidos à mão (no máximo {@value #MAX_REDIRECTS}), cada um checado de novo;</li>
- * <li>tempo de conexão e de resposta curtos e corpo cortado em {@code maxBytes}; sem cookies nem proxy.</li>
+ * <li>tempo de conexão e de resposta curtos, prazo total por busca (redirecionamentos e corpo incluídos, contra
+ * quem goteja bytes) e corpo cortado em {@code maxBytes}; sem cookies nem proxy.</li>
  * </ul>
  */
 public class SafeFetcher implements AutoCloseable {
 
     static final int MAX_REDIRECTS = 3;
+    static final Duration DEFAULT_TOTAL_TIMEOUT = Duration.ofSeconds(10);
 
     private final AddressPolicy policy;
     private final CloseableHttpClient client;
+    private final Duration totalTimeout;
+    private final ScheduledExecutorService deadlines = Executors.newSingleThreadScheduledExecutor(
+            Thread.ofPlatform().daemon().name("safe-fetcher-deadline").factory());
 
     public SafeFetcher(AddressPolicy policy, String userAgent) {
+        this(policy, userAgent, DEFAULT_TOTAL_TIMEOUT);
+    }
+
+    /** @param totalTimeout prazo de relógio para cada {@link #get}; vencido, a conexão é abortada */
+    public SafeFetcher(AddressPolicy policy, String userAgent, Duration totalTimeout) {
         this.policy = policy;
+        this.totalTimeout = totalTimeout;
         DnsResolver resolver = new GuardedResolver(policy);
         this.client = HttpClients.custom()
                 .setConnectionManager(PoolingHttpClientConnectionManagerBuilder.create().setDnsResolver(resolver)
@@ -62,11 +78,15 @@ public class SafeFetcher implements AutoCloseable {
     /** Busca a URL; vazio quando é recusada, falha ou não responde 2xx. */
     public Optional<Response> get(URI start, String accept, int maxBytes) {
         URI current = start;
+        long deadline = System.nanoTime() + totalTimeout.toNanos();
         for (int hop = 0; hop <= MAX_REDIRECTS; hop++) {
-            if (!acceptable(current)) {
+            long remaining = deadline - System.nanoTime();
+            if (remaining <= 0 || !acceptable(current)) {
                 return Optional.empty();
             }
             HttpGet request = new HttpGet(current);
+            // Os timeouts do cliente valem por leitura: só o cancelamento corta um corpo que chega aos poucos.
+            ScheduledFuture<?> abort = deadlines.schedule(request::cancel, remaining, TimeUnit.NANOSECONDS);
             request.setHeader("Accept", accept);
             request.setHeader("Accept-Language", "pt-BR,pt;q=0.9,en;q=0.5");
             URI requested = current;
@@ -103,6 +123,11 @@ public class SafeFetcher implements AutoCloseable {
                 current = step.next;
             } catch (IOException | IllegalArgumentException failed) {
                 return Optional.empty();
+            } catch (IllegalStateException cancelled) {
+                // Cancelada pelo prazo ainda na fila por uma conexão do pool.
+                return Optional.empty();
+            } finally {
+                abort.cancel(false);
             }
         }
         return Optional.empty();
@@ -144,6 +169,7 @@ public class SafeFetcher implements AutoCloseable {
 
     @Override
     public void close() throws IOException {
+        deadlines.shutdownNow();
         client.close();
     }
 

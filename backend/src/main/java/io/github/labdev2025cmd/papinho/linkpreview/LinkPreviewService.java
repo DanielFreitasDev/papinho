@@ -79,7 +79,7 @@ public class LinkPreviewService {
                         return properties.testAllowedPorts().contains(port);
                     }
                 };
-        this.fetcher = new SafeFetcher(policy, "Papinho/0.1 (link preview)");
+        this.fetcher = new SafeFetcher(policy, "Papinho/0.1 (link preview)", properties.fetchTimeout());
     }
 
     @PreDestroy
@@ -87,8 +87,11 @@ public class LinkPreviewService {
         fetcher.close();
     }
 
-    /** Prévia do link, do cache ou buscada agora; {@code available} falso quando não há o que mostrar. */
-    @Transactional
+    /**
+     * Prévia do link, do cache ou buscada agora; {@code available} falso quando não há o que mostrar. Sem
+     * transação em volta: a busca externa leva segundos e não pode segurar uma conexão do banco (o cache é lido e
+     * gravado cada um na sua transação curta do repositório).
+     */
     public PreviewView preview(java.util.UUID user, String rawUrl) {
         URI uri = normalize(rawUrl);
         String hash = hash(uri.toString());

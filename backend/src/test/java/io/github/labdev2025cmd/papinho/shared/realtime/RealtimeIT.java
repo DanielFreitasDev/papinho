@@ -264,6 +264,28 @@ class RealtimeIT {
     }
 
     @Test
+    @DisplayName("com bloqueio, nenhum dos dois recebe a presença do outro, nem pelo WebSocket nem pelo GET (CT-03)")
+    void shouldHidePresenceWhenBlocked() throws Exception {
+        Browser ana = Browser.register(base(), "ana", null);
+        Browser bruno = Browser.register(base(), "bruno", ana.invite());
+        bruno.post("/api/v1/contacts", Map.of("username", "ana"));
+        String conversation = ana.post("/api/v1/conversations/direct", Map.of("username", "bruno")).get("id")
+                .asString();
+        ana.post("/api/v1/conversations/" + conversation + "/messages",
+                Map.of("clientMessageId", UUID.randomUUID(), "body", "Oi"));
+        assertThat(ana.status("/api/v1/presence/" + bruno.userId())).as("aceita, sem bloqueio").isEqualTo(200);
+        bruno.put("/api/v1/blocks/" + ana.userId(), null);
+
+        Connection anaWs = connect(ana);
+        Connection brunoWs = connect(bruno);
+        heartbeat(bruno, brunoWs, true);
+        heartbeat(bruno, brunoWs, false);
+        assertThat(anaWs.presenceOf(bruno.userId(), Duration.ofSeconds(2))).as("quem foi bloqueada").isEmpty();
+        assertThat(ana.status("/api/v1/presence/" + bruno.userId())).isEqualTo(404);
+        assertThat(bruno.status("/api/v1/presence/" + ana.userId())).as("quem bloqueou").isEqualTo(404);
+    }
+
+    @Test
     @DisplayName("logout derruba o WebSocket aberto com aquela sessão")
     void shouldCloseWebSocketAfterLogout() throws Exception {
         Browser ana = Browser.register(base(), "ana", null);

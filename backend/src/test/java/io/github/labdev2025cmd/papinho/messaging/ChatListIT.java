@@ -132,6 +132,10 @@ class ChatListIT {
                 .isBetween(java.time.Instant.now().plusSeconds(8 * 3600 - 60),
                         java.time.Instant.now().plusSeconds(8 * 3600 + 60));
         assertThat(muted.get("muteMentions").asBoolean()).isTrue();
+        assertThat(ana.put(path(conversation) + "/mute", Map.of("duration", "ONE_WEEK"))).hasStatus(204);
+        assertThat(java.time.Instant.parse(organization(ana, conversation).get("mutedUntil").asString()))
+                .as("uma semana").isBetween(java.time.Instant.now().plusSeconds(7 * 86_400 - 60),
+                        java.time.Instant.now().plusSeconds(7 * 86_400 + 60));
         ana.put(path(conversation) + "/mute", Map.of("duration", "ALWAYS"));
         assertThat(organization(ana, conversation).get("mutedUntil").asString()).startsWith("9999-12-31");
         assertThat(organization(ana, conversation).get("muteMentions").asBoolean()).isFalse();
@@ -207,7 +211,12 @@ class ChatListIT {
         assertThat(ana.json(ana.get("/api/v1/messages/starred"))).isEmpty();
 
         ana.put(path(conversation) + "/pin", null);
+        String folder = ana.json(ana.post("/api/v1/folders", Map.of("name", "Amigos", "conversationIds",
+                List.of(conversation)))).get("id").asString();
         assertThat(ana.delete(path(conversation), null)).hasStatus(204);
+        assertThat(ana.json(ana.get("/api/v1/folders")).get(0).get("conversationIds")).as("sai das pastas")
+                .isEmpty();
+        assertThat(ana.json(ana.get("/api/v1/folders")).get(0).get("id").asString()).isEqualTo(folder);
         assertThat(ids(ana.json(ana.get("/api/v1/conversations")))).doesNotContain(conversation);
         assertThat(ids(bruno.json(bruno.get("/api/v1/conversations")))).contains(conversation);
         send(bruno, conversation, "voltei");

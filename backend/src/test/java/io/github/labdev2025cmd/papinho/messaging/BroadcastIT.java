@@ -33,13 +33,14 @@ class BroadcastIT {
     private ApiClient ana;
     private ApiClient bruno;
     private ApiClient carla;
+    private String anaId;
     private String brunoId;
     private String carlaId;
 
     @BeforeEach
     void setUp() {
         ana = clients.create();
-        Accounts.register(ana, "ana", null);
+        anaId = Accounts.userId(Accounts.register(ana, "ana", null));
         bruno = clients.create();
         brunoId = Accounts.userId(Accounts.register(bruno, "bruno", Accounts.invite(ana)));
         carla = clients.create();
@@ -76,6 +77,13 @@ class BroadcastIT {
         assertThat(carla.json(carla.get("/api/v1/conversations?requests=true"))).isEmpty();
         assertThat(ana.json(ana.get("/api/v1/conversations/" + id + "/messages")).get("messages")).hasSize(1);
 
+        // Bloqueio depois de a lista existir: a cópia não chega mais.
+        assertThat(bruno.put("/api/v1/blocks/" + anaId, null)).hasStatus(204);
+        send(ana, id, "Depois do bloqueio");
+        String direct = brunoList.get(0).get("id").asString();
+        assertThat(bruno.json(bruno.get("/api/v1/conversations/" + direct + "/messages")).get("messages")
+                .findValuesAsString("body")).as("bloqueado não recebe").doesNotContain("Depois do bloqueio");
+
         Map<String, Object> poll = new HashMap<>();
         poll.put("clientMessageId", UUID.randomUUID());
         poll.put("question", "Vem?");
@@ -96,6 +104,8 @@ class BroadcastIT {
         JsonNode copy = bruno.json(bruno.get("/api/v1/conversations/" + received.get("id").asString()
                 + "/messages")).get("messages").get(0);
         assertThat(copy.get("expiresAt").isNull()).as("cópia temporária").isFalse();
+        JsonNode original = ana.json(ana.get("/api/v1/conversations/" + id + "/messages")).get("messages").get(0);
+        assertThat(original.get("expiresAt").isNull()).as("original na lista também é temporária").isFalse();
 
         jdbc.update("update broadcast_details set expires_at = now() - interval '1 second' where conversation_id = ?",
                 UUID.fromString(id));

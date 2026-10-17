@@ -150,6 +150,41 @@ test("online e leitura recíprocos e modo privado", async ({
   await hana.context.close()
 })
 
+/** Texto de tudo o que o app guardou offline (NT-05) no IndexedDB da conta: snapshots e fila de envio. */
+function offlineText(page: Page) {
+  return page.evaluate(async () => {
+    const name = (await indexedDB.databases())
+      .map((db) => db.name)
+      .find((candidate) => candidate?.startsWith("papinho-"))
+    if (!name) {
+      return ""
+    }
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open(name)
+      request.onsuccess = () => resolve(request.result)
+      request.onerror = () => reject(request.error)
+    })
+    const stores = ["snapshots", "outbox"].filter((store) =>
+      db.objectStoreNames.contains(store)
+    )
+    const all = await Promise.all(
+      stores.map(
+        (store) =>
+          new Promise<unknown[]>((resolve, reject) => {
+            const request = db
+              .transaction(store, "readonly")
+              .objectStore(store)
+              .getAll()
+            request.onsuccess = () => resolve(request.result)
+            request.onerror = () => reject(request.error)
+          })
+      )
+    )
+    db.close()
+    return JSON.stringify(all)
+  })
+}
+
 /** Fase 5: conversa trancada (PV-03) e bloqueio de tela (PV-02). */
 test("conversa trancada e bloqueio de tela", async ({
   browser,
@@ -161,6 +196,8 @@ test("conversa trancada e bloqueio de tela", async ({
   const page = gil.page
   const chat = page.url()
   await send(page, "Segredo guardado")
+  // A conversa ainda não trancada fica guardada para o offline (NT-05).
+  await expect.poll(() => offlineText(page)).toContain("Segredo guardado")
 
   // Trancar pelo painel do contato: a conversa vai para a pasta e some da lista.
   await page.getByRole("button", { name: /Dados do contato/ }).click()
@@ -179,6 +216,10 @@ test("conversa trancada e bloqueio de tela", async ({
   await expect(
     page.getByRole("main").getByRole("link", { name: new RegExp(hana.name) })
   ).toBeVisible()
+  // Trancada não fica no aparelho (PV-03): o que já estava guardado sai do IndexedDB.
+  await expect.poll(() => offlineText(page)).not.toContain("Segredo guardado")
+  await page.waitForTimeout(1_000)
+  expect(await offlineText(page)).not.toContain("Segredo guardado")
 
   // Recarregar esquece o token: a pasta e a conversa pedem o código de novo.
   await page.reload()

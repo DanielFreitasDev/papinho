@@ -117,6 +117,23 @@ export async function deleteSnapshot(key: string) {
   await current?.db.snapshots.delete(key).catch(() => undefined)
 }
 
+/** Apaga do aparelho tudo de uma conversa: dados, mensagens e textos na fila (conversa trancada, PV-03). */
+export async function forgetConversation(conversationId: string) {
+  const db = current?.db
+  if (!db) {
+    return
+  }
+  await db
+    .transaction("rw", db.snapshots, db.outbox, async () => {
+      await db.snapshots.bulkDelete([
+        `detail:${conversationId}`,
+        `messages:${conversationId}`,
+      ])
+      await db.outbox.where("conversationId").equals(conversationId).delete()
+    })
+    .catch(() => undefined)
+}
+
 /** Guarda na fila um texto que ainda não foi confirmado pelo servidor. */
 export async function enqueue(item: OutboxItem) {
   await current?.db.outbox.put(item).catch(() => undefined)

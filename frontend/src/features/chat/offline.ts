@@ -6,6 +6,7 @@ import { onLogout } from "@/lib/logout-cleanup"
 import {
   clearOfflineData,
   dequeue,
+  forgetConversation,
   offlineDb,
   openOfflineDb,
   writeSnapshot,
@@ -24,7 +25,8 @@ onLogout(clearOfflineData)
 /**
  * Conversas recentes offline (NT-05): guarda a lista, os dados e as últimas mensagens de cada conversa que
  * aparece na lista principal; as consultas usam isso só quando a rede falha (rede primeiro). As trancadas não
- * estão nela, então nunca são guardadas (PV-03). Textos escritos sem conexão saem quando ela volta.
+ * estão nela, então nunca são guardadas, e a que for trancada depois de guardada sai do aparelho (PV-03). Textos
+ * escritos sem conexão saem quando ela volta.
  */
 export function useOfflineChat(meId: string, me: unknown) {
   const queryClient = useQueryClient()
@@ -72,15 +74,30 @@ function persist(queryClient: QueryClient) {
     window.clearTimeout(timers.get(key))
     timers.set(key, window.setTimeout(write, 500))
   }
+  // Trancada depois de guardada (aqui ou em outro aparelho): o que já estava no aparelho sai, com as gravações
+  // ainda agendadas e os textos na fila.
+  const forget = (id: string) => {
+    for (const key of [`detail:${id}`, `messages:${id}`]) {
+      window.clearTimeout(timers.get(key))
+      timers.delete(key)
+    }
+    void forgetConversation(id)
+  }
   const save = (key: readonly unknown[], data: unknown) => {
     if (data === undefined) {
       return
     }
     if (key[0] === "conversations" && key[1] === "list" && key[2] === false) {
       later("list", () => void writeSnapshot("list", data))
+    } else if (key[0] === "conversations" && key[1] === "locked") {
+      ;(data as Conversation[]).forEach((conversation) =>
+        forget(conversation.id)
+      )
     } else if (key[0] === "conversations" && key[1] === "detail") {
       const id = String(key[2])
-      if (!(data as Conversation).locked) {
+      if ((data as Conversation).locked) {
+        forget(id)
+      } else {
         later(`detail:${id}`, () => void writeSnapshot(`detail:${id}`, data))
       }
     } else if (key[0] === "messages" && key.length === 2) {

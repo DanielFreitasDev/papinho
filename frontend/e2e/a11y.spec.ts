@@ -4,6 +4,7 @@ import {
   expect,
   expectNoHorizontalScroll,
   expectNoSeriousA11yViolations,
+  horizontalScrollers,
   test,
 } from "./fixtures"
 import {
@@ -62,10 +63,13 @@ test("320 px sem rolagem horizontal", async ({ browser, pageErrors }) => {
   test.slow()
   const { context, page } = await ensureAdmin(browser, pageErrors)
   await page.setViewportSize({ width: 320, height: 640 })
+  // Junta todas as telas antes de afirmar, para a falha mostrar cada uma que rola.
+  const scrolling: [string, string[]][] = []
   for (const path of SCREENS) {
     await visit(page, path)
-    await expectNoHorizontalScroll(page)
+    scrolling.push([path, await horizontalScrollers(page)])
   }
+  expect(scrolling.filter(([, found]) => found.length > 0)).toEqual([])
   await context.close()
 })
 

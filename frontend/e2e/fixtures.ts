@@ -98,12 +98,42 @@ export async function expectNoSeriousA11yViolations(page: Page) {
   ).toEqual([])
 }
 
-/** Sem rolagem horizontal acidental (AR-02). */
+/**
+ * Sem rolagem horizontal acidental (AR-02): nem na página nem num contêiner interno (o main, a barra lateral, um
+ * painel) que role para o lado. Só contam os que rolam de fato (overflow-x auto ou scroll); listas feitas para
+ * rolar na horizontal se declaram com data-scroll-x.
+ */
 export async function expectNoHorizontalScroll(page: Page) {
-  const overflow = await page.evaluate(
-    () =>
-      document.documentElement.scrollWidth -
-      document.documentElement.clientWidth
-  )
-  expect(overflow).toBeLessThanOrEqual(0)
+  expect(
+    await horizontalScrollers(page),
+    "contêineres com rolagem horizontal"
+  ).toEqual([])
+}
+
+/** Elementos que rolam para o lado (ver expectNoHorizontalScroll). */
+export function horizontalScrollers(page: Page) {
+  return page.evaluate(() => {
+    const found: string[] = []
+    const root = document.documentElement
+    if (root.scrollWidth > root.clientWidth) {
+      found.push(`HTML ${root.scrollWidth}>${root.clientWidth}`)
+    }
+    for (const element of document.body.querySelectorAll<HTMLElement>("*")) {
+      if (element.scrollWidth <= element.clientWidth + 1) {
+        continue
+      }
+      const { overflowX } = getComputedStyle(element)
+      if (
+        (overflowX === "auto" || overflowX === "scroll") &&
+        element.closest("[data-scroll-x]") === null &&
+        element.checkVisibility()
+      ) {
+        const slot = element.dataset.slot ? `[${element.dataset.slot}]` : ""
+        found.push(
+          `${element.tagName}${slot} ${element.scrollWidth}>${element.clientWidth}`
+        )
+      }
+    }
+    return found
+  })
 }

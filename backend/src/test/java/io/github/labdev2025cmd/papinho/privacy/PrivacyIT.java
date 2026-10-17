@@ -371,6 +371,25 @@ class PrivacyIT {
         assertThat(allowed).as("com o token").hasStatus(201);
     }
 
+    @Test
+    @DisplayName("conversa trancada: listar e agendar mensagens exige o token (PV-03)")
+    void shouldRequireTokenForScheduledInLockedConversation() throws Exception {
+        String conversation = acceptedConversation();
+        String sendAt = java.time.Instant.now().plusSeconds(3600).toString();
+        assertThat(ana.post(path(conversation) + "/scheduled", Map.of("body", "agendadasecreta", "sendAt", sendAt)))
+                .hasStatus(201);
+        String token = ana.json(ana.put("/api/v1/privacy/locked-conversations/" + conversation,
+                Map.of("code", "4321"))).get("token").asString();
+
+        MvcTestResult listed = ana.get(path(conversation) + "/scheduled");
+        assertThat(listed).as("listar sem o token").hasStatus(403);
+        assertThat(ApiClient.text(listed)).doesNotContain("agendadasecreta");
+        assertThat(ana.post(path(conversation) + "/scheduled", Map.of("body", "outra", "sendAt", sendAt)))
+                .as("agendar sem o token").hasStatus(403);
+        assertThat(withToken(ana, path(conversation) + "/scheduled", token).getResponse().getContentAsString())
+                .as("com o token").contains("agendadasecreta");
+    }
+
     private String acceptedConversation() {
         bruno.post("/api/v1/contacts", Map.of("username", "ana"));
         return ana.json(ana.post("/api/v1/conversations/direct", Map.of("username", "bruno"))).get("id").asString();

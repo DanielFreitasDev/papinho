@@ -51,6 +51,8 @@ public class ScheduledMessageService {
     @Transactional
     public ScheduledView schedule(UUID me, UUID conversationId, String body, Instant sendAt, boolean silent) {
         conversations.requireSendable(me, conversationId);
+        // A resposta e a lista mostram o texto: numa conversa trancada, só com o token (PV-03).
+        conversations.requireReadable(me, conversationId);
         Instant now = clock.instant();
         if (body.isBlank() || body.length() > Message.MAX_BODY_LENGTH) {
             throw new InvalidMessageException("body");
@@ -71,7 +73,7 @@ public class ScheduledMessageService {
     /** As minhas agendadas nesta conversa, pela hora de envio. */
     @Transactional(readOnly = true)
     public List<ScheduledView> list(UUID me, UUID conversationId) {
-        conversations.requireMember(me, conversationId);
+        conversations.requireReadable(me, conversationId);
         return jdbc.query("select id, conversation_id, body, send_at, silent, failed_at from scheduled_messages "
                 + "where sender_id = :me and conversation_id = :conversationId order by send_at",
                 new MapSqlParameterSource("me", me).addValue("conversationId", conversationId),

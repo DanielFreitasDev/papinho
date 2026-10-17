@@ -45,6 +45,9 @@ const FORBIDDEN: Record<string, string> = {
   "video com controls": `<video controls src="a.webm" />`,
   details: `<details><summary>{rotulo}</summary></details>`,
   "title nativo": `<span title={dica}>{rotulo}</span>`,
+  "type em expressão": `<input type={"checkbox"} />`,
+  "type em spread": `<Input {...{ type: "password" }} />`,
+  "title em componente": `<Button title={dica}>{rotulo}</Button>`,
   "form sem noValidate": `<form onSubmit={() => undefined} />`,
 }
 
@@ -56,6 +59,8 @@ const ALLOWED: Record<string, string> = {
   "campos de texto": `<Input type="email" /><Input type="search" /><Input type="number" />`,
   "mídia sem controls": `<audio src="a.ogg" /><video src="a.webm" />`,
   "componentes do projeto": `<Checkbox /><Slider /><Progress value={1} /><DatePicker />`,
+  "title como conteúdo": `<SettingsSection title={titulo}>{rotulo}</SettingsSection><ConfirmDialog title={titulo} />`,
+  "type em expressão permitido": `<Input type={"email"} />`,
 }
 
 describe("regra de lint do UI-05", () => {

@@ -1,3 +1,4 @@
+import { readdirSync, readFileSync } from 'node:fs'
 import js from '@eslint/js'
 import globals from 'globals'
 import reactHooks from 'eslint-plugin-react-hooks'
@@ -9,36 +10,45 @@ import { defineConfig, globalIgnores } from 'eslint/config'
  * UI-05: nenhum controle com a aparência padrão do navegador fora de src/components/ui/ (onde ficam os
  * componentes do shadcn, que escondem e estilizam o elemento nativo). Cada item aponta o substituto.
  */
+const INPUTS = "JSXOpeningElement[name.name=/^(input|Input|InputGroupInput)$/]"
+
+/** O mesmo type proibido escrito como "x", {"x"} ou {...{ type: "x" }}. */
+function typeRule(value, message) {
+  return [
+    { selector: `${INPUTS} > JSXAttribute[name.name='type'][value.value=${value}]`, message },
+    { selector: `${INPUTS} > JSXAttribute[name.name='type'][value.expression.value=${value}]`, message },
+    {
+      selector: `${INPUTS} > JSXSpreadAttribute > ObjectExpression > Property[key.name='type'][value.value=${value}]`,
+      message,
+    },
+  ]
+}
+
+/**
+ * Componentes do shadcn (src/components/ui): repassam as props ao elemento, então title neles vira a dica nativa.
+ * Os do projeto que recebem title como texto (SettingsSection, ConfirmDialog...) ficam de fora. O CommandDialog
+ * usa title como o título acessível do diálogo.
+ */
+const UI_COMPONENTS = readdirSync(new URL("./src/components/ui/", import.meta.url))
+  .filter((file) => file.endsWith(".tsx"))
+  .flatMap((file) =>
+    [...readFileSync(new URL(`./src/components/ui/${file}`, import.meta.url), "utf8").matchAll(
+      /^function ([A-Z]\w*)/gm
+    )].map((match) => match[1])
+  )
+  .filter((name) => name !== "CommandDialog")
+  .join("|")
+
 const NATIVE_CONTROLS = [
   {
     selector: "JSXOpeningElement[name.name='select']",
     message: 'UI-05: use Select ou Combobox de @/components/ui, não <select>.',
   },
-  {
-    selector:
-      "JSXOpeningElement[name.name=/^(input|Input|InputGroupInput)$/] > JSXAttribute[name.name='type'][value.value=/^(checkbox|radio)$/]",
-    message: 'UI-05: use Checkbox, RadioGroup ou Switch de @/components/ui.',
-  },
-  {
-    selector:
-      "JSXOpeningElement[name.name=/^(input|Input|InputGroupInput)$/] > JSXAttribute[name.name='type'][value.value='range']",
-    message: 'UI-05: use Slider de @/components/ui.',
-  },
-  {
-    selector:
-      "JSXOpeningElement[name.name=/^(input|Input|InputGroupInput)$/] > JSXAttribute[name.name='type'][value.value=/^(date|time|datetime-local|month|week)$/]",
-    message: 'UI-05: use DatePicker ou DateTimePicker de @/components/date-picker.',
-  },
-  {
-    selector:
-      "JSXOpeningElement[name.name=/^(input|Input|InputGroupInput)$/] > JSXAttribute[name.name='type'][value.value='color']",
-    message: 'UI-05: seletor de cor próprio; nada de <input type="color">.',
-  },
-  {
-    selector:
-      "JSXOpeningElement[name.name=/^(input|Input|InputGroupInput)$/] > JSXAttribute[name.name='type'][value.value='password']",
-    message: 'UI-05: use PasswordInput de @/components/password-input (botão de mostrar a senha próprio).',
-  },
+  ...typeRule("/^(checkbox|radio)$/", 'UI-05: use Checkbox, RadioGroup ou Switch de @/components/ui.'),
+  ...typeRule("'range'", 'UI-05: use Slider de @/components/ui.'),
+  ...typeRule("/^(date|time|datetime-local|month|week)$/", 'UI-05: use DatePicker ou DateTimePicker de @/components/date-picker.'),
+  ...typeRule("'color'", 'UI-05: seletor de cor próprio; nada de <input type="color">.'),
+  ...typeRule("'password'", 'UI-05: use PasswordInput de @/components/password-input (botão de mostrar a senha próprio).'),
   {
     selector:
       "JSXOpeningElement[name.name='input']:has(JSXAttribute[name.name='type'][value.value='file']):not(:has(JSXAttribute[name.name='hidden'])):not(:has(JSXAttribute[name.name='className'][value.value=/\\bsr-only\\b/]))",
@@ -59,6 +69,11 @@ const NATIVE_CONTROLS = [
   {
     selector: "JSXOpeningElement[name.name=/^(?!iframe$)[a-z][a-z0-9]*$/] > JSXAttribute[name.name='title']",
     message: 'UI-05: title="" mostra a dica nativa; use Tooltip (o iframe pode, é o nome acessível dele).',
+  },
+  {
+    // Button, Badge, Input e afins repassam o title ao elemento: a dica nativa aparece do mesmo jeito.
+    selector: `JSXOpeningElement[name.name=/^(${UI_COMPONENTS})$/] > JSXAttribute[name.name='title']`,
+    message: 'UI-05: title="" num componente vira a dica nativa; use Tooltip.',
   },
   {
     selector: "JSXOpeningElement[name.name='form']:not(:has(JSXAttribute[name.name='noValidate']))",

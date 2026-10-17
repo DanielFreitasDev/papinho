@@ -59,6 +59,35 @@ async function nativeAppearance(page: Page, theme: Theme): Promise<string[]> {
         found.push(`controle nativo: ${describe(element)}`)
       }
     })
+    // Setinhas do type=number e botão de limpar do type=search (UI-05): o CSS base tira as duas aparências.
+    document
+      .querySelectorAll<HTMLInputElement>(
+        'input[type="number"], input[type="search"]'
+      )
+      .forEach((element) => {
+        if (!shown(element)) {
+          return
+        }
+        const allowed =
+          element.type === "number" ? ["textfield", "none"] : ["none"]
+        const appearance = getComputedStyle(element).appearance
+        if (!allowed.includes(appearance)) {
+          found.push(`aparência ${appearance}: ${describe(element)}`)
+        }
+        const parts =
+          element.type === "number"
+            ? ["::-webkit-inner-spin-button", "::-webkit-outer-spin-button"]
+            : ["::-webkit-search-cancel-button"]
+        for (const part of parts) {
+          const style = getComputedStyle(element, part)
+          if (
+            /spin-button|cancel-button/.test(style.appearance) &&
+            style.display !== "none"
+          ) {
+            found.push(`${part} nativo: ${describe(element)}`)
+          }
+        }
+      })
     document.querySelectorAll("[title]:not(iframe)").forEach((element) => {
       found.push(`title nativo: ${describe(element)}`)
     })

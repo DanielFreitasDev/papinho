@@ -10,6 +10,11 @@ final class ContentTypes {
 
     /** Imagens que o navegador mostra e que o servidor trata (sem SVG: pode ter script). */
     static final Set<String> IMAGES = Set.of("image/jpeg", "image/png", "image/gif", "image/webp");
+    /** Fotos acima do limite de recodificação cujos metadados saem em fluxo ({@link PhotoMetadata}). */
+    static final Set<String> STREAM_CLEANABLE_PHOTOS = Set.of("image/jpeg", "image/png");
+    /** Fotos com EXIF que o servidor não decodifica nem limpa (HEIC/HEIF do iPhone, AVIF): recusadas (MD-02). */
+    static final Set<String> UNCLEANABLE_PHOTOS = Set.of("image/heic", "image/heif", "image/heic-sequence",
+            "image/heif-sequence", "image/avif");
     private static final Set<String> VIDEOS = Set.of("video/mp4", "video/webm", "video/quicktime");
     private static final Set<String> AUDIOS = Set.of("audio/ogg", "audio/webm", "audio/mp4", "audio/mpeg",
             "audio/aac", "audio/wav", "audio/x-wav", "audio/vnd.wave", "audio/opus", "audio/x-m4a");

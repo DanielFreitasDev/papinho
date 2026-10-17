@@ -69,6 +69,56 @@ class MediaHelpersTest {
     }
 
     @Test
+    @DisplayName("JPEG progressivo limpo em fluxo: sai sem EXIF e comentário e decodifica igual (MD-02)")
+    void shouldStripProgressiveJpegInStream() throws IOException {
+        BufferedImage image = new BufferedImage(96, 64, BufferedImage.TYPE_INT_RGB);
+        for (int x = 0; x < 96; x++) {
+            for (int y = 0; y < 64; y++) {
+                image.setRGB(x, y, (x * 7 + y * 13) * 0x010203);
+            }
+        }
+        ByteArrayOutputStream progressive = new ByteArrayOutputStream();
+        javax.imageio.ImageWriter writer = javax.imageio.ImageIO.getImageWritersByFormatName("jpeg").next();
+        javax.imageio.ImageWriteParam param = writer.getDefaultWriteParam();
+        param.setProgressiveMode(javax.imageio.ImageWriteParam.MODE_DEFAULT);
+        try (var output = javax.imageio.ImageIO.createImageOutputStream(progressive)) {
+            writer.setOutput(output);
+            writer.write(null, new javax.imageio.IIOImage(image, null, null), param);
+        }
+        byte[] plain = progressive.toByteArray();
+        byte[] exif = "Exif\0\0GPS-SECRETO".getBytes(StandardCharsets.ISO_8859_1);
+        byte[] comment = "comentario-secreto".getBytes(StandardCharsets.ISO_8859_1);
+        ByteArrayOutputStream tagged = new ByteArrayOutputStream();
+        tagged.write(plain, 0, 2);
+        tagged.write(new byte[] {(byte) 0xFF, (byte) 0xE1, 0, (byte) (exif.length + 2)});
+        tagged.write(exif);
+        tagged.write(new byte[] {(byte) 0xFF, (byte) 0xFE, 0, (byte) (comment.length + 2)});
+        tagged.write(comment);
+        tagged.write(plain, 2, plain.length - 2);
+        tagged.write("depois-do-fim".getBytes(StandardCharsets.ISO_8859_1));
+
+        ByteArrayOutputStream clean = new ByteArrayOutputStream();
+        PhotoMetadata.stripJpeg(new ByteArrayInputStream(tagged.toByteArray()), clean);
+        String text = clean.toString(StandardCharsets.ISO_8859_1);
+        assertThat(text).doesNotContain("GPS-SECRETO").doesNotContain("comentario-secreto")
+                .doesNotContain("depois-do-fim");
+        assertThat(clean.toByteArray()).as("só os metadados saem").hasSize(plain.length);
+        BufferedImage decoded = javax.imageio.ImageIO.read(new ByteArrayInputStream(clean.toByteArray()));
+        BufferedImage original = javax.imageio.ImageIO.read(new ByteArrayInputStream(plain));
+        assertThat(decoded.getRGB(50, 30)).isEqualTo(original.getRGB(50, 30));
+    }
+
+    @Test
+    @DisplayName("PNG limpo em fluxo perde os blocos de texto e continua válido (MD-02)")
+    void shouldStripPngTextInStream() throws IOException {
+        byte[] tagged = Images.pngWithText(40, 20, "GPS-SECRETO");
+        ByteArrayOutputStream clean = new ByteArrayOutputStream();
+        PhotoMetadata.stripPng(new ByteArrayInputStream(tagged), clean);
+        assertThat(clean.toString(StandardCharsets.ISO_8859_1)).doesNotContain("GPS-SECRETO");
+        assertThat(clean.toByteArray()).isEqualTo(Images.png(40, 20));
+    }
+
+    @Test
     @DisplayName("JPEG tratado perde o EXIF e ganha miniatura e ThumbHash")
     void shouldStripJpegMetadata() throws IOException {
         PhotoPipeline.Result result = PhotoPipeline.process(Images.jpegWithOrientation(800, 400, 6), "image/jpeg");

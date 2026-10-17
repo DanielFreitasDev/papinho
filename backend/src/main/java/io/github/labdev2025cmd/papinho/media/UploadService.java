@@ -200,7 +200,15 @@ public class UploadService {
         }
         String type = ContentTypes.resolve(detected, upload.declaredType());
         MediaKind kind = ContentTypes.kind(type);
-        if (kind == MediaKind.IMAGE && Files.size(file) > MAX_PROCESSED_IMAGE) {
+        boolean oversized = kind == MediaKind.IMAGE && Files.size(file) > MAX_PROCESSED_IMAGE;
+        // Foto que não dá para limpar não entra: guardá-la levaria o EXIF e a localização junto (MD-02).
+        if (ContentTypes.UNCLEANABLE_PHOTOS.contains(type)
+                || oversized && !ContentTypes.STREAM_CLEANABLE_PHOTOS.contains(type)) {
+            discard(upload.id(), file);
+            throw new MediaExceptions.PhotoMetadataException();
+        }
+        if (oversized) {
+            // Grande demais para recodificar em memória: vai como documento, com os metadados tirados em fluxo.
             kind = MediaKind.DOCUMENT;
         }
         if (!scanner.isClean(file)) {
@@ -228,11 +236,18 @@ public class UploadService {
                     thumbnail = true;
                 }
             } else {
-                MessageDigest digest = digest();
-                try (InputStream in = new DigestInputStream(Files.newInputStream(file), digest)) {
-                    size = storage.write(MediaFile.contentKey(id), in);
+                Path source = oversized ? withoutMetadata(file, type) : file;
+                try {
+                    MessageDigest digest = digest();
+                    try (InputStream in = new DigestInputStream(Files.newInputStream(source), digest)) {
+                        size = storage.write(MediaFile.contentKey(id), in);
+                    }
+                    sha256 = HexFormat.of().formatHex(digest.digest());
+                } finally {
+                    if (!source.equals(file)) {
+                        Files.deleteIfExists(source);
+                    }
                 }
-                sha256 = HexFormat.of().formatHex(digest.digest());
             }
         } catch (ImageProcessing.InvalidImageException invalid) {
             discard(id, file);
@@ -246,6 +261,26 @@ public class UploadService {
         });
         Files.deleteIfExists(file);
         return saved.toView();
+    }
+
+    /** Cópia do JPEG ou PNG sem metadados, ao lado do arquivo recebido. */
+    private static Path withoutMetadata(Path file, String type) throws IOException {
+        Path clean = file.resolveSibling(file.getFileName() + ".clean");
+        try (InputStream in = new java.io.BufferedInputStream(Files.newInputStream(file));
+                OutputStream out = new java.io.BufferedOutputStream(Files.newOutputStream(clean))) {
+            if (type.equals("image/jpeg")) {
+                PhotoMetadata.stripJpeg(in, out);
+            } else {
+                PhotoMetadata.stripPng(in, out);
+            }
+        } catch (java.io.EOFException truncated) {
+            Files.deleteIfExists(clean);
+            throw new ImageProcessing.InvalidImageException();
+        } catch (IOException | RuntimeException failed) {
+            Files.deleteIfExists(clean);
+            throw failed;
+        }
+        return clean;
     }
 
     private void discard(UUID id, Path file) throws IOException {

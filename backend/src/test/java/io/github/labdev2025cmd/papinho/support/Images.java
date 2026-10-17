@@ -89,6 +89,23 @@ public final class Images {
     }
 
     /** PNG simples com transparência num canto. */
+    /** PNG com um bloco {@code tEXt} (metadado de texto, como o de câmeras e editores) logo depois do IHDR. */
+    public static byte[] pngWithText(int width, int height, String text) {
+        byte[] plain = png(width, height);
+        byte[] data = ("Comment\0" + text).getBytes(StandardCharsets.ISO_8859_1);
+        java.util.zip.CRC32 crc = new java.util.zip.CRC32();
+        crc.update("tEXt".getBytes(StandardCharsets.US_ASCII));
+        crc.update(data);
+        java.nio.ByteBuffer chunk = java.nio.ByteBuffer.allocate(12 + data.length).putInt(data.length)
+                .put("tEXt".getBytes(StandardCharsets.US_ASCII)).put(data).putInt((int) crc.getValue());
+        int afterHeader = 8 + 25;
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        out.write(plain, 0, afterHeader);
+        out.writeBytes(chunk.array());
+        out.write(plain, afterHeader, plain.length - afterHeader);
+        return out.toByteArray();
+    }
+
     public static byte[] png(int width, int height) {
         try {
             BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);

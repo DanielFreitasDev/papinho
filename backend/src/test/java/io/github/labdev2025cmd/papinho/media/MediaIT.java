@@ -172,6 +172,31 @@ class MediaIT {
     }
 
     @Test
+    @DisplayName("foto grande demais para recodificar sai sem EXIF; HEIC e WebP grandes, que não dá para limpar, são recusados (MD-02)")
+    void shouldStripOrRefusePhotosOutsideThePipeline() {
+        int padding = 51 * 1024 * 1024;
+        byte[] smallJpeg = Images.jpegWithExif(64, 64);
+        String jpeg = upload(ana, Arrays.copyOf(smallJpeg, smallJpeg.length + padding), "grande.jpg", "image/jpeg");
+        assertThat(ana.json(ana.get("/api/v1/media/" + jpeg)).get("kind").asString()).isEqualTo("DOCUMENT");
+        assertThat(new String(ana.get("/api/v1/media/" + jpeg + "/content").getResponse().getContentAsByteArray(),
+                StandardCharsets.ISO_8859_1)).as("JPEG acima do limite").doesNotContain("GPS-SECRETO")
+                .doesNotContain("Exif");
+
+        byte[] smallPng = Images.pngWithText(64, 64, "GPS-SECRETO -3.7319,-38.5267");
+        String png = upload(ana, Arrays.copyOf(smallPng, smallPng.length + padding), "grande.png", "image/png");
+        assertThat(new String(ana.get("/api/v1/media/" + png + "/content").getResponse().getContentAsByteArray(),
+                StandardCharsets.ISO_8859_1)).as("PNG acima do limite").doesNotContain("GPS-SECRETO");
+
+        byte[] heic = new byte[4096];
+        byte[] box = "\0\0\0\u0018ftypheic\0\0\0\0mif1heic".getBytes(StandardCharsets.ISO_8859_1);
+        System.arraycopy(box, 0, heic, 0, box.length);
+        String location = create(ana, heic.length, "foto.heic", "image/heic");
+        MvcTestResult refused = patch(ana, location, 0, heic);
+        assertThat(refused).as(ApiClient.text(refused)).hasStatus(415);
+        assertThat(ana.json(refused).get("type").asString()).isEqualTo("urn:papinho:problem:photo-metadata");
+    }
+
+    @Test
     @DisplayName("anexo na mensagem: a outra pessoa abre com Range; quem é de fora recebe 404")
     void shouldShareAttachmentWithConversationOnly() {
         byte[] video = mp4(4096);

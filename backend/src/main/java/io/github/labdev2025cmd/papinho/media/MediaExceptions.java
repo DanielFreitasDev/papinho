@@ -55,6 +55,13 @@ final class MediaExceptions {
         }
     }
 
+    /** Foto cujos metadados (EXIF, localização) o servidor não consegue tirar. */
+    static class PhotoMetadataException extends ApiException {
+        PhotoMetadataException() {
+            super(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "photo-metadata", "Photo metadata cannot be removed");
+        }
+    }
+
     static class MalwareException extends ApiException {
         MalwareException() {
             super(HttpStatus.UNPROCESSABLE_CONTENT, "media-malware", "File rejected by antivirus");

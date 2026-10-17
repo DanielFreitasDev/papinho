@@ -309,10 +309,13 @@ public class MessageService {
     public SyncResponse sync(UUID me, UUID conversationId, long afterSeq, int limit) {
         conversations.requireReadable(me, conversationId);
         int size = Math.clamp(limit, 1, MAX_SYNC);
-        List<Message> found = messages.findChangedAfter(conversationId, Math.max(0, afterSeq), Limit.of(size + 1));
+        // Lido antes da busca: em READ COMMITTED cada comando vê um retrato novo, e um lastSeq lido depois
+        // poderia cobrir uma mensagem confirmada entre os dois, que o cliente pularia ao avançar o cursor.
+        long lastSeq = sequences.current(conversationId);
+        List<Message> found = messages.findChangedAfter(conversationId, Math.max(0, afterSeq), lastSeq,
+                Limit.of(size + 1));
         boolean hasMore = found.size() > size;
         List<Message> page = hasMore ? found.subList(0, size) : found;
-        long lastSeq = sequences.current(conversationId);
         return new SyncResponse(toViews(me, withoutHidden(me, page)), lastSeq, hasMore);
     }
 
@@ -322,12 +325,13 @@ public class MessageService {
         conversations.requireReadable(me, conversationId);
         int size = Math.clamp(limit, 1, MAX_PAGE);
         long before = beforeSeq == null ? Long.MAX_VALUE : beforeSeq;
+        // O cliente parte deste lastSeq para o afterSeq: lido antes, nada confirmado no meio fica para trás.
+        long lastSeq = sequences.current(conversationId);
         List<Message> found = messages.findBefore(conversationId, before, Limit.of(size + 1));
         boolean hasMore = found.size() > size;
         List<Message> page = new ArrayList<>(hasMore ? found.subList(0, size) : found);
         page.sort(Comparator.comparingLong(Message::seq));
-        return new HistoryResponse(toViews(me, withoutHidden(me, page)), sequences.current(conversationId),
-                hasMore);
+        return new HistoryResponse(toViews(me, withoutHidden(me, page)), lastSeq, hasMore);
     }
 
     /**

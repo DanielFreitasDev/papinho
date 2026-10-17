@@ -19,10 +19,13 @@ interface MessageRepository extends JpaRepository<Message, UUID> {
     /** Alguma mensagem ainda usa o arquivo (encaminhar copia a referência)? */
     boolean existsByAttachmentId(UUID attachmentId);
 
-    /** Alterações depois de {@code afterSeq}, na ordem em que aconteceram (sincronização, RT-01). */
+    /**
+     * Alterações em {@code (afterSeq, upToSeq]}, na ordem em que aconteceram (sincronização, RT-01). O teto é o
+     * seq lido antes da busca: o que for confirmado depois fica para a próxima sincronização.
+     */
     @Query("select m from Message m where m.conversationId = :conversationId and m.changeSeq > :afterSeq "
-            + "order by m.changeSeq")
-    List<Message> findChangedAfter(UUID conversationId, long afterSeq, Limit limit);
+            + "and m.changeSeq <= :upToSeq order by m.changeSeq")
+    List<Message> findChangedAfter(UUID conversationId, long afterSeq, long upToSeq, Limit limit);
 
     /** Página de histórico antes de {@code beforeSeq}, da mais nova para a mais antiga. */
     @Query("select m from Message m where m.conversationId = :conversationId and m.seq < :beforeSeq "

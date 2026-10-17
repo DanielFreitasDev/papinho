@@ -213,8 +213,11 @@ class RealtimeIT {
                 .asString();
         ana.post("/api/v1/conversations/" + conversation + "/messages",
                 Map.of("clientMessageId", UUID.randomUUID(), "body", "Oi"));
-        bruno.patch("/api/v1/privacy", Map.of("online", "NOBODY", "lastSeen", "NOBODY"));
         Connection anaWs = connect(ana);
+        // A troca de privacidade avisa os pares depois do commit, em outra thread: espera esse aviso, que é
+        // esperado, para não contá-lo como uma entrada ou saída.
+        bruno.patch("/api/v1/privacy", Map.of("online", "NOBODY", "lastSeen", "NOBODY"));
+        assertThat(anaWs.next("presence").get("online").asBoolean()).isFalse();
 
         Connection brunoWs = connect(bruno);
         heartbeat(bruno, brunoWs, true);

@@ -258,10 +258,6 @@ test("nenhum controle com a aparência do navegador, nos temas claro e escuro", 
   isMobile,
 }) => {
   test.skip(
-    isMobile,
-    "a matriz do UI-05 é Chromium, Firefox e WebKit no desktop"
-  )
-  test.skip(
     browserName === "webkit" && !baseURL?.startsWith("https:"),
     "WebKit recusa cookies Secure em http://localhost: defina PAPINHO_E2E_HTTPS_URL (instância do perfil lan)"
   )
@@ -290,7 +286,8 @@ test("nenhum controle com a aparência do navegador, nos temas claro e escuro", 
   const field = gil.page.getByRole("textbox", { name: "Mensagem" })
   for (let index = 1; index <= 12; index++) {
     await field.fill(`Mensagem ${index}: *negrito*, _itálico_ e \`mono\``)
-    await field.press("Enter")
+    // No celular o Enter quebra a linha: envia pelo botão.
+    await gil.page.getByRole("button", { name: "Enviar" }).click()
   }
   await expect(row(hana.page, "Mensagem 12")).toBeVisible()
   const files = [
@@ -313,10 +310,13 @@ test("nenhum controle com a aparência do navegador, nos temas claro e escuro", 
   await expect(send).toBeHidden()
   // A conversa reabre com tudo carregado: este spec verifica aparência; a chegada em tempo real é coberta pelos
   // specs de chat e mídia (no WebKit a mensagem nova às vezes só aparece ao reabrir, investigação no STATUS).
+  // No celular a lista não aparece junto da conversa: espera o documento na própria conversa.
   await expect(
-    hana.page
-      .getByRole("complementary", { name: "Conversas e contatos" })
-      .getByText("Documento")
+    isMobile
+      ? hana.page.getByRole("link", { name: /relatorio\.pdf/ })
+      : hana.page
+          .getByRole("complementary", { name: "Conversas e contatos" })
+          .getByText("Documento")
   ).toBeVisible({ timeout: 30_000 })
   await hana.page.waitForLoadState("networkidle")
   await hana.page.reload()

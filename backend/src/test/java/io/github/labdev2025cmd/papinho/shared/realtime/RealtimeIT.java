@@ -240,6 +240,30 @@ class RealtimeIT {
     }
 
     @Test
+    @DisplayName("antes de aceitar: sem presença e sem leitura, nem pelo WebSocket nem em Dados da mensagem (CT-02)")
+    void shouldHidePresenceAndReadBeforeAcceptance() throws Exception {
+        Browser ana = Browser.register(base(), "ana", null);
+        Browser bruno = Browser.register(base(), "bruno", ana.invite());
+        // O Bruno não adicionou a Ana: a conversa fica como solicitação do lado dele.
+        String conversation = ana.post("/api/v1/conversations/direct", Map.of("username", "bruno")).get("id")
+                .asString();
+        String message = ana.post("/api/v1/conversations/" + conversation + "/messages",
+                Map.of("clientMessageId", UUID.randomUUID(), "body", "Oi")).get("id").asString();
+        assertThat(ana.status("/api/v1/presence/" + bruno.userId())).isEqualTo(404);
+        Connection anaWs = connect(ana);
+        Connection brunoWs = connect(bruno);
+        heartbeat(bruno, brunoWs, true);
+        assertThat(anaWs.presenceOf(bruno.userId(), Duration.ofSeconds(2))).as("presença antes de aceitar").isEmpty();
+
+        bruno.put("/api/v1/conversations/" + conversation + "/read", Map.of("seq", 1));
+        JsonNode receipt = anaWs.next("receipts");
+        assertThat(receipt.get("userId").asString()).isEqualTo(bruno.userId());
+        assertThat(receipt.get("readSeq").asLong()).as("leitura pelo WebSocket antes de aceitar").isZero();
+        JsonNode info = ana.get("/api/v1/messages/" + message + "/info").get("recipients").get(0);
+        assertThat(info.get("readAt").isNull()).as("leitura em Dados da mensagem antes de aceitar").isTrue();
+    }
+
+    @Test
     @DisplayName("logout derruba o WebSocket aberto com aquela sessão")
     void shouldCloseWebSocketAfterLogout() throws Exception {
         Browser ana = Browser.register(base(), "ana", null);

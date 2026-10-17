@@ -102,6 +102,15 @@ class SecurityIT {
                 .contains("frame-ancestors 'none'").doesNotContain("unsafe-inline")
                 // Só WebAssembly (runtime ONNX da transcrição no navegador, AU-04); eval de JavaScript continua proibido.
                 .doesNotContain("'unsafe-eval'").contains("'wasm-unsafe-eval'");
+        // A política inteira, escrita aqui: comparar com a constante deixaria passar a perda de uma diretiva nela.
+        assertThat(csp).isEqualTo("default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; "
+                + "img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self'; "
+                + "connect-src 'self' https://huggingface.co https://*.huggingface.co https://*.hf.co; "
+                + "worker-src 'self' blob:; manifest-src 'self'; "
+                + "frame-src https://www.youtube-nocookie.com https://player.vimeo.com https://open.spotify.com; "
+                + "object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'");
+        assertThat(result).hasHeader("Permissions-Policy",
+                "camera=(self), microphone=(self), geolocation=(), payment=(), usb=(), interest-cohort=()");
         assertThat(result).doesNotContainHeader("Strict-Transport-Security");
     }
 

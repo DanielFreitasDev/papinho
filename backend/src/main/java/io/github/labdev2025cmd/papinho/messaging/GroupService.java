@@ -380,6 +380,11 @@ public class GroupService {
                 .filter(m -> m.state() == MemberState.PENDING).orElseThrow(NotFoundException::new);
         sequences.lock(groupId);
         if (approve) {
+            // O pedido pode ter ficado na fila enquanto o grupo enchia: o limite vale na aprovação também.
+            if (members.findByConversation(groupId).stream().filter(m -> m.state() == MemberState.ACTIVE).count()
+                    + 1 > MAX_MEMBERS) {
+                throw new InvalidGroupException("too many members");
+            }
             request.rejoin(sequences.current(groupId), clock.instant());
             members.flush();
             members.clearPins(groupId, List.of(userId));

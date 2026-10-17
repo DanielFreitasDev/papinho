@@ -12,6 +12,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import io.github.labdev2025cmd.papinho.support.Accounts;
 import io.github.labdev2025cmd.papinho.support.ApiClient;
@@ -27,6 +28,9 @@ class GroupIT {
 
     @Autowired
     private ApiClients clients;
+
+    @Autowired
+    private JdbcTemplate jdbc;
 
     private ApiClient ana;
     private ApiClient bruno;
@@ -156,6 +160,36 @@ class GroupIT {
         remove.put("mediaId", null);
         ana.put("/api/v1/groups/" + id + "/photo", remove);
         assertThat(ana.get("/api/v1/media/" + photo + "/content")).as("foto antiga removida").hasStatus(404);
+    }
+
+    @Test
+    @DisplayName("aprovar pedido de entrada respeita o limite de membros do grupo (GR-02)")
+    void shouldRefuseApprovalWhenGroupIsFull() {
+        String id = ana.json(ana.post("/api/v1/groups", Map.of("name", "Lotado", "memberIds", List.of(brunoId))))
+                .get("id").asString();
+        ana.put("/api/v1/groups/" + id + "/settings", Map.of("onlyAdminsSend", false, "onlyAdminsEditInfo", false,
+                "onlyAdminsAddMembers", false, "joinApproval", true));
+        String code = ana.json(ana.get("/api/v1/groups/" + id + "/invite")).get("code").asString();
+        assertThat(carla.json(carla.post("/api/v1/groups/invites/" + code + "/join", null)).get("pending")
+                .asBoolean()).isTrue();
+
+        // Completa o grupo até o limite direto no banco (criar mil contas pela API levaria minutos).
+        int missing = GroupService.MAX_MEMBERS - 2;
+        jdbc.update("""
+                insert into user_accounts (id, username, password_hash, role, created_at)
+                select gen_random_uuid(), 'lotado' || n, 'x', 'USER', now() from generate_series(1, ?) n
+                """, missing);
+        jdbc.update("""
+                insert into conversation_members (conversation_id, user_id, state, joined_at)
+                select ?, id, 'ACTIVE', now() from user_accounts where username like 'lotado%'
+                """, UUID.fromString(id));
+
+        var approve = ana.post("/api/v1/groups/" + id + "/requests/" + carlaId + "/approve", null);
+        assertThat(approve).as("grupo cheio").hasStatus(400);
+        assertThat(ana.json(approve).get("type").asString()).isEqualTo("urn:papinho:problem:group-invalid");
+        assertThat(carla.get(conversation(id))).hasStatus(404);
+        assertThat(jdbc.queryForObject("select count(*) from conversation_members where conversation_id = ? "
+                + "and state = 'ACTIVE'", Integer.class, UUID.fromString(id))).isEqualTo(GroupService.MAX_MEMBERS);
     }
 
     @Test

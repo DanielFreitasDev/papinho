@@ -87,6 +87,21 @@ class SearchIT {
     }
 
     @Test
+    @DisplayName("quem sai do grupo não acha mais as mensagens dele na busca global")
+    void shouldSkipGroupsLeft() {
+        ana.post("/api/v1/contacts", Map.of("username", "bruno"));
+        String group = ana.json(ana.post("/api/v1/groups", Map.of("name", "Planos", "memberIds",
+                List.of(brunoId)))).get("id").asString();
+        String plan = send(ana, group, "planejamento da viagem");
+        assertThat(global(bruno, "planejamento")).containsExactly(plan);
+
+        assertThat(bruno.post("/api/v1/groups/" + group + "/leave", null)).hasStatus(204);
+        send(ana, group, "planejamento depois da saída");
+        assertThat(global(bruno, "planejamento")).as("ex-membro").isEmpty();
+        assertThat(global(ana, "planejamento")).hasSize(2);
+    }
+
+    @Test
     @DisplayName("dentro da conversa filtra por texto, remetente, data e tipo, com páginas; IDOR 404")
     void shouldSearchInsideConversation() {
         String first = send(ana, conversation, "bom dia, grupo");

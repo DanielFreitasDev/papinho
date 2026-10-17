@@ -106,6 +106,12 @@ class GroupIT {
         assertThat(bruno.patch("/api/v1/groups/" + id, Map.of("name", "Outro"))).hasStatus(403);
         assertThat(bruno.put("/api/v1/groups/" + id + "/settings", Map.of("onlyAdminsSend", false,
                 "onlyAdminsEditInfo", false, "onlyAdminsAddMembers", false, "joinApproval", false))).hasStatus(403);
+        ApiClient dani = clients.create();
+        String daniId = Accounts.userId(Accounts.register(dani, "dani", Accounts.invite(ana)));
+        assertThat(bruno.post("/api/v1/contacts", Map.of("username", "dani"))).hasStatus(201);
+        var added = bruno.post("/api/v1/groups/" + id + "/members", Map.of("userIds", List.of(daniId)));
+        assertThat(added).as("só admins adicionam").hasStatus(403);
+        assertThat(bruno.json(added).get("type").asString()).isEqualTo("urn:papinho:problem:group-only-admins");
 
         JsonNode members = ana.json(ana.put("/api/v1/groups/" + id + "/admins/" + brunoId, null));
         assertThat(roles(members)).containsEntry(brunoId, "ADMIN");

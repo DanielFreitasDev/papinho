@@ -475,6 +475,16 @@ class IdentityIT {
     }
 
     @Test
+    @DisplayName("todo horário do banco tem fuso (timestamptz): nada depende do fuso da JVM (§0)")
+    void shouldStoreEveryTimestampWithTimeZone() {
+        assertThat(jdbc.queryForList("""
+                select table_name || '.' || column_name from information_schema.columns
+                 where table_schema = 'public' and data_type = 'timestamp without time zone'
+                   and table_name not like 'flyway%'
+                """, String.class)).isEmpty();
+    }
+
+    @Test
     @DisplayName("logout encerra a sessão")
     void shouldLogout() {
         ApiClient client = clients.create();

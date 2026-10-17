@@ -151,6 +151,7 @@ WORK_DIR=$(mktemp -d)
 trap 'rm -rf "$WORK_DIR"' EXIT INT TERM
 PEM="$WORK_DIR/ca.pem"
 DER="$WORK_DIR/ca.der"
+VERIFIED="$WORK_DIR/papinho-ca.pem"
 
 say "Baixando a CA de $CA_URL…"
 if have curl; then curl -fsSL -o "$PEM" "$CA_URL"
@@ -167,6 +168,14 @@ if [ "$ACTUAL_FINGERPRINT" != "$EXPECTED_FINGERPRINT" ]; then
   fail "a impressão digital não confere! esperada $EXPECTED_FINGERPRINT, recebida $ACTUAL_FINGERPRINT. Nada foi instalado."
 fi
 say "Impressão digital SHA-256 conferida: $ACTUAL_FINGERPRINT"
+# Instala só o certificado conferido, refeito a partir do DER: nada mais do arquivo baixado (outro bloco, como
+# um TRUSTED CERTIFICATE anexado) chega ao repositório do sistema.
+{
+  echo '-----BEGIN CERTIFICATE-----'
+  base64 < "$DER" | tr -d '\r\n' | fold -w 64
+  echo
+  echo '-----END CERTIFICATE-----'
+} > "$VERIFIED"
 
 # A pergunta vai para o terminal mesmo com "curl | sh". Sem terminal (CI, contêiner), segue sem perguntar.
 # O teste roda num subshell: erro de redirecionamento num builtin especial encerraria o próprio script.
@@ -182,6 +191,6 @@ fi
 
 say "Instalando $CA_NAME…"
 system_remove
-system_add "$PEM"
-nss_add "$PEM"
+system_add "$VERIFIED"
+nss_add "$VERIFIED"
 say "Pronto. Feche e abra o navegador e acesse https://@@HOSTNAME_HTTPS@@/"

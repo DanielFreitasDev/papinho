@@ -70,6 +70,23 @@ class InstallCaScriptTest {
         assertThat(installed).doesNotExist();
     }
 
+    @Test
+    @DisplayName("bloco TRUSTED CERTIFICATE de outra CA anexado ao PEM não entra no repositório do sistema")
+    void shouldNotInstallAppendedCertificates() throws Exception {
+        Path ca = certificate("Papinho LAN CA");
+        Path evil = certificate("Evil CA");
+        Path trusted = dir.resolve("evil-trusted.pem");
+        exec("openssl", "x509", "-in", evil.toString(), "-trustout", "-addtrust", "serverAuth", "-out",
+                trusted.toString());
+        Path tampered = dir.resolve("adulterado.pem");
+        Files.writeString(tampered, Files.readString(ca) + Files.readString(trusted));
+
+        Result result = run(tampered, fingerprint(ca));
+        assertThat(result.exit()).as(result.output()).isZero();
+        assertThat(blocks(installed)).as("blocos instalados").containsExactly("CERTIFICATE");
+        assertThat(der(installed)).isEqualTo(der(ca));
+    }
+
     private Result run(Path served, String fingerprint) throws Exception {
         String script;
         try (InputStream in = getClass().getResourceAsStream("/pki/install-ca.sh")) {

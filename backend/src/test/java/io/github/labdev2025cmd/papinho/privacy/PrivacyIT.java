@@ -217,6 +217,21 @@ class PrivacyIT {
         assertThat(ana.post("/api/v1/groups/" + group + "/members", Map.of("userIds", List.of(brunoId))))
                 .as("agora Ana é contato do Bruno").hasStatusOk();
 
+        // "Meus contatos exceto…": a exceção não adiciona; os outros contatos adicionam.
+        String anaId = ana.json(ana.get("/api/v1/me")).get("account").get("id").asString();
+        assertThat(bruno.post("/api/v1/contacts", Map.of("username", "carla"))).hasStatus(201);
+        bruno.patch("/api/v1/privacy", Map.of("groupsAdd", "CONTACTS_EXCEPT"));
+        assertThat(bruno.put("/api/v1/privacy/exceptions/GROUPS_ADD", Map.of("userIds", List.of(anaId))))
+                .hasStatusOk();
+        assertThat(ana.post("/api/v1/groups", Map.of("name", "Exceção", "memberIds", List.of(brunoId))))
+                .as("Ana está na exceção").hasStatus(403);
+        carla.post("/api/v1/contacts", Map.of("username", "bruno"));
+        assertThat(carla.post("/api/v1/groups", Map.of("name", "Da Carla", "memberIds", List.of(brunoId))))
+                .as("Carla é contato e não está na exceção").hasStatus(201);
+        assertThat(bruno.put("/api/v1/privacy/exceptions/GROUPS_ADD", Map.of("userIds", List.of()))).hasStatusOk();
+        assertThat(ana.post("/api/v1/groups", Map.of("name", "Sem exceção", "memberIds", List.of(brunoId))))
+                .as("tirada da exceção").hasStatus(201);
+
         carla.patch("/api/v1/privacy", Map.of("groupsAdd", "NOBODY"));
         String code = ana.json(ana.get("/api/v1/groups/" + group + "/invite")).get("code").asString();
         assertThat(ana.post("/api/v1/groups", Map.of("name", "Outra", "memberIds", List.of(carlaId))))

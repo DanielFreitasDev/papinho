@@ -414,6 +414,31 @@ class RealtimeIT {
     }
 
     /** Manda o heartbeat e espera o servidor aplicá-lo (a própria pessoa sempre vê a sua presença). */
+    @Test
+    @DisplayName("aviso 'notify' pelo STOMP: com o conteúdo oculto (PV-08), só 'Papinho: Nova mensagem'")
+    void shouldHideContentInRealtimeNotify() throws Exception {
+        Browser ana = Browser.register(base(), "ana", null);
+        Browser bruno = Browser.register(base(), "bruno", ana.invite());
+        bruno.post("/api/v1/contacts", Map.of("username", "ana"));
+        String conversation = ana.post("/api/v1/conversations/direct", Map.of("username", "bruno")).get("id")
+                .asString();
+        Connection brunoWs = connect(bruno);
+
+        ana.post("/api/v1/conversations/" + conversation + "/messages",
+                Map.of("clientMessageId", UUID.randomUUID(), "body", "segredo visível"));
+        JsonNode shown = brunoWs.next("notify");
+        assertThat(shown.get("title").asString()).isEqualTo("Pessoa ana");
+        assertThat(shown.get("body").asString()).isEqualTo("segredo visível");
+
+        bruno.patch("/api/v1/privacy", Map.of("hideNotificationContent", true));
+        ana.post("/api/v1/conversations/" + conversation + "/messages",
+                Map.of("clientMessageId", UUID.randomUUID(), "body", "segredo escondido"));
+        JsonNode hidden = brunoWs.next("notify");
+        assertThat(hidden.get("title").asString()).isEqualTo("Papinho");
+        assertThat(hidden.get("body").asString()).isEqualTo("Nova mensagem");
+        assertThat(hidden.toString()).doesNotContain("segredo").doesNotContain("Pessoa ana");
+    }
+
     private static void heartbeat(Browser browser, Connection connection, boolean active) throws Exception {
         connection.session().send("/app/presence", Map.of("active", active));
         awaitOwnPresence(browser, active);

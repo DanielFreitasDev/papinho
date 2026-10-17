@@ -59,6 +59,9 @@ class MediaIT {
     @Autowired
     private JdbcTemplate jdbc;
 
+    @Autowired
+    private org.springframework.core.env.Environment environment;
+
     private ApiClient ana;
     private String brunoId;
     private ApiClient bruno;
@@ -75,6 +78,16 @@ class MediaIT {
         Accounts.register(carla, "carla", Accounts.invite(ana));
         conversation = ana.json(ana.post("/api/v1/conversations/direct", Map.of("username", "bruno")))
                 .get("id").asString();
+    }
+
+    @Test
+    @DisplayName("os testes gravam arquivos, uploads e a chave fora do diretório real do usuário")
+    void shouldKeepTestDataOutOfUserHome() {
+        java.nio.file.Path home = java.nio.file.Path.of(System.getProperty("user.home")).toAbsolutePath();
+        for (String property : java.util.List.of("app.storage.dir", "app.media.upload-dir", "app.crypto.key-file")) {
+            assertThat(java.nio.file.Path.of(environment.getRequiredProperty(property)).toAbsolutePath().normalize())
+                    .as(property).satisfies(path -> assertThat(path.startsWith(home.resolve(".papinho"))).isFalse());
+        }
     }
 
     @Test

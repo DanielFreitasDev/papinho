@@ -297,7 +297,22 @@
 			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<!-- Arquivos, uploads e a chave dos testes ficam em target/, nunca em ~/.papinho. -->
+					<environmentVariables>
+						<PAPINHO_DATA_DIR>${project.build.directory}/test-data</PAPINHO_DATA_DIR>
+					</environmentVariables>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-failsafe-plugin</artifactId>
+				<configuration>
+					<environmentVariables>
+						<PAPINHO_DATA_DIR>${project.build.directory}/test-data</PAPINHO_DATA_DIR>
+					</environmentVariables>
+				</configuration>
 			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>

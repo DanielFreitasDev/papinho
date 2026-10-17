@@ -110,6 +110,24 @@ class PollIT {
     }
 
     @Test
+    @DisplayName("enquete com prazo no passado ou agora é recusada; no futuro, aceita")
+    void shouldRefusePollClosingInThePast() {
+        Map<String, Object> body = new HashMap<>();
+        body.put("clientMessageId", UUID.randomUUID());
+        body.put("question", "Já fechou?");
+        body.put("options", List.of("sim", "não"));
+        body.put("multiple", false);
+        body.put("anonymous", false);
+        body.put("closesAt", Instant.now().minusSeconds(1).toString());
+        var past = ana.post(path() + "/polls", body);
+        assertThat(past).hasStatus(400);
+        assertThat(ana.json(past).get("type").asString()).isEqualTo("urn:papinho:problem:message-invalid");
+        assertThat(jdbc.queryForObject("select count(*) from messages where kind = 'POLL'", Integer.class)).isZero();
+        assertThat(createPoll(ana, "Ainda dá?", List.of("sim", "não"), false, false,
+                Instant.now().plusSeconds(60)).get("poll").get("closed").asBoolean()).isFalse();
+    }
+
+    @Test
     @DisplayName("na conversa individual com bloqueio, quem foi bloqueado não vota nem reage (CT-03)")
     void shouldRefuseVoteAndReactionWhenBlocked() {
         bruno.post("/api/v1/contacts", Map.of("username", "ana"));

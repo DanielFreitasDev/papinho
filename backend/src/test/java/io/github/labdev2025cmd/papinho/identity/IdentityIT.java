@@ -92,6 +92,43 @@ class IdentityIT {
     }
 
     @Test
+    @DisplayName("dois primeiros cadastros de verdade ao mesmo tempo: só um vira admin, o outro precisa de convite (ID-08)")
+    void shouldMakeOnlyOneAdminWhenFirstRegistrationsRace() throws Exception {
+        ApiClient ana = clients.create().bootstrap();
+        ApiClient bruno = clients.create().bootstrap();
+        try (Connection holder = dataSource.getConnection(); Statement statement = holder.createStatement()) {
+            // Com a trava presa, os dois passam pela contagem rápida (zero contas) e esperam juntos por ela.
+            statement.execute("select pg_advisory_lock(" + IdentityService.REGISTRATION_LOCK + ")");
+            CompletableFuture<MvcTestResult> first = CompletableFuture.supplyAsync(() -> register(ana, "ana"));
+            CompletableFuture<MvcTestResult> second = CompletableFuture.supplyAsync(() -> register(bruno, "bruno"));
+            try {
+                Thread.sleep(500);
+            } finally {
+                statement.execute("select pg_advisory_unlock(" + IdentityService.REGISTRATION_LOCK + ")");
+            }
+            var statuses = java.util.List.of(first.get(20, TimeUnit.SECONDS).getResponse().getStatus(),
+                    second.get(20, TimeUnit.SECONDS).getResponse().getStatus());
+            assertThat(statuses).as("um entra como primeiro; o outro já cai no modo somente convite")
+                    .containsExactlyInAnyOrder(201, 403);
+        }
+        assertThat(jdbc.queryForObject("select count(*) from user_accounts where role = 'ADMIN'", Integer.class))
+                .isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("instância nova nasce com os padrões seguros gravados pela migration (ID-07, AD-02)")
+    void shouldStartWithSafeDefaultsFromMigration() {
+        ApiClient admin = clients.create();
+        Accounts.register(admin, "ana", null);
+        JsonNode settings = admin.json(admin.get("/api/v1/admin/settings"));
+        assertThat(settings.get("registrationMode").asString()).isEqualTo("INVITE_ONLY");
+        assertThat(settings.get("usernameChangeCooldownDays").asLong()).isEqualTo(30);
+        assertThat(settings.get("messageEditWindowMinutes").asLong()).isEqualTo(15);
+        assertThat(settings.get("messageDeleteWindowHours").asLong()).isEqualTo(48);
+        assertThat(settings.get("userQuotaMegabytes").asLong()).isEqualTo(5120);
+    }
+
+    @Test
     @DisplayName("com a instância já em uso, cadastros não esperam uns pelos outros (sem a trava do primeiro usuário)")
     void shouldNotSerializeLaterRegistrations() throws Exception {
         ApiClient ana = clients.create();

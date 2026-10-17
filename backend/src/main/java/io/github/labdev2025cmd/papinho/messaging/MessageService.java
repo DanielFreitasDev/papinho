@@ -222,14 +222,22 @@ public class MessageService {
         return new ViewOnceGrant(token, attachment.kind(), file == null ? "" : file.contentType());
     }
 
-    /** Conteúdo pelo token (de quem o recebeu e enquanto vale); senão 404. */
-    @Transactional(readOnly = true)
+    /**
+     * Conteúdo pelo token (de quem o recebeu e enquanto vale); senão 404. A foto sai numa resposta só e o token
+     * morre nela; vídeo e áudio precisam de várias faixas ({@code Range}) e usam o token dentro da validade curta
+     * (ADR 0012).
+     */
+    @Transactional
     public MediaService.Content viewOnceContent(UUID me, String token) throws java.io.IOException {
-        UUID messageId = viewOnceOpens.messageOfToken(sha256(token), me, clock.instant())
-                .orElseThrow(NotFoundException::new);
+        String tokenHash = sha256(token);
+        Instant now = clock.instant();
+        UUID messageId = viewOnceOpens.messageOfToken(tokenHash, me, now).orElseThrow(NotFoundException::new);
         Message message = messages.findById(messageId).orElseThrow(NotFoundException::new);
         Message.Attachment attachment = message.attachment();
         if (attachment == null) {
+            throw new NotFoundException();
+        }
+        if ("IMAGE".equals(attachment.kind()) && !viewOnceOpens.consumeToken(tokenHash, me, now)) {
             throw new NotFoundException();
         }
         return media.grantedContent(attachment.id());

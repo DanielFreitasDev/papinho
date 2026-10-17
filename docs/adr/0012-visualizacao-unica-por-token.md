@@ -17,8 +17,9 @@ a reprodução.
 - O id do arquivo de uma mensagem de visualização única **nunca vai para o cliente**; as rotas normais de mídia
   recusam esse arquivo para todos, inclusive para quem enviou (`MediaAccessPolicy.restricted`).
 - Cada destinatário pede **uma única vez** um token (`POST /messages/{id}/view-once`): o servidor grava a
-  abertura com o hash do token e a validade de 5 minutos; um segundo pedido recebe 410. Dentro da validade o
-  mesmo token serve as faixas do vídeo ou do áudio, sempre com `no-store`.
+  abertura com o hash do token e a validade de 5 minutos; um segundo pedido recebe 410. A **foto** sai numa
+  resposta só: o token morre nela (auditoria de 2026-10-17, achado A15). Dentro da validade o mesmo token
+  serve as faixas do vídeo ou do áudio, sempre com `no-store`.
 - Um job com ShedLock tira o arquivo do servidor quando todos os destinatários ativos abriram e os tokens
   venceram, ou após 14 dias; a mensagem fica como "Foto aberta".
 - Áudio de visualização única não é transcrito (a transcrição usa a rota de mídia, que recusa o arquivo).
@@ -28,7 +29,8 @@ a reprodução.
 ## Consequências
 
 - Boas: reabrir é impossível pelo servidor; vídeos longos tocam; o arquivo some sem ação manual.
-- Ruins: durante os 5 minutos o token pode ser repetido pela mesma sessão (necessário para `Range`); capturas
+- Ruins: durante os 5 minutos o token de vídeo ou áudio pode ser repetido pela mesma sessão (necessário para
+  `Range`; a foto não tem esse desvio); capturas
   de tela continuam possíveis, como em qualquer navegador.
 
 ## Alternativas consideradas

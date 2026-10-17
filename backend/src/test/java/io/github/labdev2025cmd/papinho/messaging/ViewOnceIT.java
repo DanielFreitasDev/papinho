@@ -72,6 +72,8 @@ class ViewOnceIT {
         var content = bruno.get("/api/v1/view-once/" + token);
         assertThat(content).hasStatusOk();
         assertThat(content.getResponse().getHeader(HttpHeaders.CACHE_CONTROL)).contains("no-store");
+        assertThat(bruno.get("/api/v1/view-once/" + token)).as("foto: o token vale para uma resposta só")
+                .hasStatus(404);
         assertThat(ana.get("/api/v1/view-once/" + token)).as("token é de quem recebeu").hasStatus(404);
         assertThat(bruno.post("/api/v1/messages/" + id + "/view-once", null)).as("uma vez só").hasStatus(410);
         JsonNode seen = bruno.json(bruno.get("/api/v1/conversations/" + conversation + "/messages"))

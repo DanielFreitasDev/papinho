@@ -45,6 +45,15 @@ class ViewOnceOpens {
         return found.stream().findFirst();
     }
 
+    /** Vence o token agora (foto: uma resposta só); falso se ele já tinha vencido ou sido usado. */
+    boolean consumeToken(String tokenHash, UUID userId, Instant now) {
+        return jdbc.update("""
+                update view_once_opens set token_expires_at = :now
+                 where token_hash = :tokenHash and user_id = :userId and token_expires_at > :now
+                """, new MapSqlParameterSource("tokenHash", tokenHash).addValue("userId", userId)
+                .addValue("now", now.atOffset(ZoneOffset.UTC))) == 1;
+    }
+
     /** Quais destas mensagens {@code userId} já abriu. */
     Set<UUID> openedBy(UUID userId, Collection<UUID> messageIds) {
         if (messageIds.isEmpty()) {

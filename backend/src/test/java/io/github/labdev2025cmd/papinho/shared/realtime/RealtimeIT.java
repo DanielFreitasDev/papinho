@@ -315,6 +315,73 @@ class RealtimeIT {
     }
 
     @Test
+    @DisplayName("handshake com Origin de outro site é recusado, mesmo com a sessão (CSWSH, SG-01)")
+    void shouldRefuseCrossSiteHandshake() throws Exception {
+        Browser ana = Browser.register(base(), "ana", null);
+        WebSocketHttpHeaders headers = new WebSocketHttpHeaders();
+        headers.add("Cookie", ana.cookieHeader());
+        headers.add("Origin", "https://evil.example");
+        StompHeaders connect = new StompHeaders();
+        connect.add("X-XSRF-TOKEN", ana.cookies.get("XSRF-TOKEN"));
+        assertThatThrownBy(() -> stomp.connectAsync(ws(), headers, connect, new StompSessionHandlerAdapter() {
+        }).get(5, TimeUnit.SECONDS)).hasMessageContaining("403");
+        headers.set("Origin", base());
+        assertThat(stomp.connectAsync(ws(), headers, connect, new StompSessionHandlerAdapter() {
+        }).get(5, TimeUnit.SECONDS).isConnected()).as("mesma origem").isTrue();
+    }
+
+    @Test
+    @DisplayName("só a própria fila: assinar /queue, /topic ou a fila de outra pessoa derruba a sessão STOMP (SG-01)")
+    void shouldRefuseSubscriptionsOutsideOwnQueue() throws Exception {
+        Browser ana = Browser.register(base(), "ana", null);
+        Browser carla = Browser.register(base(), "carla", ana.invite());
+        for (String destination : java.util.List.of("/user/" + ana.userId() + "/queue/events", "/queue/events",
+                "/topic/events")) {
+            StompSession session = connect(carla).session();
+            session.subscribe(destination, new StompFrameHandler() {
+                @Override
+                public Type getPayloadType(StompHeaders headers) {
+                    return byte[].class;
+                }
+
+                @Override
+                public void handleFrame(StompHeaders headers, @Nullable Object payload) {
+                }
+            });
+            long deadline = System.nanoTime() + Duration.ofSeconds(5).toNanos();
+            while (session.isConnected() && System.nanoTime() < deadline) {
+                Thread.sleep(50);
+            }
+            assertThat(session.isConnected()).as("SUBSCRIBE " + destination).isFalse();
+        }
+    }
+
+    @Test
+    @DisplayName("'digitando' em conversa alheia não chega a ninguém; o de quem participa chega (MS-03, SG-01)")
+    void shouldIgnoreActivityFromOutsiders() throws Exception {
+        Browser ana = Browser.register(base(), "ana", null);
+        Browser bruno = Browser.register(base(), "bruno", ana.invite());
+        Browser carla = Browser.register(base(), "carla", ana.invite());
+        bruno.post("/api/v1/contacts", Map.of("username", "ana"));
+        String conversation = ana.post("/api/v1/conversations/direct", Map.of("username", "bruno")).get("id")
+                .asString();
+        ana.post("/api/v1/conversations/" + conversation + "/messages",
+                Map.of("clientMessageId", UUID.randomUUID(), "body", "Oi"));
+        Connection brunoWs = connect(bruno);
+        Connection carlaWs = connect(carla);
+
+        carlaWs.session().send("/app/activity", Map.of("conversationId", conversation, "activity", "typing"));
+        long deadline = System.nanoTime() + Duration.ofSeconds(2).toNanos();
+        while (System.nanoTime() < deadline) {
+            JsonNode event = brunoWs.events().poll(100, TimeUnit.MILLISECONDS);
+            assertThat(event == null ? "" : event.get("type").asString()).as("evento vindo de quem é de fora")
+                    .isNotEqualTo("activity");
+        }
+        connect(ana).session().send("/app/activity", Map.of("conversationId", conversation, "activity", "typing"));
+        assertThat(brunoWs.next("activity").get("userId").asString()).isEqualTo(ana.userId());
+    }
+
+    @Test
     @DisplayName("logout derruba o WebSocket aberto com aquela sessão")
     void shouldCloseWebSocketAfterLogout() throws Exception {
         Browser ana = Browser.register(base(), "ana", null);

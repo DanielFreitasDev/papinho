@@ -7,6 +7,30 @@ import { Slider } from "@/components/ui/slider"
 const VIEW = 256
 const OUTPUT = 512
 
+type Offset = { x: number; y: number }
+
+/** Quanto a imagem pode andar de cada lado sem mostrar o fundo, no zoom dado. */
+function bounds(image: ImageBitmap, zoom: number) {
+  const scale = Math.max(OUTPUT / image.width, OUTPUT / image.height) * zoom
+  return {
+    width: image.width * scale,
+    height: image.height * scale,
+    maxX: Math.max(0, (image.width * scale - OUTPUT) / 2),
+    maxY: Math.max(0, (image.height * scale - OUTPUT) / 2),
+  }
+}
+
+function clamp(offset: Offset, image: ImageBitmap | null, zoom: number) {
+  if (!image) {
+    return offset
+  }
+  const { maxX, maxY } = bounds(image, zoom)
+  return {
+    x: Math.min(maxX, Math.max(-maxX, offset.x)),
+    y: Math.min(maxY, Math.max(-maxY, offset.y)),
+  }
+}
+
 /**
  * Recorte quadrado da foto de perfil (ID-02): arrastar para posicionar, controle de zoom e teclas de seta.
  * O resultado é desenhado num canvas e exportado em JPEG: o navegador aplica a orientação e nenhum
@@ -23,7 +47,7 @@ export function PhotoCropper({
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [image, setImage] = useState<ImageBitmap | null>(null)
   const [zoom, setZoom] = useState(1)
-  const [offset, setOffset] = useState({ x: 0, y: 0 })
+  const [offset, setOffset] = useState<Offset>({ x: 0, y: 0 })
   const drag = useRef<{ x: number; y: number } | null>(null)
 
   useEffect(() => {
@@ -51,14 +75,8 @@ export function PhotoCropper({
     if (!context) {
       return
     }
-    const base = Math.max(OUTPUT / image.width, OUTPUT / image.height)
-    const scale = base * zoom
-    const width = image.width * scale
-    const height = image.height * scale
-    const maxX = Math.max(0, (width - OUTPUT) / 2)
-    const maxY = Math.max(0, (height - OUTPUT) / 2)
-    const x = Math.min(maxX, Math.max(-maxX, offset.x))
-    const y = Math.min(maxY, Math.max(-maxY, offset.y))
+    const { width, height } = bounds(image, zoom)
+    const { x, y } = offset
     context.fillStyle = "#fff"
     context.fillRect(0, 0, OUTPUT, OUTPUT)
     context.drawImage(
@@ -71,8 +89,16 @@ export function PhotoCropper({
     canvas.toBlob((blob) => onChange(blob), "image/jpeg", 0.9)
   }, [image, zoom, offset, onChange])
 
+  // O limite fica no estado, não só no desenho: passar da borda não cria uma zona morta na volta.
   function move(dx: number, dy: number) {
-    setOffset((current) => ({ x: current.x + dx, y: current.y + dy }))
+    setOffset((current) =>
+      clamp({ x: current.x + dx, y: current.y + dy }, image, zoom)
+    )
+  }
+
+  function changeZoom(next: number) {
+    setZoom(next)
+    setOffset((current) => clamp(current, image, next))
   }
 
   function onPointerDown(event: PointerEvent<HTMLCanvasElement>) {
@@ -130,7 +156,7 @@ export function PhotoCropper({
           step={0.01}
           value={[zoom]}
           onValueChange={(value) =>
-            setZoom(Array.isArray(value) ? value[0] : value)
+            changeZoom(Array.isArray(value) ? value[0] : value)
           }
           className="py-4"
         />

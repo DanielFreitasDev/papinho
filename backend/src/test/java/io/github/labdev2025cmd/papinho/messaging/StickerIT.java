@@ -42,6 +42,53 @@ class StickerIT {
     }
 
     @Test
+    @DisplayName("figurinha animada continua animada depois do upload, sem o EXIF")
+    void shouldKeepAnimatedStickerAnimated() {
+        String pack = ana.json(ana.post("/api/v1/stickers/packs", Map.of("name", "Animadas"))).get("id").asString();
+        String webp = Uploads.upload(ana, animatedWebp(3), "pisca.webp", "image/webp");
+        assertThat(ana.post("/api/v1/stickers/packs/" + pack + "/stickers", Map.of("mediaId", webp, "emoji", "✨")))
+                .hasStatus(201);
+
+        byte[] served = bruno.get("/api/v1/media/" + webp + "/content").getResponse().getContentAsByteArray();
+        String chunks = new String(served, java.nio.charset.StandardCharsets.ISO_8859_1);
+        assertThat(chunks).startsWith("RIFF").contains("WEBPVP8X").contains("ANIM").doesNotContain("EXIF");
+        assertThat(chunks.split("ANMF", -1)).as("três quadros").hasSize(4);
+        assertThat(served[20] & 0x02).as("bit de animação do VP8X").isEqualTo(0x02);
+        assertThat(served[20] & 0x08).as("bit do EXIF limpo").isZero();
+    }
+
+    /** WebP animado (VP8X + ANIM + um ANMF por quadro, cada um com o VP8L de 1×1) e um bloco EXIF. */
+    private static byte[] animatedWebp(int frames) {
+        byte[] bitstream = java.util.Arrays.copyOfRange(WEBP, 12, WEBP.length);
+        java.io.ByteArrayOutputStream body = new java.io.ByteArrayOutputStream();
+        body.writeBytes("WEBP".getBytes(java.nio.charset.StandardCharsets.US_ASCII));
+        // VP8X: animação (0x02) e EXIF (0x08); tela de 1×1.
+        chunk(body, "VP8X", new byte[] {0x0A, 0, 0, 0, 0, 0, 0, 0, 0, 0});
+        chunk(body, "ANIM", new byte[] {0, 0, 0, 0, 0, 0});
+        for (int i = 0; i < frames; i++) {
+            java.io.ByteArrayOutputStream frame = new java.io.ByteArrayOutputStream();
+            // X, Y, largura-1 e altura-1 (3 bytes cada), duração de 100 ms (3 bytes) e flags.
+            frame.writeBytes(new byte[] {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 100, 0, 0, 0});
+            frame.writeBytes(bitstream);
+            chunk(body, "ANMF", frame.toByteArray());
+        }
+        chunk(body, "EXIF", "Exif\0\0GPS".getBytes(java.nio.charset.StandardCharsets.US_ASCII));
+        java.io.ByteArrayOutputStream riff = new java.io.ByteArrayOutputStream();
+        chunk(riff, "RIFF", body.toByteArray());
+        return riff.toByteArray();
+    }
+
+    private static void chunk(java.io.ByteArrayOutputStream out, String fourcc, byte[] data) {
+        out.writeBytes(fourcc.getBytes(java.nio.charset.StandardCharsets.US_ASCII));
+        int size = data.length;
+        out.writeBytes(new byte[] {(byte) size, (byte) (size >> 8), (byte) (size >> 16), (byte) (size >> 24)});
+        out.writeBytes(data);
+        if ((size & 1) == 1) {
+            out.write(0);
+        }
+    }
+
+    @Test
     @DisplayName("pacote de quem envia vale para todos; só WebP; favoritas por pessoa; figurinha vira mensagem")
     void shouldShareStickerPacks() {
         String pack = ana.json(ana.post("/api/v1/stickers/packs", Map.of("name", "Gatos"))).get("id").asString();

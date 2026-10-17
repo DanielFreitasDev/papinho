@@ -14,7 +14,7 @@ sem virar um emaranhado, mas um sistema distribuído seria desproporcional para 
 
 Um único deployable organizado em módulos do **Spring Modulith**, um pacote de primeiro nível por módulo:
 
-`identity`, `profile`, `contact`, `conversation`, `message`, `media`, `presence`, `notification`,
+`identity`, `profile`, `contact`, `messaging` (conversas e mensagens), `media`, `presence`, `notification`,
 `transcription`, `linkpreview`, `privacy`, `moderation`, `backup`, `admin`, `pki`, mais `shared`
 (módulo aberto e pequeno: segurança base, erros, SPA).
 
@@ -25,6 +25,12 @@ Um único deployable organizado em módulos do **Spring Modulith**, um pacote de
 - **`ModularityTests`** (`ApplicationModules.verify()`) e **`ArchitectureTest`** (ArchUnit) no build.
 - Migrations Flyway em `db/migration/<módulo>/`.
 - Módulos são criados quando a primeira funcionalidade deles é implementada.
+- **`conversation` e `message` são um módulo só, `messaging`** (registrado na auditoria de 2026-10-17, achado A91).
+  Conversa e mensagem dividem o mesmo contador por conversa (`seq` e `last_seq`, a trava da linha que ordena
+  envio, edição, leitura e sincronização) e as mesmas transações: enviar muda a participação (aceitar a
+  solicitação), a lista (última mensagem, apagadas, arquivadas) e as confirmações. Separados, um dependeria do
+  outro nos dois sentidos, o que o Modulith recusa, ou o envio precisaria de eventos para o que hoje é uma
+  transação. Grupos, listas de transmissão, enquetes, figurinhas e busca ficam no mesmo módulo pelo mesmo motivo.
 
 ## Consequências
 

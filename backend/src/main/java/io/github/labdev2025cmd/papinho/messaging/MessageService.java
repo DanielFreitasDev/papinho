@@ -143,6 +143,7 @@ public class MessageService {
             @Nullable UUID replyToId, @Nullable UUID attachmentId, SendOptions options) {
         boolean viewOnce = options.viewOnce();
         ConversationMember member = conversations.requireMember(me, conversationId);
+        lockClientMessageId(me, clientMessageId);
         sequences.lock(conversationId);
         var existing = messages.findBySenderIdAndClientMessageId(me, clientMessageId);
         if (existing.isPresent()) {
@@ -624,6 +625,7 @@ public class MessageService {
     public SendResult createPoll(UUID me, UUID conversationId, UUID clientMessageId, String question,
             List<String> options, boolean multiple, boolean anonymous, @Nullable Instant closesAt) {
         conversations.requireMember(me, conversationId);
+        lockClientMessageId(me, clientMessageId);
         sequences.lock(conversationId);
         var existing = messages.findBySenderIdAndClientMessageId(me, clientMessageId);
         if (existing.isPresent()) {
@@ -795,6 +797,14 @@ public class MessageService {
                 .anyMatch(m -> m.userId().equals(target.senderId()));
         return inDirect && isVisible(me, target.conversationId())
                 && conversations.requireConversation(me, conversationId).kind() == ConversationKind.DIRECT;
+    }
+
+    /**
+     * A trava da conversa não pega o mesmo {@code clientMessageId} indo para outra conversa ao mesmo tempo (RT-02):
+     * sem a trava da chave, os dois envios passariam pela busca e um cairia na constraint única (500).
+     */
+    private void lockClientMessageId(UUID me, UUID clientMessageId) {
+        sequences.lockKey("client-message:" + me + ":" + clientMessageId);
     }
 
     /** Votar e reagir também é interagir: com bloqueio na conversa individual, nenhum dos dois (CT-03). */

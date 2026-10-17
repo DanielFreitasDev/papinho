@@ -51,6 +51,35 @@ class MessagingIT {
     }
 
     @Test
+    @DisplayName("mesmo clientMessageId em duas conversas ao mesmo tempo: uma grava, a outra 409 (nunca 500)")
+    void shouldRefuseConcurrentClientMessageIdAcrossConversations() throws Exception {
+        String withBruno = open(ana, "bruno");
+        String withCarla = open(ana, "carla", true);
+        java.util.concurrent.ExecutorService pool = java.util.concurrent.Executors.newFixedThreadPool(2);
+        try {
+            for (int round = 0; round < 15; round++) {
+                UUID id = UUID.randomUUID();
+                java.util.concurrent.CyclicBarrier start = new java.util.concurrent.CyclicBarrier(2);
+                List<java.util.concurrent.Future<Integer>> results = new java.util.ArrayList<>();
+                for (String conversation : List.of(withBruno, withCarla)) {
+                    results.add(pool.submit(() -> {
+                        start.await();
+                        return ana.post(messages(conversation), Map.of("clientMessageId", id, "body", "oi"))
+                                .getResponse().getStatus();
+                    }));
+                }
+                List<Integer> statuses = new java.util.ArrayList<>();
+                for (var result : results) {
+                    statuses.add(result.get(30, java.util.concurrent.TimeUnit.SECONDS));
+                }
+                assertThat(statuses).as("rodada " + round).containsExactlyInAnyOrder(201, 409);
+            }
+        } finally {
+            pool.shutdownNow();
+        }
+    }
+
+    @Test
     @DisplayName("seq cresce por conversa, reenvio com o mesmo clientMessageId não duplica e afterSeq traz só o que faltou")
     void shouldSyncBySeqAndDeduplicate() {
         String conversation = open(ana, "bruno");

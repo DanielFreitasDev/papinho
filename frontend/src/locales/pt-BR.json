@@ -612,7 +612,7 @@
     "model": "Modelo",
     "hotwords": "Palavras-chave (hotwords)",
     "apiKey": "Chave da API",
-    "apiKeyHelp": "Fica cifrada no servidor e nunca é mostrada de novo. Deixe em branco para manter a atual.",
+    "apiKeyHelp": "Fica cifrada no servidor e nunca é mostrada de novo. Deixe em branco para manter a atual; trocar o endereço para outro servidor apaga a chave.",
     "maxMegabytes": "Tamanho máximo do áudio (MB)",
     "enabled": "Ativo",
     "hasKey": "chave configurada",

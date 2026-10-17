@@ -167,6 +167,33 @@ class TranscriptionIT {
                 .hasStatus(409);
     }
 
+    @Test
+    @DisplayName("trocar o endereço do provedor sem informar a chave apaga a chave: ela não vai ao destino novo")
+    void shouldDropKeyWhenProviderOriginChanges() {
+        String provider = configureProvider();
+        Map<String, Object> update = new HashMap<>();
+        update.put("name", "Groq");
+        update.put("model", "whisper-large-v3-turbo");
+        update.put("maxBytes", 25 * 1024 * 1024);
+        update.put("enabled", true);
+        update.put("baseUrl", "http://127.0.0.1:" + PROVIDER.getAddress().getPort() + "/openai/");
+        JsonNode samePlace = admin.json(admin.put("/api/v1/admin/transcription/providers/" + provider, update));
+        assertThat(samePlace.get("hasKey").asBoolean()).as("mesma origem, só o caminho").isTrue();
+
+        update.put("baseUrl", "http://localhost:" + PROVIDER.getAddress().getPort() + "/openai");
+        JsonNode moved = admin.json(admin.put("/api/v1/admin/transcription/providers/" + provider, update));
+        assertThat(moved.get("hasKey").asBoolean()).as("outro host").isFalse();
+        assertThat(jdbc.queryForObject("select api_key_encrypted from transcription_providers where id = ?",
+                String.class, UUID.fromString(provider))).isNull();
+        assertThat(bruno.post("/api/v1/media/" + audio + "/transcript", null)).hasStatusOk();
+        assertThat(LAST.get().get("authorization")).as("destino novo sem a chave antiga").isEqualTo("null");
+
+        update.put("apiKey", SECRET);
+        update.put("baseUrl", "http://127.0.0.1:" + PROVIDER.getAddress().getPort() + "/openai");
+        assertThat(admin.json(admin.put("/api/v1/admin/transcription/providers/" + provider, update))
+                .get("hasKey").asBoolean()).as("chave informada junto com o endereço").isTrue();
+    }
+
     private String configureProvider() {
         String id = admin.json(admin.post("/api/v1/admin/transcription/providers", Map.of("kind", "GROQ")))
                 .get("id").asString();

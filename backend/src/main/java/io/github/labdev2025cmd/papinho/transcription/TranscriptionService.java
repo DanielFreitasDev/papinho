@@ -169,12 +169,24 @@ public class TranscriptionService {
         if (!scheme.equals("http") && !scheme.equals("https") || uri.getHost() == null) {
             throw new InvalidProviderException();
         }
+        boolean moved = !origin(URI.create(provider.baseUrl().strip())).equals(origin(uri));
         provider.update(name.strip(), baseUrl.strip(), model.strip(),
                 hotwords == null || hotwords.isBlank() ? null : hotwords.strip(), maxBytes, enabled);
         if (apiKey != null) {
             provider.apiKeyEncrypted(apiKey.isBlank() ? null : cipher.encrypt(apiKey.strip()));
+        } else if (moved) {
+            // A chave foi dada para o endereço antigo: outro destino só a recebe se o admin a informar de novo.
+            provider.apiKeyEncrypted(null);
         }
         return toAdmin(provider);
+    }
+
+    /** Esquema, host e porta: quem recebe a chave. */
+    private static String origin(URI uri) {
+        String scheme = uri.getScheme() == null ? "" : uri.getScheme().toLowerCase(Locale.ROOT);
+        String host = uri.getHost() == null ? "" : uri.getHost().toLowerCase(Locale.ROOT);
+        int port = uri.getPort() != -1 ? uri.getPort() : "https".equals(scheme) ? 443 : 80;
+        return scheme + "://" + host + ":" + port;
     }
 
     @Transactional

@@ -612,7 +612,7 @@
     "model": "Model",
     "hotwords": "Hotwords",
     "apiKey": "API key",
-    "apiKeyHelp": "Encrypted on the server and never shown again. Leave blank to keep the current one.",
+    "apiKeyHelp": "Encrypted on the server and never shown again. Leave blank to keep the current one; moving the address to another server clears the key.",
     "maxMegabytes": "Maximum audio size (MB)",
     "enabled": "Enabled",
     "hasKey": "key set",

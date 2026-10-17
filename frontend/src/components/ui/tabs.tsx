@@ -1,3 +1,5 @@
+// custom: o painel (TabsContent) entra na ordem do Tab e mostra o anel de foco (AR-03); o registry deixa só
+// outline-none, e o foco ficava invisível.
 import { Tabs as TabsPrimitive } from "@base-ui/react/tabs"
 import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "cn"
@@ -70,7 +72,10 @@ function TabsContent({ className, ...props }: TabsPrimitive.Panel.Props) {
   return (
     <TabsPrimitive.Panel
       data-slot="tabs-content"
-      className={cn("flex-1 text-sm outline-none", className)}
+      className={cn(
+        "flex-1 rounded-md text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:ring-inset",
+        className
+      )}
       {...props}
     />
   )

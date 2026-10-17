@@ -125,6 +125,58 @@ test("aba Contatos sem violações críticas ou sérias", async ({
   await hana.context.close()
 })
 
+/**
+ * Elemento com o foco e se o indicador de foco aparece (outline ou ring nele ou no InputGroup que o envolve, que
+ * desenha o anel do campo).
+ */
+function focusState(page: Page) {
+  return page.evaluate(() => {
+    const element = document.activeElement as HTMLElement | null
+    if (!element || element === document.body) {
+      return { name: "body", visible: true }
+    }
+    const shows = (candidate: Element | null) => {
+      if (!candidate) {
+        return false
+      }
+      const style = getComputedStyle(candidate)
+      return (
+        (style.outlineStyle !== "none" && style.outlineWidth !== "0px") ||
+        style.boxShadow !== "none"
+      )
+    }
+    return {
+      name: `${element.tagName.toLowerCase()} "${(element.getAttribute("aria-label") ?? element.textContent ?? "").trim().slice(0, 40)}"`,
+      visible:
+        shows(element) || shows(element.closest('[data-slot="input-group"]')),
+    }
+  })
+}
+
+/** Tab (ou Shift+Tab) até o alvo, sem focus() programático, conferindo o foco visível em cada parada. */
+async function tabTo(
+  page: Page,
+  target: ReturnType<Page["getByRole"]>,
+  key: "Tab" | "Shift+Tab",
+  max = 80
+) {
+  const stops: string[] = []
+  for (let step = 0; step < max; step++) {
+    if (
+      await target.evaluate((element) => element === document.activeElement)
+    ) {
+      return
+    }
+    await page.keyboard.press(key)
+    const focus = await focusState(page)
+    stops.push(focus.name)
+    expect(focus.visible, `foco visível em ${focus.name}`).toBe(true)
+  }
+  throw new Error(
+    `o alvo não está na ordem do ${key}; paradas: ${stops.join(" → ")}`
+  )
+}
+
 /** Fase 7: entrar, abrir uma conversa, mandar mensagem e usar o menu só com o teclado (AR-03). */
 test("fluxo completo só com o teclado", async ({ page }) => {
   test.skip(
@@ -166,7 +218,7 @@ test("fluxo completo só com o teclado", async ({ page }) => {
     page.getByRole("heading", { name: "Mensagens salvas" })
   ).toBeVisible()
   const field = page.getByRole("textbox", { name: "Mensagem" })
-  await field.focus()
+  await tabTo(page, field, "Tab")
   await page.keyboard.type(`Só com o teclado ${RUN}`)
   await page.keyboard.press("Enter")
   await expect(
@@ -175,11 +227,11 @@ test("fluxo completo só com o teclado", async ({ page }) => {
       .filter({ hasText: `Só com o teclado ${RUN}` })
   ).toBeVisible()
 
-  // Menu de uma conversa na lista: Tab até o botão, Enter abre, setas navegam, Esc fecha e devolve o foco.
+  // Menu de uma conversa na lista: Shift+Tab até o botão, Enter abre, setas navegam, Esc fecha e devolve o foco.
   const actions = page.getByRole("button", {
     name: "Ações da conversa: Mensagens salvas",
   })
-  await actions.focus()
+  await tabTo(page, actions, "Shift+Tab")
   await page.keyboard.press("Enter")
   const menu = page.getByRole("menu")
   await expect(menu).toBeVisible()
@@ -188,21 +240,6 @@ test("fluxo completo só com o teclado", async ({ page }) => {
   await page.keyboard.press("Escape")
   await expect(menu).toBeHidden()
   await expect(actions).toBeFocused()
-
-  // Todo elemento focável tem indicador de foco visível (outline ou ring).
-  await page.keyboard.press("Tab")
-  const visibleFocus = await page.evaluate(() => {
-    const element = document.activeElement as HTMLElement | null
-    if (!element) {
-      return false
-    }
-    const style = getComputedStyle(element)
-    return (
-      (style.outlineStyle !== "none" && style.outlineWidth !== "0px") ||
-      style.boxShadow !== "none"
-    )
-  })
-  expect(visibleFocus).toBe(true)
 })
 
 /** Fase 7: papel de parede, tamanho da fonte e densidade guardados no aparelho (UI-02), com axe. */

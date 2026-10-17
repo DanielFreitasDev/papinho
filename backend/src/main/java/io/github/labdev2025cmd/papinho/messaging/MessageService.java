@@ -34,6 +34,7 @@ import io.github.labdev2025cmd.papinho.profile.ProfileService;
 import io.github.labdev2025cmd.papinho.profile.ProfileView;
 import io.github.labdev2025cmd.papinho.shared.id.Uuids;
 import io.github.labdev2025cmd.papinho.shared.security.RateLimiter;
+import io.github.labdev2025cmd.papinho.transcription.TranscriptionService;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
@@ -84,6 +85,7 @@ public class MessageService {
     private final java.security.SecureRandom random = new java.security.SecureRandom();
     private final InstanceSettingsService settings;
     private final LinkPreviewService linkPreviews;
+    private final TranscriptionService transcriptions;
     private final JsonMapper json;
     private final ApplicationEventPublisher events;
     private final Clock clock;
@@ -94,7 +96,8 @@ public class MessageService {
             MessagingPreferences preferences, Polls polls, ViewOnceOpens viewOnceOpens, Broadcasts broadcasts,
             StickerService stickers, RateLimiter rateLimiter,
             io.github.labdev2025cmd.papinho.contact.ContactQueries contactsOf,
-            InstanceSettingsService settings, LinkPreviewService linkPreviews, JsonMapper json,
+            InstanceSettingsService settings, LinkPreviewService linkPreviews, TranscriptionService transcriptions,
+            JsonMapper json,
             ApplicationEventPublisher events, Clock clock) {
         this.messages = messages;
         this.reactions = reactions;
@@ -115,6 +118,7 @@ public class MessageService {
         this.contactsOf = contactsOf;
         this.settings = settings;
         this.linkPreviews = linkPreviews;
+        this.transcriptions = transcriptions;
         this.json = json;
         this.events = events;
         this.clock = clock;
@@ -183,6 +187,8 @@ public class MessageService {
                 stickerId);
         if (viewOnce) {
             saved.markViewOnce();
+            // O dono pode ter transcrito o áudio antes de enviar (AU-03): o texto sai junto com a mensagem nova.
+            transcriptions.forget(attachment.id());
         }
         if (options.silent()) {
             saved.markSilent();

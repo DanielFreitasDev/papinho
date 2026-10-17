@@ -137,6 +137,15 @@ public class TranscriptionService {
         return store(mediaId, text, BROWSER);
     }
 
+    /**
+     * Apaga a transcrição guardada de um áudio (o áudio virou visualização única, MS-08): o texto não pode
+     * sobrar no servidor depois de o conteúdo ser visto uma vez.
+     */
+    @Transactional
+    public void forget(UUID mediaId) {
+        jdbc.update("delete from transcripts where media_id = ?", mediaId);
+    }
+
     // ---- admin ----
 
     @Transactional(readOnly = true)

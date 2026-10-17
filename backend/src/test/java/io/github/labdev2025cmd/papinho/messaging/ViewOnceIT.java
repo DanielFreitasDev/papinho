@@ -114,6 +114,14 @@ class ViewOnceIT {
                 .as("áudio de visualização única nunca é transcrito (AU-03)").hasStatus(404);
         assertThat(audioMessage).isNotBlank();
 
+        // O dono transcreve antes de enviar: virando visualização única, o texto não pode ficar no servidor.
+        String spoken = Uploads.upload(ana, Uploads.ogg(4096), "falado.ogg", "audio/ogg");
+        assertThat(ana.put("/api/v1/media/" + spoken + "/transcript", Map.of("text", "segredo falado uma vez")))
+                .hasStatusOk();
+        send(spoken, true);
+        assertThat(jdbc.queryForObject("select count(*) from transcripts where media_id = ?", Long.class,
+                UUID.fromString(spoken))).as("transcrição de áudio que virou visualização única").isZero();
+
         String other = Uploads.upload(ana, Images.png(40, 40), "outra.png", "image/png");
         String id = send(other, true).get("id").asString();
         jdbc.update("update messages set created_at = now() - interval '15 days' where id = ?", UUID.fromString(id));

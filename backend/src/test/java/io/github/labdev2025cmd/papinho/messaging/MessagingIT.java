@@ -29,6 +29,9 @@ class MessagingIT {
     @Autowired
     private MessageService messageService;
 
+    @Autowired
+    private org.springframework.jdbc.core.JdbcTemplate jdbc;
+
     private ApiClient ana;
     private ApiClient bruno;
     private String anaId;
@@ -90,6 +93,29 @@ class MessagingIT {
         }
         JsonNode all = bruno.json(bruno.get(messages(conversation) + "?afterSeq=0&limit=100"));
         assertThat(seqs(all.get("messages"))).hasSize(senders).doesNotHaveDuplicates();
+    }
+
+    @Test
+    @DisplayName("apagar para todos tira do cache de prévias as URLs que estavam no texto (MS-06)")
+    void shouldForgetLinkPreviewsOfDeletedMessage() {
+        String conversation = open(ana, "bruno");
+        String url = "https://link-secreto-da-ana.invalid/caminho-privado-123";
+        String id = ana.json(ana.post(messages(conversation),
+                Map.of("clientMessageId", UUID.randomUUID(), "body", "olha " + url + " depois"))).get("id").asString();
+        String other = "https://exemplo.invalid/publico";
+        send(bruno, conversation, "e este " + other);
+        assertThat(bruno.get("/api/v1/link-previews?url=" + url)).hasStatusOk();
+        assertThat(bruno.get("/api/v1/link-previews?url=" + other)).hasStatusOk();
+        assertThat(previewsWith("caminho-privado-123")).isEqualTo(1);
+
+        assertThat(ana.delete("/api/v1/messages/" + id, null)).hasStatusOk();
+        assertThat(previewsWith("caminho-privado-123")).as("URL da mensagem apagada no banco").isZero();
+        assertThat(previewsWith("exemplo.invalid/publico")).as("prévia de outra mensagem").isEqualTo(1);
+    }
+
+    private int previewsWith(String fragment) {
+        return jdbc.queryForObject("select count(*) from link_previews where url like ?", Integer.class,
+                "%" + fragment + "%");
     }
 
     @Test

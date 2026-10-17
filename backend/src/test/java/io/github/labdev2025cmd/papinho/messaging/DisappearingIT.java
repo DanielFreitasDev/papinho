@@ -101,14 +101,17 @@ class DisappearingIT {
         String conversation = open(ana, "bruno");
         ana.put(path(conversation) + "/disappearing", Map.of("seconds", 86_400));
         String photo = Uploads.upload(ana, Images.png(32, 32), "foto.png", "image/png");
-        Uploads.send(ana, conversation, photo, "some");
+        Uploads.send(ana, conversation, photo, "some https://temporaria.invalid/segredo");
         String gone = ana.json(ana.get(path(conversation) + "/messages?limit=1")).get("messages").get(0)
                 .get("id").asString();
         String reply = bruno.json(bruno.post(path(conversation) + "/messages",
                 Map.of("clientMessageId", UUID.randomUUID(), "body", "vi", "replyToId", gone))).get("id").asString();
 
+        assertThat(bruno.get("/api/v1/link-previews?url=https://temporaria.invalid/segredo")).hasStatusOk();
         jdbc.update("update messages set expires_at = now() - interval '1 minute' where id = ?", UUID.fromString(gone));
         job.purge();
+        assertThat(jdbc.queryForObject("select count(*) from link_previews where url like '%temporaria.invalid%'",
+                Integer.class)).as("prévia da URL da vencida").isZero();
 
         JsonNode history = bruno.json(bruno.get(path(conversation) + "/messages")).get("messages");
         assertThat(history.findValuesAsString("id")).doesNotContain(gone).contains(reply);

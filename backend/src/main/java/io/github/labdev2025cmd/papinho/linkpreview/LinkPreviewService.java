@@ -109,6 +109,18 @@ public class LinkPreviewService {
         return previews.save(preview).toView();
     }
 
+    /**
+     * Esquece as prévias dos links de um texto que saiu do servidor (apagar para todos, temporária vencida, MS-06):
+     * o endereço, o título e a imagem da página não podem ficar para trás. Se outra mensagem tiver o mesmo link, a
+     * prévia é buscada de novo quando alguém a pedir.
+     */
+    @Transactional
+    public void forgetLinksIn(String text) {
+        if (text.contains("://")) {
+            previews.deleteMentionedIn(text);
+        }
+    }
+
     @Transactional(readOnly = true)
     public byte[] image(String hash) {
         return previews.findById(hash).map(LinkPreview::image).orElseThrow(NotFoundException::new);

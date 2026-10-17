@@ -25,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 import io.github.labdev2025cmd.papinho.admin.InstanceSettingsService;
 import io.github.labdev2025cmd.papinho.identity.UserDirectory;
 import io.github.labdev2025cmd.papinho.identity.UserDirectory.UserSummary;
+import io.github.labdev2025cmd.papinho.linkpreview.LinkPreviewService;
 import io.github.labdev2025cmd.papinho.media.MediaService;
 import io.github.labdev2025cmd.papinho.media.MediaView;
 import io.github.labdev2025cmd.papinho.messaging.MessagingExceptions.InvalidMessageException;
@@ -82,6 +83,7 @@ public class MessageService {
     private final io.github.labdev2025cmd.papinho.contact.ContactQueries contactsOf;
     private final java.security.SecureRandom random = new java.security.SecureRandom();
     private final InstanceSettingsService settings;
+    private final LinkPreviewService linkPreviews;
     private final JsonMapper json;
     private final ApplicationEventPublisher events;
     private final Clock clock;
@@ -92,7 +94,8 @@ public class MessageService {
             MessagingPreferences preferences, Polls polls, ViewOnceOpens viewOnceOpens, Broadcasts broadcasts,
             StickerService stickers, RateLimiter rateLimiter,
             io.github.labdev2025cmd.papinho.contact.ContactQueries contactsOf,
-            InstanceSettingsService settings, JsonMapper json, ApplicationEventPublisher events, Clock clock) {
+            InstanceSettingsService settings, LinkPreviewService linkPreviews, JsonMapper json,
+            ApplicationEventPublisher events, Clock clock) {
         this.messages = messages;
         this.reactions = reactions;
         this.stars = stars;
@@ -111,6 +114,7 @@ public class MessageService {
         this.rateLimiter = rateLimiter;
         this.contactsOf = contactsOf;
         this.settings = settings;
+        this.linkPreviews = linkPreviews;
         this.json = json;
         this.events = events;
         this.clock = clock;
@@ -566,6 +570,7 @@ public class MessageService {
         }
         requireAuthorWithin(me, message, settings.current().messageDeleteWindow());
         sequences.lock(message.conversationId());
+        String body = message.body();
         Message.Attachment removed = message.deleteForEveryone(clock.instant(),
                 sequences.nextChange(message.conversationId()));
         reactions.deleteByMessage(messageId);
@@ -575,6 +580,7 @@ public class MessageService {
         if (removed != null && !messages.existsByAttachmentId(removed.id())) {
             media.delete(removed.id());
         }
+        linkPreviews.forgetLinksIn(body);
         notifyChanged(message.conversationId());
         return toViews(me, List.of(message)).getFirst();
     }
@@ -731,6 +737,7 @@ public class MessageService {
         }
         messages.deleteAll(expired);
         messages.flush();
+        expired.forEach(message -> linkPreviews.forgetLinksIn(message.body()));
         files.stream().filter(id -> !messages.existsByAttachmentId(id)).forEach(media::delete);
         touched.forEach(id -> events.publishEvent(new MessagingEvents.ConversationUpdated(id,
                 conversations.audience(id))));

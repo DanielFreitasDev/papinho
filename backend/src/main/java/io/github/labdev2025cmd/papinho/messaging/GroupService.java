@@ -288,6 +288,11 @@ public class GroupService {
         }
     }
 
+    private boolean blockedByAdmin(java.util.Collection<ConversationMember> current, UUID me) {
+        return current.stream().filter(ConversationMember::admin)
+                .anyMatch(admin -> contacts.isBlockedEitherWay(admin.userId(), me));
+    }
+
     /** Link de convite atual (criado na primeira vez); só admins (GR-02). */
     @Transactional
     public String inviteCode(UUID me, UUID groupId) {
@@ -317,6 +322,10 @@ public class GroupService {
         rateLimiter.consume(RateLimiter.Policy.GROUP_INVITE_BY_USER, me.toString());
         GroupDetails group = groups.findByInviteCode(code).orElseThrow(InviteNotFoundException::new);
         List<ConversationMember> all = members.findByConversation(group.conversationId());
+        // Mesma resposta do entrar: a prévia não mostra nome, descrição e tamanho a quem não pode entrar.
+        if (blockedByAdmin(all, me)) {
+            throw new InviteNotFoundException();
+        }
         long active = all.stream().filter(m -> m.state() == MemberState.ACTIVE).count();
         MemberState mine = all.stream().filter(m -> m.userId().equals(me)).map(ConversationMember::state)
                 .findFirst().orElse(null);
@@ -340,9 +349,7 @@ public class GroupService {
         if (existing != null && existing.state() == MemberState.ACTIVE) {
             return new JoinResult(groupId, false);
         }
-        boolean blocked = current.values().stream().filter(ConversationMember::admin)
-                .anyMatch(admin -> contacts.isBlockedEitherWay(admin.userId(), me));
-        if (blocked) {
+        if (blockedByAdmin(current.values(), me)) {
             throw new InviteNotFoundException();
         }
         if (current.values().stream().filter(m -> m.state() == MemberState.ACTIVE).count() + 1 > MAX_MEMBERS) {

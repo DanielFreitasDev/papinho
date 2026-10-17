@@ -163,6 +163,23 @@ class GroupIT {
     }
 
     @Test
+    @DisplayName("quem bloqueou um admin (ou foi bloqueado) vê o link como inválido na prévia e no entrar (GR-02)")
+    void shouldHideInviteFromBlocked() {
+        String id = ana.json(ana.post("/api/v1/groups", Map.of("name", "Fechado", "description", "Só amigos",
+                "memberIds", List.of(brunoId)))).get("id").asString();
+        String code = ana.json(ana.get("/api/v1/groups/" + id + "/invite")).get("code").asString();
+        assertThat(carla.get("/api/v1/groups/invites/" + code)).hasStatusOk();
+        assertThat(carla.put("/api/v1/blocks/" + anaId, null)).hasStatus(204);
+
+        var preview = carla.get("/api/v1/groups/invites/" + code);
+        assertThat(preview).as("prévia").hasStatus(404);
+        assertThat(carla.json(preview).get("type").asString()).isEqualTo("urn:papinho:problem:group-invite-not-found");
+        assertThat(ApiClient.text(preview)).doesNotContain("Fechado").doesNotContain("Só amigos");
+        assertThat(carla.post("/api/v1/groups/invites/" + code + "/join", null)).as("entrar").hasStatus(404);
+        assertThat(carla.get(conversation(id))).hasStatus(404);
+    }
+
+    @Test
     @DisplayName("aprovar pedido de entrada respeita o limite de membros do grupo (GR-02)")
     void shouldRefuseApprovalWhenGroupIsFull() {
         String id = ana.json(ana.post("/api/v1/groups", Map.of("name", "Lotado", "memberIds", List.of(brunoId))))

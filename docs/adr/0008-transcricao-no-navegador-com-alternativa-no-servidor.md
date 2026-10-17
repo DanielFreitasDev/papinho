@@ -22,6 +22,12 @@ proposta do produto, e a máquina do dono pode não ter GPU.
   **User-Agent `Papinho/<versão>`** (nunca começando com `OpenAI/`, bloqueado pela Cloudflare).
 - O resultado fica em cache no servidor para os demais membros; áudio de visualização única nunca tem
   transcrição persistida. O admin define o padrão; o usuário escolhe nas configurações.
+- **Build dev do `onnxruntime-web` como dependência direta** (auditoria de 2026-10-17, achado A92): o
+  Transformers.js 4.3.1 fixa o `onnxruntime-web` num build dev (`1.31.0-dev.20260914-8d85527a0`), e o worker
+  importa os arquivos do runtime (`.mjs` e `.wasm` dos builds `asyncify` e WASM) direto do pacote, porque só o
+  `asyncify` tem WebGPU. A API JavaScript e o `.wasm` precisam ser da mesma versão, então a dependência direta é a
+  mesma que o Transformers.js pede; a estável (1.30) não tem as mudanças que ele usa. O `onnxruntime-web.test.ts`
+  falha se as duas versões se separarem; a troca para uma estável acompanha a atualização do Transformers.js.
 
 ## Consequências
 

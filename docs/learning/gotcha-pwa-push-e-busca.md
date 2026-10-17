@@ -8,6 +8,10 @@ updated: 2026-10-16
 ---
 - O stemmer `portuguese` do PostgreSQL não junta "mensagens" e "mensagem" (`mensagens` fica inteiro); "conversas"
   e "conversa" viram `convers`. Teste radicais com exemplos conferidos por `to_tsvector`.
+  Nem "ação" e "ações" (`aca`/`aco`), com ou sem acento, nem "homem" e "homens": o Snowball português não junta esses
+  plurais. A correção (A65, `V202610220200`) troca `-oes/-aes/-aos` por `-ao` e `-ns` por `-m` sobre o texto já sem
+  acentos (`papinho_search_text`), no índice e na consulta. Regex com letra acentuada dentro de função SQL chamada
+  pelo teste não pegou; sobre o texto sem acento, a regra fica só em ASCII.
 - `KeyFactory.generatePublic` do JDK **não** confere se o ponto EC está na curva: a chave `p256dh` do navegador
   precisa da conta y² = x³ + ax + b (mod p) explícita, senão abre ataque de curva inválida no ECDH.
 - `Signature.getInstance("SHA256withECDSAinP1363Format")` dá a assinatura crua r‖s que o JWS/VAPID exige, sem

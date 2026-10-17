@@ -13,6 +13,9 @@ updated: 2026-10-16
   já concluído (404 vira `pageerror` no e2e). Não destrua a instância no sucesso.
 - **MockMvc:** `get("/x?url=" + URLEncoder.encode(...))` codifica de novo (`%3A` vira `%253A`); passe a URL crua
   no template.
+  **Voltou (2026-10-17, achado A65):** o helper de busca do `SearchIT` codificava a consulta à mão, e nenhuma consulta
+  acentuada chegava certa ao servidor (`reuni%C3%A3o` virava texto); os testes passavam porque só usavam ASCII. Use
+  `MockMvcRequestBuilders.get(path).queryParam("q", valor)` em vez de montar a query string.
 - **TRUNCATE ... CASCADE** apaga também tabelas que referenciam a truncada — inclusive linhas únicas de
   configuração (`transcription_settings`). No `DatabaseCleaner`, use `DELETE` para essas tabelas.
 - **Vite + onnxruntime-web:** importar `onnxruntime-web/dist/...wasm?url` falha (exports); use os subcaminhos

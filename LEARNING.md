@@ -25,9 +25,9 @@ Leia as entradas relacionadas à tarefa. Os detalhes ficam em `docs/learning/`.
 - [E2E: rate limit em memória e corrida do primeiro admin](docs/learning/gotcha-e2e-rate-limit-primeiro-admin.md) — instância nova por rodada; projeto de setup; `PAPINHO_RATE_LIMIT_MULTIPLIER` no e2e.
 - [STOMP com Spring Security 7](docs/learning/gotcha-stomp-spring-security-csrf-e-heartbeat.md) — CSRF cru no CONNECT, agendador do heartbeat, WebSocket fecha com a sessão HTTP.
 - [E2E do chat](docs/learning/gotcha-e2e-chat-seletores-e-presenca.md) — hasText é substring, opacidade é visível, presença antes de aceitar.
-- [Mídia: ImageIO, Uppy, MockMvc, TRUNCATE, onnxruntime](docs/learning/gotcha-midia-imagem-e-testes.md) — EXIF por segmentos, sem destroy no sucesso, URL crua no MockMvc, TRUNCATE com deadlock, WebGPU só no build asyncify.
+- [Mídia: ImageIO, Uppy, MockMvc, TRUNCATE, onnxruntime](docs/learning/gotcha-midia-imagem-e-testes.md) — EXIF por segmentos, sem destroy no sucesso, URL crua no MockMvc (voltou na busca), TRUNCATE com deadlock, WebGPU só no build asyncify.
 - [E2E: Chromium preinstalado, toasts e contraste](docs/learning/gotcha-e2e-chromium-preinstalado-e-a11y.md) — nome de download, headless shell sem notificações, toast é dialog, muted 0.5, axe em animação, tag por spec, Spinner/Item do shadcn, erros forçados só 4xx.
-- [PWA, Web Push, busca e e2e offline](docs/learning/gotcha-pwa-push-e-busca.md) — stemmer pt, ponto EC sem checagem no JDK, MIME do manifesto, tsc -b com e2e, testar a troca de service worker.
+- [PWA, Web Push, busca e e2e offline](docs/learning/gotcha-pwa-push-e-busca.md) — stemmer pt (plurais -ões/-ns), ponto EC sem checagem no JDK, MIME do manifesto, tsc -b com e2e, testar a troca de service worker.
 - [E-mail de recuperação: executor, ArchUnit e SMTP nos testes](docs/learning/gotcha-email-recuperacao-executor-e-testes.md) — sem applicationTaskExecutor com WebSocket, nada de token no outbox, GreenMail/Mailpit.
 - [E2E em Firefox e WebKit](docs/learning/gotcha-e2e-firefox-e-webkit.md) — cookie Secure em localhost, colorScheme, CSP das capturas, proxy do desktop, pendências do WebKit.
 - [IP do cliente atrás de proxy](docs/learning/gotcha-ip-do-cliente-atras-de-proxy.md) — framework confia no X-Forwarded-For do cliente; use native (RemoteIpValve).
@@ -36,6 +36,7 @@ Leia as entradas relacionadas à tarefa. Os detalhes ficam em `docs/learning/`.
 - [Frontend: salto, service worker, toque e foco](docs/learning/gotcha-frontend-auditoria-2026-10-17.md) — scrollToMessage sem item, workbox.register sem catch, data-slot do Base UI, TabsContent sem foco.
 - [S3 nos testes sem MinIO](docs/learning/gotcha-s3-nos-testes-sem-minio.md) — adobe/s3mock, espera pelo log, skip vira Range.
 - [Máquina local: proxy no Maven, portas e /tmp](docs/learning/gotcha-ambiente-local-com-proxy.md) — proxy virava argumento do vite, e2e em portas altas, gh sem push, jcmd, internet só pelo proxy, 12 workers.
+- [Correção dos Baixos de 2026-10-17](docs/learning/gotcha-correcao-baixos-2026-10-17.md) — Enter no celular, safe area pelo CDP, Mockito com varargs, mutação equivalente, 416 do Spring, shadcn add.
 - [Janela de mensagens sobre o MessageScroller](docs/learning/gotcha-janela-de-mensagens-e-message-scroller.md) — âncora que volta ao DOM salta, root e observador recriado após o commit, lado do corte pela borda, compensação pela linha visível.
 
 ## Decisões de arquitetura
@@ -46,6 +47,7 @@ Leia as entradas relacionadas à tarefa. Os detalhes ficam em `docs/learning/`.
 - [UI-05: aparência própria](docs/learning/decisao-ui05-aparencia-propria.md) — data/hora, senha, busca, mídia, noValidate, regra de lint e a prova no e2e.
 - [Limpeza dos arquivos nunca usados](docs/learning/decisao-limpeza-de-arquivos-nao-usados.md) — porta MediaReferences, in_use preguiçoso, trava contra o anexo simultâneo.
 - [Correção da auditoria de 2026-10-17](docs/learning/decisao-auditoria-2026-10-17.md) — convite do admin no fechado, foto view-once, HEIC recusado, exportação sem trancadas, presença.
+- [Correção dos Baixos de 2026-10-17](docs/learning/decisao-auditoria-baixos-2026-10-17.md) — login por IP e conta, grant dos anexos trancados, reservas da conta apagada, antivírus fora.
 
 ## Abordagens que NÃO funcionaram
 - [Reidratar o cache com o IndexedDB antes da rede](docs/learning/falha-reidratar-cache-offline-antes-da-rede.md) — o snapshot velho apagava o marcador de não lidas; use rede primeiro.

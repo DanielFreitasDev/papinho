@@ -260,6 +260,16 @@ class MediaIT {
         assertThat(range).hasStatus(206);
         assertThat(range.getResponse().getContentAsByteArray()).hasSize(100);
         assertThat(range.getResponse().getContentType()).isEqualTo("video/mp4");
+        for (String invalid : List.of("bytes=abc", "bytes=9999999-")) {
+            MvcTestResult refused = bruno.perform(MockMvcRequestBuilders.get("/api/v1/media/" + id + "/content")
+                    .header(HttpHeaders.RANGE, invalid));
+            assertThat(refused).as(invalid).hasStatus(416)
+                    .hasContentTypeCompatibleWith(org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON);
+            assertThat(refused.getResponse().getHeader(HttpHeaders.CONTENT_RANGE)).isEqualTo("bytes */4096");
+            assertThat(bruno.json(refused).get("type").asString()).isEqualTo("urn:papinho:problem:range-not-satisfiable");
+            assertThat(refused.getResponse().getContentAsByteArray()).as("sem o arquivo no corpo")
+                    .hasSizeLessThan(1000);
+        }
 
         assertThat(carla.get("/api/v1/media/" + id)).hasStatus(404);
         assertThat(carla.get("/api/v1/media/" + id + "/content")).hasStatus(404);

@@ -50,6 +50,7 @@ class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
             log.error("Request failed slug={}", exception.slug(), exception);
         }
         ResponseEntity.BodyBuilder response = ResponseEntity.status(exception.status());
+        exception.headers().forEach(response::header);
         // RFC 6585: o cabeçalho padrão, que clientes como o tus (Uppy) respeitam, além da propriedade no corpo.
         if (exception instanceof RateLimitedException limited) {
             response.header(HttpHeaders.RETRY_AFTER, Long.toString(limited.retryAfterSeconds()));

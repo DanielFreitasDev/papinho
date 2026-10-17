@@ -10,10 +10,12 @@ import org.springframework.core.io.Resource;
 import org.springframework.http.CacheControl;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpRange;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -46,8 +48,26 @@ class MediaController {
 
     @GetMapping("/{id}/content")
     ResponseEntity<Resource> content(@PathVariable UUID id, @RequestParam(defaultValue = "false") boolean download,
-            @RequestParam(required = false) @Nullable String grant) throws IOException {
-        return respond(media.content(CurrentUser.id(), id, false, grant), download);
+            @RequestParam(required = false) @Nullable String grant,
+            @RequestHeader(value = HttpHeaders.RANGE, required = false) @Nullable String range) throws IOException {
+        MediaService.Content content = media.content(CurrentUser.id(), id, false, grant);
+        requireSatisfiable(range, content.resource());
+        return respond(content, download);
+    }
+
+    /**
+     * O Spring responde ao Range ilegível com 416, mas manda o arquivo inteiro no corpo: aqui ele sai em Problem
+     * Details, sem o conteúdo.
+     */
+    private static void requireSatisfiable(@Nullable String range, Resource resource) throws IOException {
+        if (range == null) {
+            return;
+        }
+        try {
+            HttpRange.toResourceRegions(HttpRange.parseRanges(range), resource);
+        } catch (IllegalArgumentException invalid) {
+            throw new MediaExceptions.RangeNotSatisfiableException(resource.contentLength());
+        }
     }
 
     @GetMapping("/{id}/thumbnail")

@@ -68,6 +68,21 @@ final class MediaExceptions {
         }
     }
 
+    /** Faixa de bytes ilegível ou fora do arquivo: 416 sem o conteúdo, com o tamanho em Content-Range. */
+    static class RangeNotSatisfiableException extends ApiException {
+        private final long length;
+
+        RangeNotSatisfiableException(long length) {
+            super(HttpStatus.REQUESTED_RANGE_NOT_SATISFIABLE, "range-not-satisfiable", "Invalid Range header");
+            this.length = length;
+        }
+
+        @Override
+        public Map<String, String> headers() {
+            return Map.of("Content-Range", "bytes */" + length);
+        }
+    }
+
     /** O antivírus ligado não respondeu (MD-06): nada é aceito sem a análise. */
     static class ScannerUnavailableException extends ApiException {
         ScannerUnavailableException() {

@@ -52,4 +52,9 @@ public abstract class ApiException extends RuntimeException {
     public Map<String, Object> properties() {
         return properties;
     }
+
+    /** Cabeçalhos HTTP que acompanham a resposta (por exemplo, {@code Content-Range} no 416). */
+    public Map<String, String> headers() {
+        return Map.of();
+    }
 }

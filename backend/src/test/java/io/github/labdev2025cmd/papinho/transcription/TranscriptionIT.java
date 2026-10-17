@@ -8,6 +8,7 @@ import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -18,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import com.sun.net.httpserver.HttpServer;
@@ -80,6 +82,9 @@ class TranscriptionIT {
     @Autowired
     private ApiClients clients;
 
+    @Autowired
+    private JdbcTemplate jdbc;
+
     private ApiClient admin;
     private ApiClient bruno;
     private ApiClient carla;
@@ -109,6 +114,9 @@ class TranscriptionIT {
         assertThat(adminView.get("providers").get(0).get("hasKey").asBoolean()).isTrue();
         assertThat(ApiClient.text(admin.get("/api/v1/admin/transcription"))).doesNotContain(SECRET);
         assertThat(bruno.get("/api/v1/admin/transcription")).hasStatus(403);
+        String stored = jdbc.queryForObject("select api_key_encrypted from transcription_providers where id = ?",
+                String.class, UUID.fromString(provider));
+        assertThat(stored).as("chave cifrada em repouso (AU-05)").startsWith("v1:").doesNotContain(SECRET);
 
         int before = CALLS.get();
         String path = "/api/v1/media/" + audio + "/transcript";

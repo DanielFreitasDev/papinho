@@ -7,11 +7,8 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import java.time.ZoneId;
-import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 
@@ -28,6 +25,7 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import io.github.labdev2025cmd.papinho.shared.security.RateLimiter;
+import io.github.labdev2025cmd.papinho.support.MutableClock;
 
 /** Validade do token de desbloqueio (PV-03): 10 minutos parado, 1 hora no máximo, com o relógio controlado. */
 class ConversationLocksTest {
@@ -84,33 +82,5 @@ class ConversationLocksTest {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.addHeader(ConversationLocks.HEADER, token);
         RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
-    }
-
-    private static final class MutableClock extends Clock {
-
-        private Instant now;
-
-        private MutableClock(Instant now) {
-            this.now = now;
-        }
-
-        void advance(Duration duration) {
-            now = now.plus(duration);
-        }
-
-        @Override
-        public ZoneId getZone() {
-            return ZoneOffset.UTC;
-        }
-
-        @Override
-        public Clock withZone(ZoneId zone) {
-            return this;
-        }
-
-        @Override
-        public Instant instant() {
-            return now;
-        }
     }
 }

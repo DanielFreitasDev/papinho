@@ -88,3 +88,41 @@ describe("regra de lint do UI-05", () => {
     expect(rules).toContain("no-restricted-imports")
   })
 })
+
+describe("regra de lint do MS-01 (sem HTML cru)", () => {
+  it("recusa dangerouslySetInnerHTML, também em components/ui", async () => {
+    for (const filePath of [
+      "src/features/exemplo/tela.tsx",
+      "src/components/ui/exemplo.tsx",
+    ]) {
+      const found = await problems(
+        `<span dangerouslySetInnerHTML={{ __html: texto }} />`,
+        filePath
+      )
+      expect(found).toHaveLength(1)
+      expect(found[0]).toMatch(/^MS-01/)
+    }
+  })
+
+  it("recusa innerHTML, outerHTML e insertAdjacentHTML", async () => {
+    const [result] = await eslint.lintText(
+      `export function f(el: HTMLElement, texto: string) {\n` +
+        `  el.innerHTML = texto\n  el.outerHTML = texto\n` +
+        `  el.insertAdjacentHTML("beforeend", texto)\n}\n`,
+      { filePath: "src/lib/exemplo.ts" }
+    )
+    expect(
+      result.messages
+        .filter((message) => message.ruleId === "no-restricted-syntax")
+        .map((message) => message.message.slice(0, 5))
+    ).toEqual(["MS-01", "MS-01", "MS-01"])
+  })
+
+  it("aceita textContent, sem HTML cru", async () => {
+    const [result] = await eslint.lintText(
+      `export function f(el: HTMLElement, texto: string) {\n  el.textContent = texto\n}\n`,
+      { filePath: "src/lib/exemplo.ts" }
+    )
+    expect(result.messages).toEqual([])
+  })
+})

@@ -66,6 +66,25 @@ const NATIVE_CONTROLS = [
   },
 ]
 
+/**
+ * MS-01: texto do usuário nunca vira HTML. Nada de dangerouslySetInnerHTML, innerHTML/outerHTML nem
+ * insertAdjacentHTML em lugar nenhum do app (também em src/components/ui/).
+ */
+const RAW_HTML = [
+  {
+    selector: "JSXAttribute[name.name='dangerouslySetInnerHTML']",
+    message: 'MS-01: sem dangerouslySetInnerHTML; renderize nós do React (o texto do usuário fica texto).',
+  },
+  {
+    selector: "AssignmentExpression > MemberExpression.left[property.name=/^(innerHTML|outerHTML)$/]",
+    message: 'MS-01: sem innerHTML/outerHTML; use textContent ou nós do React.',
+  },
+  {
+    selector: "CallExpression[callee.property.name='insertAdjacentHTML']",
+    message: 'MS-01: sem insertAdjacentHTML; use nós do React.',
+  },
+]
+
 export default defineConfig([
   globalIgnores(['dist', 'playwright-report', 'test-results']),
   {
@@ -101,10 +120,16 @@ export default defineConfig([
     },
   },
   {
+    files: ['src/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-syntax': ['error', ...RAW_HTML],
+    },
+  },
+  {
     files: ['src/**/*.tsx'],
     ignores: ['src/components/ui/**'],
     rules: {
-      'no-restricted-syntax': ['error', ...NATIVE_CONTROLS],
+      'no-restricted-syntax': ['error', ...NATIVE_CONTROLS, ...RAW_HTML],
     },
   },
   {

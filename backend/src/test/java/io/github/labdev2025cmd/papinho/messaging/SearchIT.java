@@ -2,8 +2,6 @@ package io.github.labdev2025cmd.papinho.messaging;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -15,6 +13,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 import io.github.labdev2025cmd.papinho.support.Accounts;
 import io.github.labdev2025cmd.papinho.support.ApiClient;
@@ -67,6 +66,23 @@ class SearchIT {
         Accounts.register(carla, "carla", Accounts.invite(ana));
         assertThat(global(carla, "fortaleza")).as("conversa dos outros").isEmpty();
         assertThat(ana.get("/api/v1/search/messages?q=a")).as("consulta curta").hasStatus(400);
+    }
+
+    @Test
+    @DisplayName("singular e plural se acham: -ão e -ões, -m e -ns, com e sem acento")
+    void shouldMatchPortuguesePlurals() {
+        String reuniao = send(ana, conversation, "A Reunião de Ações");
+        String mensagens = send(ana, conversation, "Mandei as mensagens");
+        String homem = send(ana, conversation, "Um homem e um pão");
+
+        assertThat(global(ana, "acao")).containsExactly(reuniao);
+        assertThat(global(ana, "reuniões")).containsExactly(reuniao);
+        assertThat(global(ana, "REUNIOES")).containsExactly(reuniao);
+        assertThat(global(ana, "mensagem")).containsExactly(mensagens);
+        assertThat(global(ana, "homens")).containsExactly(homem);
+        assertThat(global(ana, "pães")).containsExactly(homem);
+        assertThat(ana.json(ana.get("/api/v1/conversations/" + conversation + "/search?q=mensagem"))
+                .get("messages").findValuesAsString("id")).contains(mensagens);
     }
 
     @Test
@@ -129,7 +145,8 @@ class SearchIT {
     }
 
     private List<String> global(ApiClient client, String query) {
-        var result = client.get("/api/v1/search/messages?q=" + URLEncoder.encode(query, StandardCharsets.UTF_8));
+        // queryParam: o MockMvc codifica a URL de novo, e um "%C3%A3" já codificado chegaria como texto.
+        var result = client.perform(MockMvcRequestBuilders.get("/api/v1/search/messages").queryParam("q", query));
         assertThat(result).as(ApiClient.text(result)).hasStatusOk();
         return ids(client.json(result));
     }

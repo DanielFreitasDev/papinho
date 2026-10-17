@@ -13,7 +13,8 @@ import org.springframework.stereotype.Component;
 
 /**
  * Consultas de busca de mensagens (GR-06) no PostgreSQL: texto completo com a configuração
- * {@code papinho_portuguese} (português sem acentos) ou trecho por trigramas ({@code papinho_unaccent}). Só
+ * {@code papinho_portuguese} (português sem acentos, com os plurais em -ões e -ns trocados pelo singular em
+ * {@code papinho_search_text}) ou trecho por trigramas ({@code papinho_unaccent}). Só
  * devolve ids; quem chama checa o acesso e monta as mensagens.
  */
 @Component
@@ -27,7 +28,8 @@ class MessageSearch {
             """;
 
     private static final String MATCHES = """
-              (to_tsvector('papinho_portuguese', m.body) @@ websearch_to_tsquery('papinho_portuguese', :query)
+              (to_tsvector('papinho_portuguese', papinho_search_text(m.body))
+                   @@ websearch_to_tsquery('papinho_portuguese', papinho_search_text(:query))
                or papinho_unaccent(m.body) like papinho_unaccent(:pattern) escape '\\')
             """;
 

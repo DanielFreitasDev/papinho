@@ -157,8 +157,10 @@ class LinkPreviewIT {
     @Test
     @DisplayName("rede local e metadados de nuvem não são buscados; outros esquemas são recusados")
     void shouldRefusePrivateTargets() {
+        // Sem loopback: o IT libera o 127.0.0.1 para o site de teste, e um servidor na porta 80 da máquina
+        // passaria. A recusa do loopback com a regra de produção está no SafeFetcherTest.
         for (String url : new String[] {"http://10.0.0.1/", "http://169.254.169.254/latest/meta-data/",
-            "http://127.0.0.1/admin", "http://192.168.0.1/"}) {
+            "http://192.168.0.1/", "http://[fd00::1]/"}) {
             JsonNode preview = ana.json(ana.get(previewPath(url)));
             assertThat(preview.get("available").asBoolean()).as(url).isFalse();
         }

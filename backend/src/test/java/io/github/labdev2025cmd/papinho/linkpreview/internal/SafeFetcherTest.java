@@ -115,6 +115,28 @@ class SafeFetcherTest {
     }
 
     @Test
+    @DisplayName("com a regra de produção (só endereços públicos), o servidor local que responde não é alcançado")
+    void shouldRefuseLoopbackWithProductionRule() throws IOException {
+        AddressPolicy production = new AddressPolicy() {
+            @Override
+            public boolean allowed(InetAddress address) {
+                return AddressPolicy.PUBLIC_ONLY.allowed(address);
+            }
+
+            @Override
+            public boolean allowsPort(int candidate) {
+                return candidate == port;
+            }
+        };
+        try (SafeFetcher fetcher = new SafeFetcher(production, "Papinho-test")) {
+            int before = HITS.get();
+            assertThat(fetcher.get(url("/ok"), "text/html", 1024)).isEmpty();
+            assertThat(fetcher.get(URI.create("http://localhost:" + port + "/ok"), "text/html", 1024)).isEmpty();
+            assertThat(HITS.get()).as("o servidor local não recebeu nada").isEqualTo(before);
+        }
+    }
+
+    @Test
     @DisplayName("redireciona para outro loopback ou para file: e é recusado")
     void shouldBlockForbiddenRedirects() throws IOException {
         try (SafeFetcher fetcher = fetcher()) {

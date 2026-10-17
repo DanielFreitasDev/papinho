@@ -22,6 +22,9 @@ date: 2026-10-17
   com `yes n |`. O import `cn` do arquivo gerado é um alias do projeto e funciona.
 - **Playwright Firefox/WebKit no sandbox:** `PLAYWRIGHT_BROWSERS_PATH=<pasta> pnpm exec playwright install firefox webkit`
   baixa, mas o WebKit só abre depois de `pnpm exec playwright install-deps firefox webkit` (apt, como root).
+- **Duas instâncias, um banco:** o JAR padrão e o do perfil lan precisam do mesmo `PAPINHO_DATA_DIR` (a mesma
+  `secret.key`); com diretórios diferentes, a chave VAPID cifrada por um não abre no outro e o WebKit (que usa a lan)
+  recebe uma rajada de 500 ("Unable to decrypt secret"). O CI já usa o mesmo diretório.
 - **JAR e e2e:** cada mutação de frontend exige gerar o JAR de novo, e o JAR mutado fica em `backend/target`; gere o
   certo antes do próximo e2e.
 

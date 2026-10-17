@@ -341,11 +341,18 @@ class PrivacyIT {
         String group = ana.json(ana.post("/api/v1/groups", Map.of("name", "Turma", "memberIds",
                 List.of(brunoId, carlaId)))).get("id").asString();
         bruno.put(path(group) + "/read-receipts", Map.of("enabled", false));
-        long seq = ana.json(ana.post(path(group) + "/messages", Map.of("clientMessageId", UUID.randomUUID(),
-                "body", "olá grupo"))).get("seq").asLong();
+        // O global desligado não vale no grupo: lá a confirmação é sempre ligada, salvo na própria conversa.
+        carla.patch("/api/v1/privacy", Map.of("readReceipts", false));
+        JsonNode sent = ana.json(ana.post(path(group) + "/messages", Map.of("clientMessageId", UUID.randomUUID(),
+                "body", "olá grupo")));
+        long seq = sent.get("seq").asLong();
         carla.put(path(group) + "/read", Map.of("seq", seq));
         assertThat(ana.json(ana.get(path(group))).get("peerReadSeq").asLong())
                 .as("Bruno desligou e não leu: fica fora do 'lida por todos'").isEqualTo(seq);
+        assertThat(java.util.stream.StreamSupport.stream(ana.json(ana.get("/api/v1/messages/"
+                + sent.get("id").asString() + "/info")).get("recipients").spliterator(), false)
+                .filter(r -> r.get("userId").asString().equals(carlaId)).findFirst().orElseThrow()
+                .get("readAt").isNull()).as("leitura da Carla no grupo, com o global dela desligado").isFalse();
         JsonNode listed = java.util.stream.StreamSupport.stream(ana.json(ana.get("/api/v1/conversations"))
                 .spliterator(), false).filter(item -> item.get("id").asString().equals(group)).findFirst().orElseThrow();
         assertThat(listed.get("peerReadSeq").asLong()).as("na lista de conversas").isEqualTo(seq);

@@ -525,10 +525,11 @@ public class MessageService {
         conversations.requireReadable(me, conversationId);
         UUID peer = conversations.membersOf(conversationId).stream().map(ConversationMember::userId)
                 .filter(id -> !id.equals(me)).findFirst().orElseThrow(NotFoundException::new);
-        List<Message> latest = new ArrayList<>(messages.findBefore(conversationId, Long.MAX_VALUE,
+        // O filtro vai na consulta, antes do limite: avisos e apagadas não podem tomar o lugar das últimas.
+        List<Message> latest = new ArrayList<>(messages.findLatestFromPeople(conversationId,
                 Limit.of(Math.clamp(count, 1, MAX_PAGE))));
         latest.sort(Comparator.comparingLong(Message::seq));
-        return new ReportSnapshot(peer, latest.stream().filter(m -> !m.deleted() && !m.system())
+        return new ReportSnapshot(peer, latest.stream()
                 .map(m -> new SnapshotMessage(m.id(), m.senderId(), m.body(), m.createdAt())).toList());
     }
 

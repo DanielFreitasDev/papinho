@@ -75,6 +75,28 @@ class ModerationIT {
     }
 
     @Test
+    @DisplayName("avisos do sistema e mensagens apagadas não tomam o lugar das 5 últimas na cópia (CT-04)")
+    void shouldCopyFiveUserMessagesSkippingNoticesAndDeleted() {
+        for (int i = 1; i <= 9; i++) {
+            send(i % 2 == 0 ? carla : bruno, "m" + i);
+        }
+        String path = "/api/v1/conversations/" + conversation;
+        assertThat(carla.put(path + "/disappearing", Map.of("seconds", 86_400))).hasStatus(204);
+        Map<String, Object> off = new HashMap<>();
+        off.put("seconds", null);
+        assertThat(carla.put(path + "/disappearing", off)).hasStatus(204);
+        String deleted = carla.json(carla.post(path + "/messages",
+                Map.of("clientMessageId", UUID.randomUUID(), "body", "m10"))).get("id").asString();
+        assertThat(carla.delete("/api/v1/messages/" + deleted, null)).hasStatus(200);
+        send(carla, "m11");
+
+        assertThat(bruno.post("/api/v1/reports", Map.of("conversationId", conversation, "reason", "de novo",
+                "block", false))).hasStatus(201);
+        JsonNode report = admin.json(admin.get("/api/v1/admin/reports")).get("items").get(0);
+        assertThat(bodies(report.get("messages"))).containsExactly("m6", "m7", "m8", "m9", "m11");
+    }
+
+    @Test
     @DisplayName("só quem participa denuncia, e só o admin vê a fila")
     void shouldProtectReportsAndQueue() {
         send(carla, "oi");

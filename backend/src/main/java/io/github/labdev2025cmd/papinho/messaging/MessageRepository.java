@@ -27,6 +27,12 @@ interface MessageRepository extends JpaRepository<Message, UUID> {
             + "and m.changeSeq <= :upToSeq order by m.changeSeq")
     List<Message> findChangedAfter(UUID conversationId, long afterSeq, long upToSeq, Limit limit);
 
+    /** Últimas mensagens de pessoas (sem avisos do sistema nem apagadas), da mais nova para a mais antiga. */
+    @Query("select m from Message m where m.conversationId = :conversationId "
+            + "and m.kind <> io.github.labdev2025cmd.papinho.messaging.MessageKind.SYSTEM and m.deletedAt is null "
+            + "order by m.seq desc")
+    List<Message> findLatestFromPeople(UUID conversationId, Limit limit);
+
     /** Página de histórico antes de {@code beforeSeq}, da mais nova para a mais antiga. */
     @Query("select m from Message m where m.conversationId = :conversationId and m.seq < :beforeSeq "
             + "order by m.seq desc")

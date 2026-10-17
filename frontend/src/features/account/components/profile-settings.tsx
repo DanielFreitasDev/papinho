@@ -33,6 +33,7 @@ import { errorMessage } from "@/lib/api-client"
 import { useChangePhoto, useRemovePhoto, useUpdateProfile } from "../api"
 import { PhotoCropper } from "./photo-cropper"
 import { SettingsSection } from "./settings-section"
+import { useErrorToast } from "@/hooks/use-error-toast"
 
 const schema = z.object({
   displayName: displayNameSchema,
@@ -48,6 +49,7 @@ export function ProfileSettings() {
   const update = useUpdateProfile()
   const changePhoto = useChangePhoto()
   const removePhoto = useRemovePhoto()
+  const onError = useErrorToast()
   const fileInput = useRef<HTMLInputElement>(null)
   const [file, setFile] = useState<File | null>(null)
   const [cropped, setCropped] = useState<Blob | null>(null)
@@ -116,7 +118,7 @@ export function ProfileSettings() {
             {profile.hasPhoto ? (
               <Button
                 variant="ghost"
-                onClick={() => removePhoto.mutate()}
+                onClick={() => removePhoto.mutate(undefined, { onError })}
                 disabled={removePhoto.isPending}
               >
                 <TrashIcon data-icon="inline-start" />

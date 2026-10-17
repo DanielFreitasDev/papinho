@@ -53,6 +53,7 @@ import {
   type ListAction,
 } from "../organization"
 import type { Conversation, MuteDuration } from "../types"
+import { useErrorToast } from "@/hooks/use-error-toast"
 
 const DURATIONS: MuteDuration[] = ["EIGHT_HOURS", "ONE_WEEK", "ALWAYS"]
 
@@ -71,6 +72,7 @@ export function ConversationMenu({
   const action = useListAction()
   const unreadAction = useConversationAction()
   const toggleFolder = useToggleFolder()
+  const onError = useErrorToast()
   const folders = useQuery(organizationQueries.folders())
   const [muteOpen, setMuteOpen] = useState(false)
   const [clearOpen, setClearOpen] = useState(false)
@@ -161,11 +163,14 @@ export function ConversationMenu({
                     key={folder.id}
                     checked={folderIds.includes(folder.id)}
                     onCheckedChange={(checked) =>
-                      toggleFolder.mutate({
-                        folderId: folder.id,
-                        conversationId: conversation.id,
-                        on: checked,
-                      })
+                      toggleFolder.mutate(
+                        {
+                          folderId: folder.id,
+                          conversationId: conversation.id,
+                          on: checked,
+                        },
+                        { onError }
+                      )
                     }
                   >
                     {folder.name}
@@ -178,10 +183,10 @@ export function ConversationMenu({
             <DropdownMenuItem
               disabled={unread}
               onClick={() =>
-                unreadAction.mutate({
-                  conversationId: conversation.id,
-                  action: "unread",
-                })
+                unreadAction.mutate(
+                  { conversationId: conversation.id, action: "unread" },
+                  { onError }
+                )
               }
             >
               <MailIcon />

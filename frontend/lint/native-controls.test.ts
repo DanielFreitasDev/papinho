@@ -126,3 +126,30 @@ describe("regra de lint do MS-01 (sem HTML cru)", () => {
     expect(result.messages).toEqual([])
   })
 })
+
+describe("regra de lint do UI-03 (ação com falha visível)", () => {
+  const lint = async (body: string) => {
+    const [result] = await eslint.lintText(
+      `export function Tela({ star }: { star: { mutate: (...args: unknown[]) => void } }) {\n` +
+        `  const onError = () => undefined\n  void onError\n${body}\n  return null\n}\n`,
+      { filePath: "src/features/exemplo/acao.tsx" }
+    )
+    return result.messages
+      .filter((message) => message.ruleId === "no-restricted-syntax")
+      .map((message) => message.message.slice(0, 5))
+  }
+
+  it("recusa .mutate sem onError", async () => {
+    expect(await lint(`  star.mutate({ id: 1 })`)).toEqual(["UI-03"])
+    expect(
+      await lint(`  star.mutate({ id: 1 }, { onSuccess: () => undefined })`)
+    ).toEqual(["UI-03"])
+  })
+
+  it("aceita .mutate com onError", async () => {
+    expect(await lint(`  star.mutate({ id: 1 }, { onError })`)).toEqual([])
+    expect(
+      await lint(`  star.mutate(undefined, { onError: () => undefined })`)
+    ).toEqual([])
+  })
+})

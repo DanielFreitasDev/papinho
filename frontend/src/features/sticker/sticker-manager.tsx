@@ -177,11 +177,14 @@ export function StickerManager({
                             : t("sticker.favorite")
                         }
                         onClick={() =>
-                          action.mutate({
-                            action: "favorite",
-                            stickerId: sticker.id,
-                            favorite: !sticker.favorite,
-                          })
+                          action.mutate(
+                            {
+                              action: "favorite",
+                              stickerId: sticker.id,
+                              favorite: !sticker.favorite,
+                            },
+                            { onError: fail }
+                          )
                         }
                       >
                         {sticker.favorite ? <StarOffIcon /> : <StarIcon />}

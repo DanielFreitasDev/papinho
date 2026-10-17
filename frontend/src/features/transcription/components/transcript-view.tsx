@@ -28,6 +28,7 @@ export function TranscriptView({
 
   const run = () => {
     setProgress(null)
+    // eslint-disable-next-line no-restricted-syntax -- a falha aparece no cartão da transcrição (transcribe.isError)
     transcribe.mutate((fraction) => setProgress(fraction))
   }
 
@@ -40,6 +41,7 @@ export function TranscriptView({
       transcript.data === null
     ) {
       autoStarted.current = true
+      // eslint-disable-next-line no-restricted-syntax -- a falha aparece no cartão da transcrição (transcribe.isError)
       transcribe.mutate((fraction) => setProgress(fraction))
     }
   }, [

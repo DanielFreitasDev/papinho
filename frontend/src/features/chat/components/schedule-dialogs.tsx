@@ -20,6 +20,7 @@ import { errorMessage } from "@/lib/api-client"
 import { formatDateTime } from "@/lib/format"
 import { chatQueries, useScheduleAction } from "../api"
 import { plainText } from "../format/parse"
+import { useErrorToast } from "@/hooks/use-error-toast"
 
 /** Daqui a uma hora, arredondado para os próximos 5 minutos (o passo do seletor de hora). */
 function defaultSendAt() {
@@ -136,6 +137,7 @@ export function ScheduledListDialog({
     enabled: open,
   })
   const action = useScheduleAction(conversationId)
+  const onError = useErrorToast()
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -179,7 +181,9 @@ export function ScheduledListDialog({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => action.mutate({ action: "cancel", id: item.id })}
+                onClick={() =>
+                  action.mutate({ action: "cancel", id: item.id }, { onError })
+                }
               >
                 {item.failedAt ? t("chat.remove") : t("common.cancel")}
               </Button>

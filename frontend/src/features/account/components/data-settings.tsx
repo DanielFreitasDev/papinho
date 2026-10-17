@@ -108,6 +108,7 @@ function DeleteAccountDialog({ onClose }: { onClose: () => void }) {
           className="flex flex-col gap-4"
           onSubmit={(event) => {
             event.preventDefault()
+            // eslint-disable-next-line no-restricted-syntax -- o erro aparece no Alert do diálogo (remove.isError)
             remove.mutate()
           }}
         >

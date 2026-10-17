@@ -25,6 +25,7 @@ import type { Attachment, Conversation, Peer } from "../types"
 import { ConversationGallery } from "./conversation-gallery"
 import { ConversationPrivacy } from "./conversation-privacy"
 import { DisappearingSetting } from "./disappearing-select"
+import { useErrorToast } from "@/hooks/use-error-toast"
 
 /**
  * Painel "Dados do contato" (UI-01): foto, nome, @usuario e recado, com adicionar aos contatos, bloquear
@@ -51,6 +52,7 @@ export function ContactDetails({
   })
   const add = useAddContact()
   const block = useBlock()
+  const onError = useErrorToast()
   const [confirmBlock, setConfirmBlock] = useState(false)
   const [reporting, setReporting] = useState(false)
   const [gallery, setGallery] = useState(false)
@@ -163,6 +165,7 @@ export function ContactDetails({
                       void refreshQueries(queryClient, chatKeys.conversations)
                       toast.add({ title: t("chat.contactAdded") })
                     },
+                    onError,
                   }
                 )
               }

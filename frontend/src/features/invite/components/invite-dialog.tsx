@@ -41,6 +41,7 @@ import {
   useRevokeInvite,
   type CreatedInvite,
 } from "../api"
+import { useErrorToast } from "@/hooks/use-error-toast"
 
 const VALIDITY_HOURS = [1, 24, 168, 720] as const
 const MAX_USES = [1, 5, 20, 100] as const
@@ -60,6 +61,7 @@ export function InviteDialog({
   const [error, setError] = useState<string | null>(null)
   const create = useCreateInvite()
   const revoke = useRevokeInvite()
+  const onError = useErrorToast()
   const invites = useQuery({ ...inviteQueries.list(), enabled: open })
 
   const validityLabel = (hours: number) =>
@@ -218,7 +220,7 @@ export function InviteDialog({
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => revoke.mutate(invite.id)}
+                          onClick={() => revoke.mutate(invite.id, { onError })}
                           disabled={revoke.isPending}
                         >
                           {t("invite.revoke")}

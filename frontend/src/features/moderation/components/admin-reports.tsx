@@ -17,6 +17,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { formatDateTime } from "@/lib/format"
 import { cn } from "cn"
 import { moderationQueries, useCloseReport, type Report } from "../api"
+import { useErrorToast } from "@/hooks/use-error-toast"
 
 /** Fila de denúncias do admin (CT-04, AD-01): abertas da mais antiga; fechadas da mais recente. */
 export function AdminReports() {
@@ -74,6 +75,7 @@ export function AdminReports() {
 function ReportCard({ report }: { report: Report }) {
   const { t } = useTranslation()
   const close = useCloseReport()
+  const onError = useErrorToast()
   const reported = report.reported ? `@${report.reported.username}` : "—"
   const reporter = report.reporter ? `@${report.reporter.username}` : "—"
   return (
@@ -137,14 +139,18 @@ function ReportCard({ report }: { report: Report }) {
             variant="outline"
             size="sm"
             disabled={close.isPending}
-            onClick={() => close.mutate({ id: report.id, action: "dismiss" })}
+            onClick={() =>
+              close.mutate({ id: report.id, action: "dismiss" }, { onError })
+            }
           >
             {t("moderation.dismiss")}
           </Button>
           <Button
             size="sm"
             disabled={close.isPending}
-            onClick={() => close.mutate({ id: report.id, action: "resolve" })}
+            onClick={() =>
+              close.mutate({ id: report.id, action: "resolve" }, { onError })
+            }
           >
             {t("moderation.resolve")}
           </Button>

@@ -61,4 +61,45 @@ test.describe("estados das telas", () => {
     await expect(forbidden.getByRole("button")).toHaveCount(0)
     await expectNoSeriousA11yViolations(page)
   })
+  /** Ação recusada pela API (UI-03): o detalhe aparece num toast de erro, não some em silêncio. */
+  test("ação que falha mostra o erro", async ({ page }) => {
+    await loginThroughUi(page, ADMIN)
+    await expect(
+      page.getByRole("complementary", { name: "Conversas e contatos" })
+    ).toBeVisible()
+    const xsrf = (await page.context().cookies()).find(
+      (cookie) => cookie.name === "XSRF-TOKEN"
+    )!.value
+    const saved = (await (
+      await page.request.post("/api/v1/conversations/saved", {
+        headers: { "X-XSRF-TOKEN": decodeURIComponent(xsrf) },
+      })
+    ).json()) as { id: string }
+    await page.goto(`/c/${saved.id}`)
+    const text = `Favoritar com falha ${Date.now()}`
+    await page.getByRole("textbox", { name: "Mensagem" }).fill(text)
+    await page.getByRole("button", { name: "Enviar" }).click()
+    const row = page
+      .locator('[data-slot="message"]')
+      .filter({ has: page.locator("p", { hasText: text }) })
+    await expect(
+      row.getByRole("img", { name: /^(Enviada|Entregue|Lida)$/ })
+    ).toBeVisible()
+
+    await page.route(/\/api\/v1\/messages\/[^/]+\/star$/, (route) =>
+      route.fulfill({
+        status: 409,
+        contentType: "application/problem+json",
+        body: JSON.stringify({
+          status: 409,
+          title: "Conflito",
+          detail: "Falha simulada ao favoritar",
+        }),
+      })
+    )
+    await row.hover()
+    await row.getByRole("button", { name: "Ações da mensagem" }).click()
+    await page.getByRole("menuitem", { name: "Favoritar" }).click()
+    await expect(page.getByText("Falha simulada ao favoritar")).toBeVisible()
+  })
 })

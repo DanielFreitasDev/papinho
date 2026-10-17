@@ -11,6 +11,7 @@ import { subscribeUnlockToken, unlockToken } from "@/lib/unlock-token"
 import { chatKeys } from "../api"
 import type { Conversation } from "../types"
 import { ConversationList } from "./conversation-list"
+import { useErrorToast } from "@/hooks/use-error-toast"
 
 /**
  * Pasta das conversas trancadas (PV-03): pede o código e então lista as conversas que ele abre. "Trancar de
@@ -21,6 +22,7 @@ export function LockedFolder({ meId }: { meId: string }) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const relock = useRelockAll()
+  const onError = useErrorToast()
   const token = useSyncExternalStore(subscribeUnlockToken, unlockToken)
   return (
     <>
@@ -37,6 +39,7 @@ export function LockedFolder({ meId }: { meId: string }) {
                 ).map((conversation) => conversation.id)
                 relock.mutate(ids, {
                   onSettled: () => void navigate({ to: "/" }),
+                  onError,
                 })
               }}
             >

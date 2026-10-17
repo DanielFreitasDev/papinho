@@ -28,12 +28,14 @@ import {
 } from "../organization"
 import type { Folder } from "../types"
 import { useConversationLabel } from "./conversation-avatar"
+import { useErrorToast } from "@/hooks/use-error-toast"
 
 /** Configurações > Conversas: listas personalizadas e "manter arquivadas" (GR-05). */
 export function FolderSettings() {
   const { t } = useTranslation()
   const folders = useQuery(organizationQueries.folders())
   const remove = useDeleteFolder()
+  const onError = useErrorToast()
   const [editing, setEditing] = useState<Folder | "new" | null>(null)
   const [deleting, setDeleting] = useState<Folder | null>(null)
   return (
@@ -99,6 +101,7 @@ export function FolderSettings() {
           deleting &&
           remove.mutate(deleting.id, {
             onSuccess: () => toast.add({ title: t("organize.folderDeleted") }),
+            onError,
           })
         }
       />
@@ -208,6 +211,7 @@ export function KeepArchivedSetting() {
   const { t } = useTranslation()
   const preferences = useQuery(chatQueries.preferences())
   const change = useChangePreferences()
+  const onError = useErrorToast()
   return (
     <SettingsSection
       title={t("organize.keepArchivedTitle")}
@@ -221,7 +225,10 @@ export function KeepArchivedSetting() {
           onCheckedChange={(keepArchived) =>
             change.mutate(
               { keepArchived },
-              { onSuccess: () => toast.add({ title: t("common.saved") }) }
+              {
+                onSuccess: () => toast.add({ title: t("common.saved") }),
+                onError,
+              }
             )
           }
         />

@@ -90,6 +90,7 @@ import {
 import { PresenceLine } from "./presence-line"
 import { ConversationSearch } from "./conversation-search"
 import { UnlockForm } from "@/features/privacy"
+import { useErrorToast } from "@/hooks/use-error-toast"
 
 /** Tela de uma conversa individual (Fase 2): cabeçalho, fixadas, mensagens e campo de envio. */
 export function ConversationView({
@@ -222,6 +223,7 @@ function LoadedConversation({
   const send = useSendMessage(conversation.id)
   const messageAction = useMessageAction()
   const conversationAction = useConversationAction()
+  const showError = useErrorToast()
   const block = useBlock()
   const editMessage = useEditMessage()
   const instance = useQuery(authQueries.instance())
@@ -658,14 +660,13 @@ function LoadedConversation({
       case "star":
       case "unstar":
       case "unreact":
-        messageAction.mutate({ messageId: id, action })
+        messageAction.mutate({ messageId: id, action }, { onError: showError })
         return
       default:
-        messageAction.mutate({
-          messageId: id,
-          action: "react",
-          emoji: action.react,
-        })
+        messageAction.mutate(
+          { messageId: id, action: "react", emoji: action.react },
+          { onError: showError }
+        )
     }
   }
 
@@ -847,10 +848,10 @@ function LoadedConversation({
                 <Button
                   size="sm"
                   onClick={() =>
-                    conversationAction.mutate({
-                      conversationId: conversation.id,
-                      action: "accept",
-                    })
+                    conversationAction.mutate(
+                      { conversationId: conversation.id, action: "accept" },
+                      { onError: showError }
+                    )
                   }
                 >
                   {t("chat.accept")}
@@ -1054,7 +1055,10 @@ function LoadedConversation({
               disabled={selection.length === 0}
               onClick={() => {
                 selection.forEach((messageId) =>
-                  messageAction.mutate({ messageId, action: "star" })
+                  messageAction.mutate(
+                    { messageId, action: "star" },
+                    { onError: showError }
+                  )
                 )
                 setSelection(null)
               }}
@@ -1199,11 +1203,10 @@ function LoadedConversation({
             <EmojiPicker
               onSelect={(emoji) => {
                 if (reactingTo) {
-                  messageAction.mutate({
-                    messageId: reactingTo,
-                    action: "react",
-                    emoji,
-                  })
+                  messageAction.mutate(
+                    { messageId: reactingTo, action: "react", emoji },
+                    { onError: showError }
+                  )
                 }
                 setReactingTo(null)
               }}

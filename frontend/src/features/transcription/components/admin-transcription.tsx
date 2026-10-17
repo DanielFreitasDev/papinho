@@ -30,6 +30,7 @@ import {
   type AdminProvider,
   type ProviderKind,
 } from "../api"
+import { useErrorToast } from "@/hooks/use-error-toast"
 
 const KINDS: ProviderKind[] = ["GROQ", "WHISPER", "OPENAI", "CUSTOM"]
 
@@ -38,6 +39,7 @@ export function AdminTranscription() {
   const { t } = useTranslation()
   const view = useQuery(transcriptionQueries.admin())
   const actions = useAdminTranscription()
+  const onError = useErrorToast()
   const [kind, setKind] = useState<ProviderKind>("GROQ")
   if (!view.data) {
     return <QueryState query={view}>{() => null}</QueryState>
@@ -60,7 +62,9 @@ export function AdminTranscription() {
           items={defaults}
           value={view.data.defaultProviderId ?? "BROWSER"}
           onValueChange={(value) =>
-            actions.setDefault.mutate(value === "BROWSER" ? null : value)
+            actions.setDefault.mutate(value === "BROWSER" ? null : value, {
+              onError,
+            })
           }
         >
           <SelectTrigger id="transcription-default" className="w-full sm:w-72">
@@ -106,7 +110,7 @@ export function AdminTranscription() {
             </SelectContent>
           </Select>
         </Field>
-        <Button onClick={() => actions.create.mutate(kind)}>
+        <Button onClick={() => actions.create.mutate(kind, { onError })}>
           {t("transcription.add")}
         </Button>
       </div>
@@ -117,6 +121,7 @@ export function AdminTranscription() {
 function ProviderForm({ provider }: { provider: AdminProvider }) {
   const { t } = useTranslation()
   const actions = useAdminTranscription()
+  const onError = useErrorToast()
   const [values, setValues] = useState({
     name: provider.name,
     baseUrl: provider.baseUrl,
@@ -271,6 +276,7 @@ function ProviderForm({ provider }: { provider: AdminProvider }) {
                         : t("transcription.unhealthy"),
                       type: result.healthy ? "success" : "error",
                     }),
+                  onError,
                 })
               }
             >
@@ -280,7 +286,7 @@ function ProviderForm({ provider }: { provider: AdminProvider }) {
           <Button
             type="button"
             variant="ghost"
-            onClick={() => actions.remove.mutate(provider.id)}
+            onClick={() => actions.remove.mutate(provider.id, { onError })}
           >
             {t("common.delete")}
           </Button>

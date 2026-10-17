@@ -14,12 +14,14 @@ import {
 import { contactQueries, useBlock } from "@/features/contact"
 import { formatDate } from "@/lib/format"
 import { SettingsSection } from "./settings-section"
+import { useErrorToast } from "@/hooks/use-error-toast"
 
 /** Pessoas bloqueadas, com desbloqueio (CT-03). */
 export function BlockedSettings() {
   const { t } = useTranslation()
   const blocked = useQuery(contactQueries.blocks())
   const block = useBlock()
+  const onError = useErrorToast()
 
   return (
     <SettingsSection title={t("settings.blocked")}>
@@ -46,7 +48,10 @@ export function BlockedSettings() {
                     variant="outline"
                     size="sm"
                     onClick={() =>
-                      block.mutate({ userId: person.userId, blocked: false })
+                      block.mutate(
+                        { userId: person.userId, blocked: false },
+                        { onError }
+                      )
                     }
                   >
                     {t("contacts.unblock")}

@@ -51,6 +51,7 @@ import { ConversationAvatar } from "./conversation-avatar"
 import { ConversationGallery } from "./conversation-gallery"
 import { ConversationPrivacy } from "./conversation-privacy"
 import { DisappearingSetting } from "./disappearing-select"
+import { useErrorToast } from "@/hooks/use-error-toast"
 
 /**
  * Painel "Dados do grupo" (GR-01, GR-02): foto, nome e descrição, membros com admins, adicionar, convite por
@@ -462,6 +463,7 @@ function JoinRequests({ conversationId }: { conversationId: string }) {
   const { t } = useTranslation()
   const requests = useQuery(groupQueries.requests(conversationId))
   const action = useGroupAction(conversationId)
+  const onError = useErrorToast()
   if (!requests.data || requests.data.length === 0) {
     return null
   }
@@ -490,11 +492,10 @@ function JoinRequests({ conversationId }: { conversationId: string }) {
             <Button
               size="sm"
               onClick={() =>
-                action.mutate({
-                  action: "decide",
-                  userId: request.userId,
-                  approve: true,
-                })
+                action.mutate(
+                  { action: "decide", userId: request.userId, approve: true },
+                  { onError }
+                )
               }
             >
               {t("groups.approve")}
@@ -503,11 +504,10 @@ function JoinRequests({ conversationId }: { conversationId: string }) {
               size="sm"
               variant="outline"
               onClick={() =>
-                action.mutate({
-                  action: "decide",
-                  userId: request.userId,
-                  approve: false,
-                })
+                action.mutate(
+                  { action: "decide", userId: request.userId, approve: false },
+                  { onError }
+                )
               }
             >
               {t("groups.decline")}

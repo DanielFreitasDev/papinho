@@ -85,6 +85,18 @@ const RAW_HTML = [
   },
 ]
 
+/**
+ * Ação com falha visível (AGENTS, UI-03): todo `.mutate(...)` passa um `onError` (useErrorToast ou o tratamento da
+ * tela); quem mostra o erro no próprio estado (`isError`) desliga a regra na linha com o motivo. `mutateAsync`
+ * fica com try/catch.
+ */
+const SILENT_MUTATION = [
+  {
+    selector: "CallExpression[callee.property.name='mutate']:not(:has(Property[key.name='onError']))",
+    message: 'UI-03: .mutate(...) sem onError deixa a falha silenciosa; passe { onError } (useErrorToast).',
+  },
+]
+
 export default defineConfig([
   globalIgnores(['dist', 'playwright-report', 'test-results']),
   {
@@ -122,14 +134,14 @@ export default defineConfig([
   {
     files: ['src/**/*.{ts,tsx}'],
     rules: {
-      'no-restricted-syntax': ['error', ...RAW_HTML],
+      'no-restricted-syntax': ['error', ...RAW_HTML, ...SILENT_MUTATION],
     },
   },
   {
     files: ['src/**/*.tsx'],
     ignores: ['src/components/ui/**'],
     rules: {
-      'no-restricted-syntax': ['error', ...NATIVE_CONTROLS, ...RAW_HTML],
+      'no-restricted-syntax': ['error', ...NATIVE_CONTROLS, ...RAW_HTML, ...SILENT_MUTATION],
     },
   },
   {

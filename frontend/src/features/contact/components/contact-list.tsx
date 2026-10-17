@@ -55,6 +55,7 @@ import {
   useRenameContact,
 } from "../api"
 import type { Contact } from "../types"
+import { useErrorToast } from "@/hooks/use-error-toast"
 
 /**
  * Lista de contatos com estados de carregando, vazio e erro (UI-03) e ações por contato. Com {@code onOpen}, tocar
@@ -73,6 +74,7 @@ export function ContactList({
   const rename = useRenameContact()
   const remove = useRemoveContact()
   const block = useBlock()
+  const onError = useErrorToast()
 
   if (contacts.isPending) {
     return (
@@ -224,7 +226,8 @@ export function ContactList({
         description={t("contacts.blockConfirmDescription")}
         confirmLabel={t("contacts.block")}
         onConfirm={() =>
-          blocking && block.mutate({ userId: blocking.userId, blocked: true })
+          blocking &&
+          block.mutate({ userId: blocking.userId, blocked: true }, { onError })
         }
       />
       <ConfirmDialog
@@ -232,7 +235,9 @@ export function ContactList({
         onOpenChange={(open) => !open && setRemoving(null)}
         title={`${t("contacts.remove")}: ${removing?.label ?? ""}`}
         confirmLabel={t("contacts.remove")}
-        onConfirm={() => removing && remove.mutate(removing.userId)}
+        onConfirm={() =>
+          removing && remove.mutate(removing.userId, { onError })
+        }
       />
     </>
   )

@@ -18,12 +18,14 @@ import { SettingsSection } from "@/features/account"
 import { transcriptionQueries, useSavePreference } from "../api"
 import { setWhisperModel, whisperModel } from "../browser-whisper"
 import type { WhisperModel } from "../protocol"
+import { useErrorToast } from "@/hooks/use-error-toast"
 
 /** Preferências de transcrição do usuário (AU-03, AU-04, AU-05). */
 export function TranscriptionSettings() {
   const { t } = useTranslation()
   const options = useQuery(transcriptionQueries.options())
   const save = useSavePreference()
+  const onError = useErrorToast()
   const [model, setModel] = useState<WhisperModel>(whisperModel())
   if (!options.data) {
     return (
@@ -49,7 +51,7 @@ export function TranscriptionSettings() {
   const update = (next: { provider?: string; auto?: boolean }) =>
     save.mutate(
       { ...preference, ...next },
-      { onSuccess: () => toast.add({ title: t("common.saved") }) }
+      { onSuccess: () => toast.add({ title: t("common.saved") }), onError }
     )
   return (
     <SettingsSection title={t("settings.transcription")}>

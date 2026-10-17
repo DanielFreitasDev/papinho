@@ -241,15 +241,16 @@ public class IdentityService {
         consumeAccountAttempt(normalized, clientKey);
         Optional<UserAccount> found = users.findByUsername(normalized);
         String cleanCode = code.strip().toLowerCase(java.util.Locale.ROOT).replace(" ", "").replace("-", "");
+        // Sempre RECOVERY_CODE_COUNT hashes, sem parar no acerto: o tempo não diz se a conta existe (ID-05).
+        List<RecoveryCode> candidates = found.isPresent() && found.get().enabled()
+                ? recoveryCodes.findUnused(found.get().id()) : List.of();
         RecoveryCode match = null;
-        if (found.isPresent() && found.get().enabled()) {
-            for (RecoveryCode candidate : recoveryCodes.findUnused(found.get().id())) {
-                if (passwordEncoder.matches(cleanCode, candidate.codeHash())) {
-                    match = candidate;
-                    break;
-                }
+        for (RecoveryCode candidate : candidates) {
+            if (passwordEncoder.matches(cleanCode, candidate.codeHash()) && match == null) {
+                match = candidate;
             }
-        } else {
+        }
+        for (int i = candidates.size(); i < RECOVERY_CODE_COUNT; i++) {
             passwordEncoder.matches(cleanCode, dummyHash);
         }
         if (match == null) {

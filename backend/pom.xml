@@ -20,6 +20,7 @@
 		<jsoup.version>1.23.2</jsoup.version>
 		<shedlock.version>7.10.1</shedlock.version>
 		<greenmail.version>2.1.14</greenmail.version>
+		<awssdk.version>2.54.0</awssdk.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -122,6 +123,17 @@
 			<groupId>org.jsoup</groupId>
 			<artifactId>jsoup</artifactId>
 			<version>${jsoup.version}</version>
+		</dependency>
+		<!-- Armazenamento S3-compatível (ADR 0006); o cliente HTTP síncrono basta, sem o Netty do assíncrono. -->
+		<dependency>
+			<groupId>software.amazon.awssdk</groupId>
+			<artifactId>s3</artifactId>
+			<exclusions>
+				<exclusion>
+					<groupId>software.amazon.awssdk</groupId>
+					<artifactId>netty-nio-client</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.httpcomponents.client5</groupId>
@@ -255,6 +267,13 @@
 				<groupId>org.springframework.modulith</groupId>
 				<artifactId>spring-modulith-bom</artifactId>
 				<version>${spring-modulith.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+			<dependency>
+				<groupId>software.amazon.awssdk</groupId>
+				<artifactId>bom</artifactId>
+				<version>${awssdk.version}</version>
 				<type>pom</type>
 				<scope>import</scope>
 			</dependency>

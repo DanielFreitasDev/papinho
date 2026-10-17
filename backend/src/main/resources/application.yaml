@@ -114,7 +114,18 @@ app:
     key: ${PAPINHO_CRYPTO_KEY:}
     key-file: ${PAPINHO_DATA_DIR:${user.home}/.papinho}/secret.key
   storage:
+    # filesystem (padrão) ou s3 (produção, ADR 0006).
+    type: ${PAPINHO_STORAGE_TYPE:filesystem}
     dir: ${PAPINHO_STORAGE_DIR:${PAPINHO_DATA_DIR:${user.home}/.papinho}/files}
+    s3:
+      # Vazio usa o endereço da AWS; para MinIO, R2 e afins, o endereço do serviço.
+      endpoint: ${PAPINHO_S3_ENDPOINT:}
+      region: ${PAPINHO_S3_REGION:us-east-1}
+      bucket: ${PAPINHO_S3_BUCKET:}
+      # Vazias usam as credenciais do ambiente (AWS_ACCESS_KEY_ID, perfil ou papel da máquina).
+      access-key: ${PAPINHO_S3_ACCESS_KEY:}
+      secret-key: ${PAPINHO_S3_SECRET_KEY:}
+      path-style: ${PAPINHO_S3_PATH_STYLE:true}
   media:
     # Uploads tus em andamento (sempre em disco local, mesmo com armazenamento S3).
     upload-dir: ${PAPINHO_UPLOAD_DIR:${PAPINHO_DATA_DIR:${user.home}/.papinho}/uploads}

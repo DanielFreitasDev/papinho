@@ -9,7 +9,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
-import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
@@ -21,9 +21,10 @@ import io.github.labdev2025cmd.papinho.media.FileStorage;
  * só são aceitos caracteres seguros, então nenhuma chave escapa do diretório (path traversal).
  */
 @Component
+@ConditionalOnProperty(prefix = "app.storage", name = "type", havingValue = "filesystem", matchIfMissing = true)
 class FilesystemFileStorage implements FileStorage {
 
-    private static final Pattern SAFE_KEY = Pattern.compile("^[a-z0-9][a-z0-9/_-]{0,200}$");
+    static final Pattern SAFE_KEY = Pattern.compile("^[a-z0-9][a-z0-9/_-]{0,200}$");
 
     private final Path root;
 
@@ -84,12 +85,4 @@ class FilesystemFileStorage implements FileStorage {
         return path;
     }
 
-    /**
-     * Diretório dos arquivos enviados (prefixo {@code app.storage}).
-     *
-     * @param dir raiz do armazenamento em disco, fora do repositório
-     */
-    @ConfigurationProperties(prefix = "app.storage")
-    record StorageProperties(Path dir) {
-    }
 }

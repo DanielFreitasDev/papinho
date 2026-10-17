@@ -454,6 +454,27 @@ class IdentityIT {
     }
 
     @Test
+    @DisplayName("criar convites e conferir convites têm limite, com 429 e Retry-After (SG-03)")
+    void shouldRateLimitInvites() {
+        ApiClient ana = clients.create();
+        Accounts.register(ana, "ana", null);
+        for (int i = 0; i < RateLimiter.Policy.INVITE_CREATE_BY_USER.capacity(); i++) {
+            assertThat(ana.post("/api/v1/invites", Map.of("validHours", 1, "maxUses", 1))).hasStatus(201);
+        }
+        var created = ana.post("/api/v1/invites", Map.of("validHours", 1, "maxUses", 1));
+        assertProblem(created, 429, "rate-limited");
+        assertThat(created.getResponse().getHeader("Retry-After")).isNotBlank();
+
+        ApiClient anonymous = clients.create().bootstrap();
+        for (int i = 0; i < RateLimiter.Policy.INVITE_CHECK_BY_IP.capacity(); i++) {
+            assertThat(anonymous.get("/api/v1/invites/status?token=chute" + i)).hasStatusOk();
+        }
+        var checked = anonymous.get("/api/v1/invites/status?token=mais-um");
+        assertProblem(checked, 429, "rate-limited");
+        assertThat(checked.getResponse().getHeader("Retry-After")).isNotBlank();
+    }
+
+    @Test
     @DisplayName("logout encerra a sessão")
     void shouldLogout() {
         ApiClient client = clients.create();

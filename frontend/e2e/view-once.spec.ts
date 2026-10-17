@@ -72,7 +72,10 @@ test("visualização única abre uma vez, com marca d'água e sem cache", async 
       })
       document.dispatchEvent(new Event("visibilitychange"))
     }, state)
-  expect(await filter()).toBe("none")
+  // A janela do teste pode não ter o foco (outro contexto do navegador agiu por último), e o visualizador
+  // começa desfocado nesse caso: devolve o foco e espera a transição do filtro acabar.
+  await hana.page.evaluate(() => window.dispatchEvent(new Event("focus")))
+  await expect.poll(filter).toBe("none")
   await hana.page.evaluate(() => window.dispatchEvent(new Event("blur")))
   await expect.poll(filter).toContain("blur")
   await hana.page.evaluate(() => window.dispatchEvent(new Event("focus")))

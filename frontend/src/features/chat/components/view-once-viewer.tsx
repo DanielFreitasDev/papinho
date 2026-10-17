@@ -54,7 +54,11 @@ function ViewOnceContent({ messageId }: { messageId: string }) {
         method: "POST",
       }),
   })
-  const [hidden, setHidden] = useState(false)
+  // Já começa desfocado se a janela não tem o foco ou a aba está escondida: o blur que veio antes de abrir não
+  // dispara de novo.
+  const [hidden, setHidden] = useState(
+    () => !document.hasFocus() || document.visibilityState !== "visible"
+  )
   const { mutate } = grant
 
   // Pede o token uma vez ao abrir; ele não é reemitido.

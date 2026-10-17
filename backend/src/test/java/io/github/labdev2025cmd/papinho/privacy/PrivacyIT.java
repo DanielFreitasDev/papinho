@@ -325,6 +325,32 @@ class PrivacyIT {
     }
 
     /** Ana escreve para Bruno, que tem Ana nos contatos: conversa aceita pelos dois lados. */
+    @Test
+    @DisplayName("quem desligou a própria confirmação não vê a leitura em Dados da mensagem; no grupo, o 'lida por todos' ignora quem desligou (PV-05, PV-06)")
+    void shouldApplyReadReceiptRulesToInfoAndGroupList() {
+        String conversation = acceptedConversation();
+        String message = send(ana, conversation, "oi");
+        ana.patch("/api/v1/privacy", Map.of("readReceipts", false));
+        bruno.put(path(conversation) + "/read", Map.of("seq", 1));
+        assertThat(info(ana, message).get("readAt").isNull()).as("Ana desligou a dela: não vê a do Bruno").isTrue();
+        ana.patch("/api/v1/privacy", Map.of("readReceipts", true));
+        assertThat(info(ana, message).get("readAt").isNull()).as("religada, volta a ver").isFalse();
+
+        ana.post("/api/v1/contacts", Map.of("username", "bruno"));
+        ana.post("/api/v1/contacts", Map.of("username", "carla"));
+        String group = ana.json(ana.post("/api/v1/groups", Map.of("name", "Turma", "memberIds",
+                List.of(brunoId, carlaId)))).get("id").asString();
+        bruno.put(path(group) + "/read-receipts", Map.of("enabled", false));
+        long seq = ana.json(ana.post(path(group) + "/messages", Map.of("clientMessageId", UUID.randomUUID(),
+                "body", "olá grupo"))).get("seq").asLong();
+        carla.put(path(group) + "/read", Map.of("seq", seq));
+        assertThat(ana.json(ana.get(path(group))).get("peerReadSeq").asLong())
+                .as("Bruno desligou e não leu: fica fora do 'lida por todos'").isEqualTo(seq);
+        JsonNode listed = java.util.stream.StreamSupport.stream(ana.json(ana.get("/api/v1/conversations"))
+                .spliterator(), false).filter(item -> item.get("id").asString().equals(group)).findFirst().orElseThrow();
+        assertThat(listed.get("peerReadSeq").asLong()).as("na lista de conversas").isEqualTo(seq);
+    }
+
     private String acceptedConversation() {
         bruno.post("/api/v1/contacts", Map.of("username", "ana"));
         return ana.json(ana.post("/api/v1/conversations/direct", Map.of("username", "bruno"))).get("id").asString();

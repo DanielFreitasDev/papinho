@@ -264,6 +264,35 @@ class RealtimeIT {
     }
 
     @Test
+    @DisplayName("leitura pelo WebSocket segue a reciprocidade: quem desligou não manda nem recebe (PV-05, PV-06)")
+    void shouldApplyReadReceiptReciprocityToRealtimeEvents() throws Exception {
+        Browser ana = Browser.register(base(), "ana", null);
+        Browser bruno = Browser.register(base(), "bruno", ana.invite());
+        bruno.post("/api/v1/contacts", Map.of("username", "ana"));
+        String conversation = ana.post("/api/v1/conversations/direct", Map.of("username", "bruno")).get("id")
+                .asString();
+        String messages = "/api/v1/conversations/" + conversation + "/messages";
+        String read = "/api/v1/conversations/" + conversation + "/read";
+        Connection anaWs = connect(ana);
+
+        ana.post(messages, Map.of("clientMessageId", UUID.randomUUID(), "body", "um"));
+        bruno.patch("/api/v1/privacy", Map.of("readReceipts", false));
+        bruno.put(read, Map.of("seq", 1));
+        assertThat(anaWs.next("receipts").get("readSeq").asLong()).as("Bruno, que leu, desligou").isZero();
+
+        bruno.patch("/api/v1/privacy", Map.of("readReceipts", true));
+        ana.patch("/api/v1/privacy", Map.of("readReceipts", false));
+        ana.post(messages, Map.of("clientMessageId", UUID.randomUUID(), "body", "dois"));
+        bruno.put(read, Map.of("seq", 2));
+        assertThat(anaWs.next("receipts").get("readSeq").asLong()).as("Ana, que recebe, desligou").isZero();
+
+        ana.patch("/api/v1/privacy", Map.of("readReceipts", true));
+        ana.post(messages, Map.of("clientMessageId", UUID.randomUUID(), "body", "três"));
+        bruno.put(read, Map.of("seq", 3));
+        assertThat(anaWs.next("receipts").get("readSeq").asLong()).as("os dois compartilham").isEqualTo(3);
+    }
+
+    @Test
     @DisplayName("com bloqueio, nenhum dos dois recebe a presença do outro, nem pelo WebSocket nem pelo GET (CT-03)")
     void shouldHidePresenceWhenBlocked() throws Exception {
         Browser ana = Browser.register(base(), "ana", null);

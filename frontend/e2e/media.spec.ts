@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test"
+import type { Locator, Page } from "@playwright/test"
 
 import { expect, expectNoSeriousA11yViolations, test } from "./fixtures"
 import { RUN, twoFriends } from "./support"
@@ -34,6 +34,47 @@ async function attach(
   if (caption) {
     await dialog.getByLabel("Legenda (opcional)").fill(caption)
   }
+  await dialog.getByRole("button", { name: "Enviar" }).click()
+  await expect(dialog).toBeHidden()
+}
+
+/** Cola (ClipboardEvent) ou solta (DragEvent) uma imagem PNG gerada no navegador sobre o elemento. */
+async function dispatchFile(
+  target: Locator,
+  kind: "paste" | "drop",
+  name: string
+) {
+  await target.evaluate(
+    async (element, { kind, name }) => {
+      const canvas = document.createElement("canvas")
+      canvas.width = 120
+      canvas.height = 80
+      canvas.getContext("2d")!.fillRect(0, 0, 120, 80)
+      const blob = await new Promise<Blob>((resolve) =>
+        canvas.toBlob((value) => resolve(value!), "image/png")
+      )
+      const data = new DataTransfer()
+      data.items.add(new File([blob], name, { type: "image/png" }))
+      const init = { bubbles: true, cancelable: true }
+      if (kind === "paste") {
+        element.dispatchEvent(
+          new ClipboardEvent("paste", { ...init, clipboardData: data })
+        )
+      } else {
+        for (const type of ["dragenter", "dragover", "drop"]) {
+          element.dispatchEvent(
+            new DragEvent(type, { ...init, dataTransfer: data })
+          )
+        }
+      }
+    },
+    { kind, name }
+  )
+}
+
+async function sendFromDialog(page: Page) {
+  const dialog = page.getByRole("dialog", { name: "Enviar 1 arquivo" })
+  await expect(dialog).toBeVisible()
   await dialog.getByRole("button", { name: "Enviar" }).click()
   await expect(dialog).toBeHidden()
 }
@@ -139,6 +180,26 @@ test("fotos, documento e cancelamento de envio entre dois navegadores", async ({
   await expect(
     hana.page.getByRole("button", { name: "Abrir imagem azul.png" })
   ).toHaveCount(0)
+  await gil.page.unroute("**/api/v1/uploads/*")
+
+  // Ctrl+V com um arquivo no composer e arrastar e soltar na conversa abrem o mesmo diálogo de envio (MS-13).
+  await dispatchFile(
+    gil.page.getByRole("textbox", { name: "Mensagem" }),
+    "paste",
+    "colada.png"
+  )
+  await sendFromDialog(gil.page)
+  await dispatchFile(
+    gil.page.locator('[data-slot="message-scroller"]'),
+    "drop",
+    "arrastada.png"
+  )
+  await sendFromDialog(gil.page)
+  for (const name of ["colada.png", "arrastada.png"]) {
+    await expect(
+      hana.page.getByRole("button", { name: `Abrir imagem ${name}` })
+    ).toBeVisible()
+  }
 
   // Galeria da conversa (MD-03): abas de mídia e documentos, e a foto abre no visualizador.
   await hana.page
@@ -148,7 +209,7 @@ test("fotos, documento e cancelamento de envio entre dois navegadores", async ({
   const gallery = hana.page.getByRole("tabpanel", { name: "Mídia" })
   await expect(
     gallery.getByRole("button", { name: /Abrir imagem/ })
-  ).toHaveCount(2)
+  ).toHaveCount(4)
   await expectNoSeriousA11yViolations(hana.page)
   await hana.page.getByRole("tab", { name: "Docs" }).click()
   await expect(
@@ -164,13 +225,13 @@ test("fotos, documento e cancelamento de envio entre dois navegadores", async ({
   await hana.page.keyboard.press("Escape")
   await hana.page.keyboard.press("Escape")
 
-  // A prévia da lista mostra o tipo do anexo (no celular, voltando para a lista).
+  // A prévia da lista mostra o tipo do último anexo (no celular, voltando para a lista).
   const back = hana.page.getByRole("link", { name: "Voltar" })
   if (await back.isVisible()) {
     await back.click()
   }
   await expect(
-    hana.page.getByRole("complementary").getByText(/Documento/)
+    hana.page.getByRole("complementary").getByText("Foto", { exact: true })
   ).toBeVisible()
 
   await Promise.all([gil.context.close(), hana.context.close()])

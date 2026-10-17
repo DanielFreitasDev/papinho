@@ -109,6 +109,36 @@ class PollIT {
         assertThat(anaId).isNotBlank();
     }
 
+    @Test
+    @DisplayName("na conversa individual com bloqueio, quem foi bloqueado não vota nem reage (CT-03)")
+    void shouldRefuseVoteAndReactionWhenBlocked() {
+        bruno.post("/api/v1/contacts", Map.of("username", "ana"));
+        String direct = ana.json(ana.post("/api/v1/conversations/direct", Map.of("username", "bruno")))
+                .get("id").asString();
+        var created = ana.post("/api/v1/conversations/" + direct + "/polls", Map.of("clientMessageId",
+                UUID.randomUUID(), "question", "Cinema?", "options", List.of("sim", "não"), "multiple", false,
+                "anonymous", false));
+        assertThat(created).hasStatus(201);
+        String poll = ana.json(created).get("id").asString();
+        String option = ana.json(created).get("poll").get("options").get(0).get("id").asString();
+        String brunoId = bruno.json(bruno.get("/api/v1/me")).get("account").get("id").asString();
+
+        assertThat(ana.put("/api/v1/blocks/" + brunoId, null)).hasStatus(204);
+        var vote = bruno.put(vote(poll), Map.of("optionIds", List.of(option)));
+        assertThat(vote).as("voto de quem foi bloqueado").hasStatus(403);
+        assertThat(bruno.json(vote).get("type").asString()).isEqualTo("urn:papinho:problem:message-blocked");
+        assertThat(bruno.put("/api/v1/messages/" + poll + "/reaction", Map.of("emoji", "👍")))
+                .as("reação de quem foi bloqueado").hasStatus(403);
+        assertThat(ana.put(vote(poll), Map.of("optionIds", List.of(option)))).as("nem quem bloqueou")
+                .hasStatus(403);
+        assertThat(jdbc.queryForObject("select count(*) from message_reactions", Integer.class)).isZero();
+
+        // Em grupo o bloqueio não impede de participar (como no WhatsApp).
+        JsonNode inGroup = createPoll(ana, "No grupo?", List.of("a", "b"), false, false, null);
+        assertThat(bruno.put(vote(inGroup.get("id").asString()), Map.of("optionIds",
+                List.of(inGroup.get("poll").get("options").get(0).get("id").asString())))).hasStatusOk();
+    }
+
     private JsonNode createPoll(ApiClient client, String question, List<String> options, boolean multiple,
             boolean anonymous, Instant closesAt) {
         Map<String, Object> body = new HashMap<>();

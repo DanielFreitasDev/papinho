@@ -398,6 +398,7 @@ public class MessageService {
         if ((message.deleted() || message.system()) && emoji != null) {
             throw new InvalidMessageException("deleted message");
         }
+        requireNotBlocked(me, message);
         sequences.lock(message.conversationId());
         MessageReaction.Key key = new MessageReaction.Key(messageId, me);
         if (emoji == null) {
@@ -668,6 +669,7 @@ public class MessageService {
         if (poll.closesAt() != null && !poll.closesAt().isAfter(clock.instant())) {
             throw new MessagingExceptions.PollClosedException();
         }
+        requireNotBlocked(me, message);
         Set<UUID> chosen = new LinkedHashSet<>(optionIds);
         Set<UUID> valid = poll.options().stream().map(Polls.Option::id).collect(Collectors.toSet());
         if (!valid.containsAll(chosen) || (!poll.multiple() && chosen.size() > 1)) {
@@ -793,6 +795,13 @@ public class MessageService {
                 .anyMatch(m -> m.userId().equals(target.senderId()));
         return inDirect && isVisible(me, target.conversationId())
                 && conversations.requireConversation(me, conversationId).kind() == ConversationKind.DIRECT;
+    }
+
+    /** Votar e reagir também é interagir: com bloqueio na conversa individual, nenhum dos dois (CT-03). */
+    private void requireNotBlocked(UUID me, Message message) {
+        if (conversations.blockedWithSomeone(me, message.conversationId())) {
+            throw new MessagingExceptions.BlockedException();
+        }
     }
 
     private void requireAuthorWithin(UUID me, Message message, java.time.Duration window) {

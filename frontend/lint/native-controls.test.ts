@@ -29,7 +29,7 @@ async function problems(
 }
 
 const FORBIDDEN: Record<string, string> = {
-  select: `<select aria-label="x"><option>a</option></select>`,
+  select: `<select aria-label={rotulo}><option value="a" /></select>`,
   checkbox: `<input type="checkbox" />`,
   radio: `<Input type="radio" />`,
   range: `<input type="range" />`,
@@ -43,15 +43,15 @@ const FORBIDDEN: Record<string, string> = {
   meter: `<meter value={1} />`,
   "audio com controls": `<audio controls src="a.ogg" />`,
   "video com controls": `<video controls src="a.webm" />`,
-  details: `<details><summary>a</summary></details>`,
-  "title nativo": `<span title="dica">a</span>`,
+  details: `<details><summary>{rotulo}</summary></details>`,
+  "title nativo": `<span title={dica}>{rotulo}</span>`,
   "form sem noValidate": `<form onSubmit={() => undefined} />`,
 }
 
 const ALLOWED: Record<string, string> = {
   "file oculto": `<input type="file" hidden />`,
   "file sr-only": `<input type="file" className="sr-only" />`,
-  "iframe com title": `<iframe title="Vídeo" src="https://www.youtube-nocookie.com/embed/x" />`,
+  "iframe com title": `<iframe title={titulo} src="https://www.youtube-nocookie.com/embed/x" />`,
   "form com noValidate": `<form noValidate onSubmit={() => undefined} />`,
   "campos de texto": `<Input type="email" /><Input type="search" /><Input type="number" />`,
   "mídia sem controls": `<audio src="a.ogg" /><video src="a.webm" />`,
@@ -150,6 +150,41 @@ describe("regra de lint do UI-03 (ação com falha visível)", () => {
     expect(await lint(`  star.mutate({ id: 1 }, { onError })`)).toEqual([])
     expect(
       await lint(`  star.mutate(undefined, { onError: () => undefined })`)
+    ).toEqual([])
+  })
+})
+
+describe("regra de lint do IN-01 (texto só pelo i18next)", () => {
+  const LITERAL: Record<string, string> = {
+    "texto no JSX": `<p>Olá, tudo bem?</p>`,
+    "texto numa expressão": `<p>{"Enviar"}</p>`,
+    "template no JSX": "<p>{`Olá ${nome}`}</p>",
+    "aria-label fixo": `<button aria-label="Fechar" />`,
+    "placeholder fixo": `<Input placeholder="Buscar" />`,
+    "alt fixo": `<img alt="Foto" src="a.png" />`,
+    "aria-label em template": "<button aria-label={`Abrir ${nome}`} />",
+  }
+
+  it.each(Object.entries(LITERAL))("recusa %s", async (_, jsx) => {
+    const found = await problems(jsx)
+    expect(found.length).toBeGreaterThan(0)
+    expect(found.every((message) => message.startsWith("IN-01"))).toBe(true)
+  })
+
+  it("aceita chaves, números e símbolos", async () => {
+    expect(
+      await problems(
+        '<p>{t("chat.title")} · {count} – 3/4 @{usuario} {`${a} · ${b}`}</p><button aria-label={t("chat.send")} />'
+      )
+    ).toEqual([])
+  })
+
+  it("deixa os componentes do shadcn com o texto do registry", async () => {
+    expect(
+      await problems(
+        `<span className="sr-only">Close</span>`,
+        "src/components/ui/exemplo.tsx"
+      )
     ).toEqual([])
   })
 })

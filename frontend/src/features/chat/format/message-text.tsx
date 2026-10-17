@@ -80,7 +80,8 @@ function renderInline(nodes: Inline[]): ReactNode[] {
         if (node.username === "todos") {
           return (
             <strong key={index} className="font-semibold text-primary">
-              @todos
+              {/* eslint-disable-next-line no-restricted-syntax -- é o próprio texto digitado (@todos), não rótulo */}
+              {"@todos"}
             </strong>
           )
         }

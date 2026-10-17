@@ -86,7 +86,9 @@ export function AdminUsers() {
                     <ItemTitle className="truncate">
                       {user.displayName}
                       {user.admin ? (
-                        <Badge variant="secondary">admin</Badge>
+                        <Badge variant="secondary">
+                          {t("admin.adminBadge")}
+                        </Badge>
                       ) : null}
                       {!user.enabled ? (
                         <Badge variant="destructive">

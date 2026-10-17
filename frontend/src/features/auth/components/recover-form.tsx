@@ -66,7 +66,7 @@ export function RecoverForm({ onDone }: { onDone: () => void }) {
             autoComplete="one-time-code"
             autoCapitalize="none"
             spellCheck={false}
-            placeholder="xxxxx-xxxxx"
+            placeholder={t("auth.recoveryCodePlaceholder")}
             aria-invalid={!!form.formState.errors.recoveryCode}
             {...form.register("recoveryCode")}
           />

@@ -97,6 +97,34 @@ const SILENT_MUTATION = [
   },
 ]
 
+/**
+ * IN-01: texto da interface só pelo i18next. Nada de letras soltas no JSX nem em atributos que o leitor de tela
+ * ou a pessoa leem (aria-label, placeholder, alt, title); números, símbolos e pontuação podem.
+ */
+const READ_ATTRIBUTES =
+  'aria-label|aria-description|aria-placeholder|aria-roledescription|aria-valuetext|placeholder|alt|title|label'
+const LITERAL_TEXT = [
+  {
+    selector: "JSXText[value=/[A-Za-zÀ-ÿ]/]",
+    message: 'IN-01: texto fixo na interface; use t("chave") com a chave nos dois idiomas.',
+  },
+  {
+    selector: [
+      ':matches(JSXElement, JSXFragment) > JSXExpressionContainer > Literal[value=/[A-Za-zÀ-ÿ]/]',
+      ':matches(JSXElement, JSXFragment) > JSXExpressionContainer > TemplateLiteral > TemplateElement[value.raw=/[A-Za-zÀ-ÿ]/]',
+    ].join(', '),
+    message: 'IN-01: texto fixo na interface; use t("chave") com a chave nos dois idiomas.',
+  },
+  {
+    selector: [
+      `JSXAttribute[name.name=/^(${READ_ATTRIBUTES})$/] > Literal[value=/[A-Za-zÀ-ÿ]/]`,
+      `JSXAttribute[name.name=/^(${READ_ATTRIBUTES})$/] > JSXExpressionContainer > Literal[value=/[A-Za-zÀ-ÿ]/]`,
+      `JSXAttribute[name.name=/^(${READ_ATTRIBUTES})$/] > JSXExpressionContainer > TemplateLiteral > TemplateElement[value.raw=/[A-Za-zÀ-ÿ]/]`,
+    ].join(', '),
+    message: 'IN-01: texto fixo num atributo lido pela pessoa; use t("chave").',
+  },
+]
+
 export default defineConfig([
   globalIgnores(['dist', 'playwright-report', 'test-results']),
   {
@@ -141,7 +169,7 @@ export default defineConfig([
     files: ['src/**/*.tsx'],
     ignores: ['src/components/ui/**'],
     rules: {
-      'no-restricted-syntax': ['error', ...NATIVE_CONTROLS, ...RAW_HTML, ...SILENT_MUTATION],
+      'no-restricted-syntax': ['error', ...NATIVE_CONTROLS, ...RAW_HTML, ...SILENT_MUTATION, ...LITERAL_TEXT],
     },
   },
   {

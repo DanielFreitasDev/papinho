@@ -105,7 +105,8 @@
     "verifyTitle": "Confirmar e-mail",
     "verifyDescription": "Confirmação do e-mail de recuperação da sua conta.",
     "emailVerified": "E-mail confirmado. Ele já pode receber links de redefinição de senha.",
-    "openApp": "Abrir o Papinho"
+    "openApp": "Abrir o Papinho",
+    "recoveryCodePlaceholder": "xxxxx-xxxxx"
   },
   "shell": {
     "menu": "Menu",
@@ -329,7 +330,8 @@
       "userFiles_one": "{{count}} arquivo · {{size}}",
       "userFiles_other": "{{count}} arquivos · {{size}}"
     },
-    "noUsers": "Ninguém encontrado"
+    "noUsers": "Ninguém encontrado",
+    "adminBadge": "admin"
   },
   "chat": {
     "conversations": "Conversas",

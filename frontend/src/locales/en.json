@@ -105,7 +105,8 @@
     "verifyTitle": "Confirm email",
     "verifyDescription": "Confirmation of your account's recovery email.",
     "emailVerified": "Email confirmed. It can now receive password reset links.",
-    "openApp": "Open Papinho"
+    "openApp": "Open Papinho",
+    "recoveryCodePlaceholder": "xxxxx-xxxxx"
   },
   "shell": {
     "menu": "Menu",
@@ -329,7 +330,8 @@
       "userFiles_one": "{{count}} file · {{size}}",
       "userFiles_other": "{{count}} files · {{size}}"
     },
-    "noUsers": "Nobody found"
+    "noUsers": "Nobody found",
+    "adminBadge": "admin"
   },
   "chat": {
     "conversations": "Chats",

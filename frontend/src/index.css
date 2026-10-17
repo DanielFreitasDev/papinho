@@ -314,7 +314,10 @@
  * (CSP): os atrasos são valores fixos.
  */
 @layer components {
-  html[data-blur~="messages"] [data-private="messages"],
+  /* O balão com foto desfoca os filhos, menos a foto: o filtro do pai pegaria a foto também, e a mídia tem o
+     interruptor próprio. */
+  html[data-blur~="messages"] [data-private="messages"]:not(:has(> [data-private="media"])),
+  html[data-blur~="messages"] [data-private="messages"]:has(> [data-private="media"]) > :not([data-private="media"]),
   html[data-blur~="previews"] [data-private="previews"],
   html[data-blur~="names"] [data-private="names"],
   html[data-blur~="photos"] [data-private="photos"],
@@ -325,15 +328,19 @@
   /* Só com mouse: no toque, o navegador deixa o item tocado em :hover até tocar em outro lugar, e um toque curto
      revelaria a mensagem de vez. No celular quem revela é o toque longo. */
   @media (hover: hover) {
-    html[data-blur] [data-private]:hover {
+    html[data-blur] [data-private]:hover,
+    html[data-blur] [data-private="messages"]:hover > :not([data-private="media"]) {
       filter: none;
       transition-delay: var(--reveal-delay, 0ms);
     }
   }
   html[data-blur] [data-private]:focus-within,
   html[data-blur] [data-private-scope]:focus-within [data-private],
+  html[data-blur] [data-private-scope]:focus-within [data-private="messages"] > *,
   html[data-blur] [data-private][data-revealed],
-  html[data-blur] [data-revealed] [data-private] {
+  html[data-blur] [data-private="messages"][data-revealed] > :not([data-private="media"]),
+  html[data-blur] [data-revealed] [data-private],
+  html[data-blur] [data-revealed] [data-private="messages"] > * {
     filter: none;
     transition-delay: 0ms;
   }
@@ -350,8 +357,10 @@
     --reveal-delay: 3000ms;
   }
   @media (prefers-reduced-motion: reduce) {
-    html[data-blur] [data-private] {
-      transition-duration: 0ms;
+    html[data-blur] [data-private],
+    html[data-blur] [data-private="messages"] > * {
+      /* Vale sobre qualquer seletor de desfoque, por mais específico que seja. */
+      transition-duration: 0ms !important;
     }
   }
 }

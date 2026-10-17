@@ -85,6 +85,43 @@ test("fotos, documento e cancelamento de envio entre dois navegadores", async ({
     .toBeGreaterThan(0)
   await expectNoSeriousA11yViolations(hana.page)
 
+  // Modo privado (PV-01): os interruptores de mensagens e de mídia são independentes.
+  const caption = hana.page
+    .getByRole("main")
+    .locator("strong", { hasText: "cores" })
+  const setBlur = (value: string | null) =>
+    hana.page.evaluate((blur) => {
+      if (blur) {
+        document.documentElement.dataset.blur = blur
+      } else {
+        delete document.documentElement.dataset.blur
+      }
+    }, value)
+  // Desfocado de fato: ele ou algum ancestral dentro da mensagem tem o filtro.
+  const blurred = (target: Locator) =>
+    target.evaluate((element) => {
+      for (
+        let node: Element | null = element;
+        node && !node.hasAttribute("data-private-scope");
+        node = node.parentElement
+      ) {
+        if (getComputedStyle(node).filter.includes("blur")) {
+          return true
+        }
+      }
+      return false
+    })
+  await hana.page.mouse.move(0, 0)
+  await setBlur("messages")
+  await expect.poll(() => blurred(caption)).toBe(true)
+  await expect.poll(() => blurred(first)).toBe(false)
+  await setBlur("messages media")
+  await expect.poll(() => blurred(first)).toBe(true)
+  await setBlur("media")
+  await expect.poll(() => blurred(caption)).toBe(false)
+  await expect.poll(() => blurred(first)).toBe(true)
+  await setBlur(null)
+
   // Visualizador: abre, navega para a próxima, amplia e fecha com Esc.
   await first.click()
   const viewer = hana.page.getByRole("dialog", { name: /verde\.png/ })

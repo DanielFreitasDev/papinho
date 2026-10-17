@@ -423,6 +423,37 @@ class IdentityIT {
     }
 
     @Test
+    @DisplayName("quem erra a senha de outra pessoa não bloqueia o login dela, mas vários IPs param no teto da conta")
+    void shouldNotLockOutVictimFromAnotherAddress() {
+        Accounts.register(clients.create(), "ana", null);
+        ApiClient attacker = clients.create().bootstrap();
+        for (int i = 0; i < RateLimiter.Policy.LOGIN_BY_IP_AND_ACCOUNT.capacity(); i++) {
+            assertThat(attacker.post("/api/v1/auth/login", Map.of("username", "ana", "password", "chute " + i)))
+                    .hasStatus(401);
+        }
+        assertThat(attacker.post("/api/v1/auth/login", Map.of("username", "ana", "password", Accounts.PASSWORD)))
+                .hasStatus(429);
+
+        ApiClient victim = clients.create().bootstrap();
+        assertThat(victim.post("/api/v1/auth/login", Map.of("username", "ana", "password", Accounts.PASSWORD)))
+                .hasStatusOk();
+
+        // Muitos IPs juntos ainda esbarram no teto da conta (força bruta distribuída).
+        int perAddress = RateLimiter.Policy.LOGIN_BY_IP_AND_ACCOUNT.capacity();
+        int ceiling = RateLimiter.Policy.LOGIN_BY_ACCOUNT.capacity();
+        int attempts = 0;
+        while (attempts < ceiling) {
+            ApiClient other = clients.create().bootstrap();
+            for (int i = 0; i < perAddress && attempts < ceiling; i++, attempts++) {
+                assertThat(other.post("/api/v1/auth/login", Map.of("username", "ana", "password", "erro " + attempts)))
+                        .hasStatus(401);
+            }
+        }
+        assertThat(clients.create().bootstrap().post("/api/v1/auth/login",
+                Map.of("username", "ana", "password", "mais um erro"))).hasStatus(429);
+    }
+
+    @Test
     @DisplayName("logout encerra a sessão")
     void shouldLogout() {
         ApiClient client = clients.create();

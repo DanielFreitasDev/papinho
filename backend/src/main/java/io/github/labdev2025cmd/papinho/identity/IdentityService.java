@@ -133,13 +133,14 @@ public class IdentityService {
 
     /**
      * Autentica por senha (e TOTP, se ligado). Usuário inexistente, desativado ou senha errada dão a mesma
-     * resposta e gastam o mesmo tempo (ID-04). Limites por IP e por conta (SG-03).
+     * resposta e gastam o mesmo tempo (ID-04). Limites por IP, por IP e conta e um teto por conta (SG-03): quem
+     * chuta a senha de outra pessoa trava o próprio endereço, não o login dela.
      */
     @Transactional
     public PapinhoUser authenticate(String rawUsername, String password, @Nullable String totpCode, String clientKey) {
         rateLimiter.consume(RateLimiter.Policy.LOGIN_BY_IP, clientKey);
         String normalized = Username.normalize(rawUsername);
-        rateLimiter.consume(RateLimiter.Policy.LOGIN_BY_ACCOUNT, normalized);
+        consumeAccountAttempt(normalized, clientKey);
 
         Optional<UserAccount> found = users.findByUsername(normalized);
         if (found.isEmpty()) {
@@ -163,8 +164,14 @@ public class IdentityService {
                 throw new IdentityExceptions.InvalidCodeException();
             }
         }
+        rateLimiter.reset(RateLimiter.Policy.LOGIN_BY_IP_AND_ACCOUNT, normalized + "|" + clientKey);
         rateLimiter.reset(RateLimiter.Policy.LOGIN_BY_ACCOUNT, normalized);
         return toPrincipal(account);
+    }
+
+    private void consumeAccountAttempt(String normalizedUsername, String clientKey) {
+        rateLimiter.consume(RateLimiter.Policy.LOGIN_BY_IP_AND_ACCOUNT, normalizedUsername + "|" + clientKey);
+        rateLimiter.consume(RateLimiter.Policy.LOGIN_BY_ACCOUNT, normalizedUsername);
     }
 
     /** Dados da própria conta. */
@@ -231,7 +238,7 @@ public class IdentityService {
     public UUID recover(String rawUsername, String code, String newPassword, String clientKey) {
         rateLimiter.consume(RateLimiter.Policy.RECOVERY_BY_IP, clientKey);
         String normalized = Username.normalize(rawUsername);
-        rateLimiter.consume(RateLimiter.Policy.LOGIN_BY_ACCOUNT, normalized);
+        consumeAccountAttempt(normalized, clientKey);
         Optional<UserAccount> found = users.findByUsername(normalized);
         String cleanCode = code.strip().toLowerCase(java.util.Locale.ROOT).replace(" ", "").replace("-", "");
         RecoveryCode match = null;

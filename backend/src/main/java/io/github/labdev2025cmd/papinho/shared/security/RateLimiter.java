@@ -25,7 +25,11 @@ public class RateLimiter {
     public record Policy(String name, int capacity, Duration refillPeriod) {
 
         public static final Policy LOGIN_BY_IP = new Policy("login-ip", 20, Duration.ofMinutes(15));
-        public static final Policy LOGIN_BY_ACCOUNT = new Policy("login-account", 10, Duration.ofMinutes(15));
+        /** Erros de um IP contra uma conta: quem chuta a senha de outra pessoa trava só o próprio endereço. */
+        public static final Policy LOGIN_BY_IP_AND_ACCOUNT = new Policy("login-ip-account", 10,
+                Duration.ofMinutes(15));
+        /** Teto da conta somando todos os IPs: contra força bruta distribuída, alto para não travar a dona. */
+        public static final Policy LOGIN_BY_ACCOUNT = new Policy("login-account", 50, Duration.ofMinutes(15));
         public static final Policy REGISTER_BY_IP = new Policy("register-ip", 10, Duration.ofHours(1));
         public static final Policy RECOVERY_BY_IP = new Policy("recovery-ip", 10, Duration.ofHours(1));
         /** Links de redefinição por e-mail para a mesma conta (ID-05): impede encher a caixa de alguém. */

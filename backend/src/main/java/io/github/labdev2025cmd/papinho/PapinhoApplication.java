@@ -1,5 +1,9 @@
 package io.github.labdev2025cmd.papinho;
 
+import java.io.FileDescriptor;
+import java.io.FileOutputStream;
+import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 import org.springframework.boot.SpringApplication;
@@ -20,7 +24,10 @@ public class PapinhoApplication {
 
     public static void main(String[] args) {
         if (args.length > 0 && PkiCommand.NAME.equals(args[0])) {
-            int status = PkiCommand.run(Arrays.copyOfRange(args, 1, args.length), System.out, System.err);
+            // Em UTF-8 mesmo com locale POSIX (contêiner, systemd): senão os acentos saem como "?".
+            int status = PkiCommand.run(Arrays.copyOfRange(args, 1, args.length),
+                    new PrintStream(new FileOutputStream(FileDescriptor.out), true, StandardCharsets.UTF_8),
+                    new PrintStream(new FileOutputStream(FileDescriptor.err), true, StandardCharsets.UTF_8));
             System.exit(status);
         }
         SpringApplication.run(PapinhoApplication.class, args);

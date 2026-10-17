@@ -89,7 +89,23 @@ class PkiCommandTest {
         int status = run("init", "--dir", tempDir.toString(), "--ip", "192.168.0.10", "--hostname", "192.168.0.10");
 
         assertThat(status).isEqualTo(2);
-        assertThat(err.toString()).contains("hostname inválido");
+        assertThat(err.toString(StandardCharsets.UTF_8)).contains("192.168.0.10").contains("papinho.lan")
+                .contains("WebAuthn").contains("Hostname na rede");
+    }
+
+    @Test
+    @DisplayName("com locale POSIX, a mensagem sai em UTF-8, sem acentos trocados por '?'")
+    void shouldWriteUtf8WithPosixLocale() throws Exception {
+        ProcessBuilder builder = new ProcessBuilder(Path.of(System.getProperty("java.home"), "bin", "java").toString(),
+                "-cp", System.getProperty("java.class.path"), "io.github.labdev2025cmd.papinho.PapinhoApplication",
+                "pki", "init", "--dir", tempDir.toString(), "--ip", "192.168.0.10", "--hostname", "192.168.0.10");
+        builder.environment().put("LANG", "C");
+        builder.environment().put("LC_ALL", "C");
+        builder.environment().remove("JAVA_TOOL_OPTIONS");
+        Process process = builder.start();
+        String stderr = new String(process.getErrorStream().readAllBytes(), StandardCharsets.UTF_8);
+        assertThat(process.waitFor()).isEqualTo(2);
+        assertThat(stderr).contains("não").doesNotContain("n?o");
     }
 
     @Test

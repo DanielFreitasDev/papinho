@@ -201,9 +201,14 @@ public final class PkiCommand {
     private String hostname(Map<String, String> options) {
         String hostname = options.getOrDefault("hostname",
                 environment.getOrDefault("PAPINHO_HOSTNAME", DEFAULT_HOSTNAME)).toLowerCase(Locale.ROOT);
-        if (!HOSTNAME.matcher(hostname).matches() || hostname.matches("^[0-9.]+$")) {
+        if (hostname.matches("^[0-9.]+$") || hostname.contains(":")) {
             // WebAuthn não aceita IP como RP ID: o hostname precisa ser um nome DNS (PK-05).
-            throw new IllegalArgumentException("hostname inválido: " + hostname);
+            throw new IllegalArgumentException("o hostname precisa ser um nome, como papinho.lan, e não o IP "
+                    + hostname + ": as passkeys (WebAuthn) não aceitam IP. O IP vai em --ip; veja \"Hostname na rede\""
+                    + " no README.");
+        }
+        if (!HOSTNAME.matcher(hostname).matches()) {
+            throw new IllegalArgumentException("hostname inválido: " + hostname + " (use um nome como papinho.lan)");
         }
         return hostname;
     }

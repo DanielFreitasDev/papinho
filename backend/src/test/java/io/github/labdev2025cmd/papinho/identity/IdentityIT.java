@@ -264,6 +264,32 @@ class IdentityIT {
     }
 
     @Test
+    @DisplayName("modo fechado: o convite do admin reabre a porta para quem o recebe; o de outra pessoa não (ID-07)")
+    void shouldAcceptOnlyAdminInvitesWhenClosed() {
+        ApiClient admin = clients.create();
+        Accounts.register(admin, "ana", null);
+        ApiClient bruno = clients.create();
+        Accounts.register(bruno, "bruno", Accounts.invite(admin));
+        String brunoInvite = Accounts.invite(bruno);
+        assertThat(admin.put("/api/v1/admin/settings", settings("CLOSED", 30))).hasStatusOk();
+        assertThat(bruno.post("/api/v1/invites", Map.of("validHours", 24, "maxUses", 1))).as("só o admin convida")
+                .hasStatus(403);
+        String adminInvite = Accounts.invite(admin);
+
+        ApiClient carla = clients.create().bootstrap();
+        assertThat(carla.json(carla.get("/api/v1/invites/status?token=" + brunoInvite)).get("usable").asBoolean())
+                .as("convite de quem não é admin, com a instância fechada").isFalse();
+        var refused = carla.post("/api/v1/auth/register", Map.of("username", "carla", "displayName", "Carla",
+                "password", Accounts.PASSWORD, "inviteToken", brunoInvite));
+        assertThat(refused).hasStatus(403);
+        assertThat(carla.json(refused).get("type").asString()).isEqualTo("urn:papinho:problem:registration-closed");
+
+        assertThat(carla.json(carla.get("/api/v1/invites/status?token=" + adminInvite)).get("usable").asBoolean())
+                .isTrue();
+        Accounts.register(carla, "carla", adminInvite);
+    }
+
+    @Test
     @DisplayName("@usuario é único sem diferenciar maiúsculas e respeita reservados e formato")
     void shouldEnforceUsernameRules() {
         ApiClient admin = clients.create();

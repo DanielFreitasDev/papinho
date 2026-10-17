@@ -86,15 +86,27 @@ public class InviteService {
     @Transactional(readOnly = true)
     public boolean isUsable(String token, String clientKey) {
         rateLimiter.consume(RateLimiter.Policy.INVITE_CHECK_BY_IP, clientKey);
-        return repository.findByTokenHash(hash(token)).map(i -> i.usable(clock.instant())).orElse(false);
+        return repository.findByTokenHash(hash(token))
+                .map(i -> i.usable(clock.instant()) && opensClosedInstance(i)).orElse(false);
     }
 
-    /** Consome um uso dentro da transação do cadastro, com lock de linha contra corrida. */
+    /**
+     * Consome um uso dentro da transação do cadastro, com lock de linha contra corrida. Com a instância fechada,
+     * só o convite de quem é admin agora serve (ID-07).
+     */
     void consume(String token) {
         Instant now = clock.instant();
         Invite invite = repository.lockByTokenHash(hash(token)).filter(i -> i.usable(now))
                 .orElseThrow(IdentityExceptions.InviteInvalidException::new);
+        if (!opensClosedInstance(invite)) {
+            throw new IdentityExceptions.RegistrationClosedException();
+        }
         invite.consume(now);
+    }
+
+    private boolean opensClosedInstance(Invite invite) {
+        return settings.current().registrationMode() != RegistrationMode.CLOSED || users.findById(invite.createdBy())
+                .map(creator -> creator.role() == Role.ADMIN && creator.enabled()).orElse(false);
     }
 
     static String hash(String token) {

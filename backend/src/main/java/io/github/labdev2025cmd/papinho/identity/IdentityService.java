@@ -96,10 +96,11 @@ public class IdentityService {
         boolean firstUser = isFirstUser();
         if (!firstUser) {
             RegistrationMode mode = settings.current().registrationMode();
-            if (mode == RegistrationMode.CLOSED) {
+            if (mode == RegistrationMode.CLOSED && (inviteToken == null || inviteToken.isBlank())) {
                 throw new IdentityExceptions.RegistrationClosedException();
             }
-            if (mode == RegistrationMode.INVITE_ONLY || inviteToken != null) {
+            // Fechada, a porta só abre com o convite de um admin (o InviteService confere quem o criou).
+            if (mode != RegistrationMode.OPEN || inviteToken != null) {
                 if (inviteToken == null || inviteToken.isBlank()) {
                     throw new IdentityExceptions.InviteInvalidException();
                 }

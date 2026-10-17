@@ -179,6 +179,8 @@ public class MessageService {
             if (!target.conversationId().equals(conversationId) && !privateReply(me, conversationId, target)) {
                 throw new InvalidMessageException("reply target outside conversation");
             }
+            // A resposta devolve o texto citado: numa conversa trancada, só com o token (PV-03).
+            conversations.requireReadable(me, target.conversationId());
         }
         if (member.state() == MemberState.REQUEST) {
             member.changeState(MemberState.ACTIVE);

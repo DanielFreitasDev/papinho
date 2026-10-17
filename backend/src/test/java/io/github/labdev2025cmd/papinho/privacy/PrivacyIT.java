@@ -351,6 +351,26 @@ class PrivacyIT {
         assertThat(listed.get("peerReadSeq").asLong()).as("na lista de conversas").isEqualTo(seq);
     }
 
+    @Test
+    @DisplayName("conversa trancada: responder citando uma mensagem exige o token, senão a citação vazaria o texto (PV-03)")
+    void shouldRequireTokenToQuoteInLockedConversation() throws Exception {
+        String conversation = acceptedConversation();
+        String secret = send(bruno, conversation, "respostasecreta");
+        String token = ana.json(ana.put("/api/v1/privacy/locked-conversations/" + conversation,
+                Map.of("code", "4321"))).get("token").asString();
+
+        MvcTestResult quoted = ana.post(path(conversation) + "/messages",
+                Map.of("clientMessageId", UUID.randomUUID(), "body", "oi", "replyToId", secret));
+        assertThat(quoted).as("citar sem o token").hasStatus(403);
+        assertThat(ApiClient.text(quoted)).doesNotContain("respostasecreta");
+
+        MvcTestResult allowed = ana.perform(MockMvcRequestBuilders.post(path(conversation) + "/messages")
+                .header(ConversationLocks.HEADER, token).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"clientMessageId\":\"" + UUID.randomUUID() + "\",\"body\":\"oi\",\"replyToId\":\"" + secret
+                        + "\"}"));
+        assertThat(allowed).as("com o token").hasStatus(201);
+    }
+
     private String acceptedConversation() {
         bruno.post("/api/v1/contacts", Map.of("username", "ana"));
         return ana.json(ana.post("/api/v1/conversations/direct", Map.of("username", "bruno"))).get("id").asString();

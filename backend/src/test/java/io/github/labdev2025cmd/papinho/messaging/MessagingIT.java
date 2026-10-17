@@ -13,6 +13,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import io.github.labdev2025cmd.papinho.media.FileStorage;
+import io.github.labdev2025cmd.papinho.media.StoredMedia;
 import io.github.labdev2025cmd.papinho.support.Accounts;
 import io.github.labdev2025cmd.papinho.support.ApiClient;
 import io.github.labdev2025cmd.papinho.support.IntegrationTest;
@@ -31,6 +33,9 @@ class MessagingIT {
 
     @Autowired
     private org.springframework.jdbc.core.JdbcTemplate jdbc;
+
+    @Autowired
+    private FileStorage storage;
 
     private ApiClient ana;
     private ApiClient bruno;
@@ -320,9 +325,11 @@ class MessagingIT {
 
         JsonNode withPhoto = ana.json(ana.get(messages(conversation) + "?limit=1")).get("messages").get(0);
         assertThat(ana.get("/api/v1/media/" + photo + "/content")).hasStatusOk();
+        assertThat(StoredMedia.exists(storage, photo)).isTrue();
         ana.delete("/api/v1/messages/" + withPhoto.get("id").asString(), null);
         assertThat(ana.get("/api/v1/media/" + photo + "/content")).as("arquivo removido do servidor")
                 .hasStatus(404);
+        assertThat(StoredMedia.exists(storage, photo)).as("arquivo apagado do armazenamento").isFalse();
         assertThat(bruno.json(bruno.get(conversationPath(conversation))).get("lastMessage").get("deleted")
                 .asBoolean()).isTrue();
 

@@ -16,6 +16,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 
+import io.github.labdev2025cmd.papinho.media.FileStorage;
+import io.github.labdev2025cmd.papinho.media.StoredMedia;
 import io.github.labdev2025cmd.papinho.support.Accounts;
 import io.github.labdev2025cmd.papinho.support.ApiClient;
 import io.github.labdev2025cmd.papinho.support.Images;
@@ -36,6 +38,9 @@ class DisappearingIT {
 
     @Autowired
     private JdbcTemplate jdbc;
+
+    @Autowired
+    private FileStorage storage;
 
     private ApiClient ana;
     private ApiClient bruno;
@@ -118,6 +123,7 @@ class DisappearingIT {
         JsonNode replyNode = history.get(history.size() - 1);
         assertThat(replyNode.get("replyTo").isNull()).isTrue();
         assertThat(ana.get("/api/v1/media/" + photo + "/content")).as("arquivo removido").hasStatus(404);
+        assertThat(StoredMedia.exists(storage, photo)).as("arquivo apagado do armazenamento").isFalse();
     }
 
     @Test

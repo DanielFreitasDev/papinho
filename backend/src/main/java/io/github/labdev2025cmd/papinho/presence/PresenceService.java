@@ -134,19 +134,24 @@ public class PresenceService {
         if (was == now) {
             return;
         }
-        @Nullable Instant lastSeen = null;
+        @Nullable Instant previous = lastSeen(userId).orElse(null);
+        @Nullable Instant next = previous;
         if (!now) {
-            lastSeen = clock.instant();
+            next = clock.instant();
             // A conta pode ter sido excluída antes de a conexão cair: aí não há o que gravar (nem erro de FK).
             jdbc.update("insert into user_presence (user_id, last_seen_at) select id, ? from user_accounts where id = ? "
                     + "on conflict (user_id) do update set last_seen_at = excluded.last_seen_at",
-                    lastSeen.atOffset(ZoneOffset.UTC), userId);
+                    next.atOffset(ZoneOffset.UTC), userId);
         }
-        @Nullable Instant changedAt = lastSeen;
+        // Só avisa quem passa a ver algo diferente: um evento a cada transição, mesmo com o conteúdo filtrado,
+        // daria a hora exata de cada entrada e saída de quem escondeu a presença (PV-04, PV-05).
         for (UUID peer : conversations.mutualPeers(userId)) {
-            PresenceView view = filtered(peer, userId, now, changedAt);
-            broker.convertAndSendToUser(peer.toString(), DESTINATION,
-                    new PresenceEvent("presence", userId, view.online(), view.lastSeenAt()));
+            PresenceView seen = filtered(peer, userId, was, previous);
+            PresenceView view = filtered(peer, userId, now, next);
+            if (!view.equals(seen)) {
+                broker.convertAndSendToUser(peer.toString(), DESTINATION,
+                        new PresenceEvent("presence", userId, view.online(), view.lastSeenAt()));
+            }
         }
     }
 

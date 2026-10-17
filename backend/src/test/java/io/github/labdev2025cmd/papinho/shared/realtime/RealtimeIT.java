@@ -203,6 +203,43 @@ class RealtimeIT {
     }
 
     @Test
+    @DisplayName("presença escondida não gera evento pelo WebSocket: entrada e saída não vazam (PV-04, PV-05)")
+    void shouldNotLeakHiddenPresenceTransitions() throws Exception {
+        Browser ana = Browser.register(base(), "ana", null);
+        Browser bruno = Browser.register(base(), "bruno", ana.invite());
+        bruno.post("/api/v1/contacts", Map.of("username", "ana"));
+        String conversation = ana.post("/api/v1/conversations/direct", Map.of("username", "bruno")).get("id")
+                .asString();
+        ana.post("/api/v1/conversations/" + conversation + "/messages",
+                Map.of("clientMessageId", UUID.randomUUID(), "body", "Oi"));
+        bruno.patch("/api/v1/privacy", Map.of("online", "NOBODY", "lastSeen", "NOBODY"));
+        Connection anaWs = connect(ana);
+
+        Connection brunoWs = connect(bruno);
+        heartbeat(bruno, brunoWs, true);
+        heartbeat(bruno, brunoWs, false);
+        heartbeat(bruno, brunoWs, true);
+        brunoWs.session().disconnect();
+        awaitOwnPresence(bruno, false);
+        assertThat(anaWs.presenceOf(bruno.userId(), Duration.ofSeconds(2)))
+                .as("nada visível mudou: nenhum evento marca a hora da entrada ou da saída").isEmpty();
+
+        // Só o visto por último à vista: ficar online não muda o que a Ana vê, sair muda o horário.
+        bruno.patch("/api/v1/privacy", Map.of("lastSeen", "EVERYONE"));
+        assertThat(anaWs.next("presence").get("lastSeenAt").isNull()).as("a mudança de privacidade avisa").isFalse();
+        JsonNode before = ana.get("/api/v1/presence/" + bruno.userId());
+        brunoWs = connect(bruno);
+        heartbeat(bruno, brunoWs, true);
+        assertThat(anaWs.presenceOf(bruno.userId(), Duration.ofSeconds(2))).as("ficar online escondido").isEmpty();
+        assertThat(ana.get("/api/v1/presence/" + bruno.userId())).isEqualTo(before);
+        brunoWs.session().disconnect();
+        JsonNode offline = anaWs.next("presence");
+        assertThat(offline.get("online").asBoolean()).isFalse();
+        assertThat(offline.get("lastSeenAt").asString()).as("novo visto por último")
+                .isNotEqualTo(before.get("lastSeenAt").asString());
+    }
+
+    @Test
     @DisplayName("logout derruba o WebSocket aberto com aquela sessão")
     void shouldCloseWebSocketAfterLogout() throws Exception {
         Browser ana = Browser.register(base(), "ana", null);
@@ -232,6 +269,20 @@ class RealtimeIT {
             Thread.sleep(50);
         }
         assertThat(laptopWs.session().isConnected()).as("sem esperar a varredura de 30 s").isFalse();
+    }
+
+    /** Manda o heartbeat e espera o servidor aplicá-lo (a própria pessoa sempre vê a sua presença). */
+    private static void heartbeat(Browser browser, Connection connection, boolean active) throws Exception {
+        connection.session().send("/app/presence", Map.of("active", active));
+        awaitOwnPresence(browser, active);
+    }
+
+    private static void awaitOwnPresence(Browser browser, boolean online) throws Exception {
+        long deadline = System.nanoTime() + Duration.ofSeconds(5).toNanos();
+        while (browser.get("/api/v1/presence/" + browser.userId()).get("online").asBoolean() != online) {
+            assertThat(System.nanoTime()).as("presença própria = " + online).isLessThan(deadline);
+            Thread.sleep(50);
+        }
     }
 
     private Connection connect(Browser browser) throws Exception {
@@ -279,6 +330,20 @@ class RealtimeIT {
                 }
             }
             throw new AssertionError("No '" + type + "' event received");
+        }
+
+        /** Eventos de presença de {@code userId} que chegam dentro de {@code window}. */
+        java.util.List<JsonNode> presenceOf(String userId, Duration window) throws InterruptedException {
+            java.util.List<JsonNode> found = new java.util.ArrayList<>();
+            long deadline = System.nanoTime() + window.toNanos();
+            while (System.nanoTime() < deadline) {
+                JsonNode event = events.poll(100, TimeUnit.MILLISECONDS);
+                if (event != null && "presence".equals(event.get("type").asString())
+                        && userId.equals(event.get("userId").asString())) {
+                    found.add(event);
+                }
+            }
+            return found;
         }
     }
 

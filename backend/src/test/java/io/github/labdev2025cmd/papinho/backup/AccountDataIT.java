@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 import io.github.labdev2025cmd.papinho.support.Accounts;
 import io.github.labdev2025cmd.papinho.support.ApiClient;
@@ -83,6 +84,32 @@ class AccountDataIT {
                 .doesNotContain("totp_secret").doesNotContain("p256dh");
         assertThat(zip.keySet()).anyMatch(name -> name.startsWith("arquivos/") && name.endsWith("nota.png"));
         assertThat(unzip(bruno.get("/api/v1/account/export")).keySet()).containsOnly("dados.json");
+    }
+
+    @Test
+    @DisplayName("conversa trancada: sem o token, a exportação leva só que ela existe, sem textos nem arquivos (PV-03)")
+    void shouldLeaveLockedConversationContentOutOfExport() throws IOException {
+        send(bruno, "segredoxyz https://exemplo.org/a", null);
+        String upload = Uploads.upload(bruno, Images.png(16, 16), "foto-trancada.png", "image/png");
+        send(bruno, "", upload);
+        assertThat(bruno.post("/api/v1/conversations/" + conversation + "/scheduled", Map.of("body",
+                "agendadasecreta", "sendAt", java.time.Instant.now().plusSeconds(3600).toString()))).hasStatus(201);
+        assertThat(bruno.put("/api/v1/conversations/" + conversation + "/draft", Map.of("body", "rascunhosecreto")))
+                .isNotNull();
+        String token = bruno.json(bruno.put("/api/v1/privacy/locked-conversations/" + conversation,
+                Map.of("code", "4321"))).get("token").asString();
+
+        Map<String, byte[]> zip = unzip(bruno.get("/api/v1/account/export?files=true"));
+        String raw = new String(zip.get("dados.json"), StandardCharsets.UTF_8);
+        assertThat(raw).doesNotContain("segredoxyz").doesNotContain("agendadasecreta")
+                .doesNotContain("rascunhosecreto").doesNotContain("foto-trancada");
+        assertThat(zip.keySet()).as("arquivos").noneMatch(name -> name.contains("foto-trancada"));
+
+        Map<String, byte[]> unlocked = unzip(bruno.perform(MockMvcRequestBuilders.get("/api/v1/account/export")
+                .param("files", "true").header("X-Papinho-Unlock", token)));
+        assertThat(new String(unlocked.get("dados.json"), StandardCharsets.UTF_8)).as("com o token")
+                .contains("segredoxyz").contains("agendadasecreta").contains("foto-trancada");
+        assertThat(unlocked.keySet()).anyMatch(name -> name.endsWith("foto-trancada.png"));
     }
 
     @Test

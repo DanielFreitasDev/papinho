@@ -51,6 +51,11 @@ interface MessageRepository extends JpaRepository<Message, UUID> {
             """, nativeQuery = true)
     boolean attachmentVisibleTo(UUID viewer, UUID mediaId);
 
+    /** Entre os arquivos dados, os anexados a mensagens destas conversas. */
+    @Query(value = "select distinct m.attachment_id from messages m where m.conversation_id in (:conversationIds) "
+            + "and m.attachment_id in (:mediaIds)", nativeQuery = true)
+    java.util.Set<UUID> attachmentsIn(java.util.Collection<UUID> conversationIds, java.util.Collection<UUID> mediaIds);
+
     /** O arquivo é de uma mensagem de visualização única (só abre por token, MS-08)? */
     @Query(value = "select exists (select 1 from messages m where m.attachment_id = :mediaId and m.view_once)",
             nativeQuery = true)

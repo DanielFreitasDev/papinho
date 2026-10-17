@@ -30,7 +30,14 @@ por mensagens e presença sem criar ciclo entre módulos do Spring Modulith.
   conteúdo (mensagens, sincronização, galeria, fixadas, dados da mensagem) exige o cabeçalho
   `X-Papinho-Unlock` com um token aleatório que cobre os códigos digitados. O token fica **só na memória do
   servidor** (hash SHA-256), vale 10 minutos desde o último uso e no máximo 1 hora; reiniciar tranca tudo.
-  No cliente fica só na memória da aba. Tentativas de código têm limite (SG-03).
+  No cliente fica só na memória da aba. Tentativas de código têm limite (SG-03). Citar uma mensagem e listar
+  ou criar agendadas também exigem o token (auditoria de 2026-10-17, achados A23 e A24).
+- **Exportação da conta (BK-02) com conversa trancada** (achado A25): a exportação leva só que a conversa
+  existe (`trancada: true`); textos enviados, rascunhos, agendadas, com quem é a conversa e os arquivos
+  anexados nela ficam de fora quando o token da requisição não a abre. O link de download do navegador não
+  manda cabeçalhos, então na tela a exportação sai sempre sem as trancadas; para levá-las, a pessoa as destranca
+  antes. Exigir o token ou uma nova senha para exportar foi descartado: o download por link não carrega o
+  cabeçalho e a portabilidade da LGPD não pode depender de abrir a pasta.
 - **Bloqueio de tela (PV-02):** PIN ou senha próprios com Argon2 e gatilhos guardados no servidor, todos
   desligados por padrão. O estado "bloqueado" é do cliente (`localStorage` por conta, sincronizado entre abas):
   é proteção visual e a sessão continua ativa. O desbloqueio por passkey reutiliza a cerimônia de login por

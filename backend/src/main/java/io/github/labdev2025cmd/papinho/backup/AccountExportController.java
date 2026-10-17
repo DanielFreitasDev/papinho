@@ -30,10 +30,11 @@ class AccountExportController {
     ResponseEntity<StreamingResponseBody> export(@RequestParam(defaultValue = "false") boolean files) {
         UUID me = CurrentUser.id();
         export.checkLimit(me);
+        AccountExport.Prepared prepared = export.prepare(me, files);
         return ResponseEntity.ok().contentType(MediaType.parseMediaType("application/zip"))
                 .cacheControl(CacheControl.noStore())
                 .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment()
                         .filename("papinho-meus-dados.zip", StandardCharsets.UTF_8).build().toString())
-                .body(output -> export.write(me, files, output));
+                .body(output -> export.write(prepared, output));
     }
 }

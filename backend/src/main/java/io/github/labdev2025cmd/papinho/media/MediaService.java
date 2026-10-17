@@ -149,7 +149,19 @@ public class MediaService {
     /** Arquivos que a pessoa enviou, para a exportação dos dados dela (BK-02). */
     @Transactional(readOnly = true)
     public java.util.List<OwnedFile> ownedBy(UUID ownerId) {
-        return files.findByOwner(ownerId).stream().map(file -> new OwnedFile(file.id(), file.filename())).toList();
+        java.util.List<MediaFile> owned = files.findByOwner(ownerId);
+        java.util.Set<UUID> hidden = hiddenFromOwner(ownerId, owned.stream().map(MediaFile::id).toList());
+        return owned.stream().filter(file -> !hidden.contains(file.id()))
+                .map(file -> new OwnedFile(file.id(), file.filename())).toList();
+    }
+
+    /** Arquivos da pessoa que a exportação desta requisição não leva (conversas trancadas fechadas, PV-03). */
+    java.util.Set<UUID> hiddenFromOwner(UUID ownerId, java.util.Collection<UUID> mediaIds) {
+        java.util.Set<UUID> hidden = new java.util.HashSet<>();
+        if (!mediaIds.isEmpty()) {
+            policies.forEach(policy -> hidden.addAll(policy.hiddenFromOwner(ownerId, mediaIds)));
+        }
+        return hidden;
     }
 
     /** Arquivo de uma pessoa: id e nome original já limpo. */

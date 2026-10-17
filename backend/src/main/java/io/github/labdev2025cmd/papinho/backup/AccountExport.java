@@ -47,26 +47,37 @@ class AccountExport {
         rateLimiter.consume(RateLimiter.Policy.EXPORT_BY_USER, userId.toString());
     }
 
+    /**
+     * Junta os dados na thread da requisição: o token de conversa trancada vem do cabeçalho dela (PV-03), e o
+     * corpo em streaming roda depois, noutra thread.
+     */
     @Transactional(readOnly = true)
-    void write(UUID userId, boolean withFiles, OutputStream target) throws IOException {
+    Prepared prepare(UUID userId, boolean withFiles) {
         ObjectNode data = json.createObjectNode();
         data.put("exportadoEm", clock.instant().toString());
         sections.forEach(section -> data.set(section.name(), section.collect(userId)));
+        return new Prepared(json.writerWithDefaultPrettyPrinter().writeValueAsBytes(data),
+                withFiles ? media.ownedBy(userId) : List.of());
+    }
+
+    void write(Prepared prepared, OutputStream target) throws IOException {
         try (ZipOutputStream zip = new ZipOutputStream(target, StandardCharsets.UTF_8)) {
             zip.putNextEntry(new ZipEntry("dados.json"));
-            zip.write(json.writerWithDefaultPrettyPrinter().writeValueAsBytes(data));
+            zip.write(prepared.data());
             zip.closeEntry();
-            if (withFiles) {
-                for (MediaService.OwnedFile file : media.ownedBy(userId)) {
-                    try (InputStream in = media.grantedContent(file.id()).resource().getInputStream()) {
-                        zip.putNextEntry(new ZipEntry("arquivos/" + file.id() + "-" + FileNames.sanitize(file.filename())));
-                        in.transferTo(zip);
-                        zip.closeEntry();
-                    } catch (RuntimeException | IOException gone) {
-                        // Arquivo já removido do armazenamento: fica só a linha em dados.json.
-                    }
+            for (MediaService.OwnedFile file : prepared.files()) {
+                try (InputStream in = media.grantedContent(file.id()).resource().getInputStream()) {
+                    zip.putNextEntry(new ZipEntry("arquivos/" + file.id() + "-" + FileNames.sanitize(file.filename())));
+                    in.transferTo(zip);
+                    zip.closeEntry();
+                } catch (RuntimeException | IOException gone) {
+                    // Arquivo já removido do armazenamento: fica só a linha em dados.json.
                 }
             }
         }
+    }
+
+    /** Dados já reunidos e os arquivos a incluir. */
+    record Prepared(byte[] data, List<MediaService.OwnedFile> files) {
     }
 }

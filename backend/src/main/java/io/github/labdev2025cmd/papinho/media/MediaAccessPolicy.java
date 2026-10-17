@@ -1,5 +1,7 @@
 package io.github.labdev2025cmd.papinho.media;
 
+import java.util.Collection;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -16,5 +18,13 @@ public interface MediaAccessPolicy {
      */
     default boolean restricted(UUID mediaId) {
         return false;
+    }
+
+    /**
+     * Entre os arquivos de {@code owner}, os que ficam de fora da exportação da conta nesta requisição: anexos de
+     * conversa trancada que o token não abre (PV-03).
+     */
+    default Set<UUID> hiddenFromOwner(UUID owner, Collection<UUID> mediaIds) {
+        return Set.of();
     }
 }

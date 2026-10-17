@@ -70,7 +70,12 @@ public class BroadcastService {
         requireOwn(me, id);
         Set<UUID> recipients = validRecipients(me, recipientIds);
         Instant now = clock.instant();
-        validate(name, expiresAt, messageTtlSeconds, null);
+        // Vencida, a lista fica só para consulta: mudar a validade a reabriria (GR-04).
+        Broadcasts.Details current = broadcasts.details(List.of(id)).get(id);
+        if (current == null || current.expired(now)) {
+            throw new MessagingExceptions.BroadcastExpiredException();
+        }
+        validate(name, expiresAt, messageTtlSeconds, now);
         broadcasts.save(id, name.strip(), expiresAt, messageTtlSeconds, now);
         broadcasts.replaceRecipients(id, recipients);
         return conversationService.view(me, id);
@@ -106,13 +111,12 @@ public class BroadcastService {
         return recipients;
     }
 
-    private static void validate(String name, @Nullable Instant expiresAt, @Nullable Integer ttl,
-            @Nullable Instant now) {
+    private static void validate(String name, @Nullable Instant expiresAt, @Nullable Integer ttl, Instant now) {
         String trimmed = name.strip();
         if (trimmed.isEmpty() || trimmed.length() > GroupDetails.MAX_NAME) {
             throw new InvalidGroupException("name");
         }
-        if (now != null && expiresAt != null && !expiresAt.isAfter(now)) {
+        if (expiresAt != null && !expiresAt.isAfter(now)) {
             throw new InvalidGroupException("expires in the past");
         }
         if (ttl != null && !MessagingPreferences.TIMERS.contains(ttl)) {

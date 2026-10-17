@@ -104,6 +104,24 @@ class BroadcastIT {
         assertThat(expired.get("canSend").asBoolean()).isFalse();
         assertThat(ana.post("/api/v1/conversations/" + id + "/messages",
                 Map.of("clientMessageId", UUID.randomUUID(), "body", "tarde"))).hasStatus(403);
+
+        var reopen = ana.put("/api/v1/broadcasts/" + id, Map.of("name", "Festa", "recipientIds", List.of(brunoId),
+                "expiresAt", Instant.now().plusSeconds(86_400).toString()));
+        assertThat(reopen).as("lista vencida não reabre").hasStatus(403);
+        assertThat(ana.json(reopen).get("type").asString()).isEqualTo("urn:papinho:problem:broadcast-expired");
+        assertThat(ana.json(ana.get("/api/v1/conversations/" + id)).get("broadcast").get("expired").asBoolean())
+                .isTrue();
+    }
+
+    @Test
+    @DisplayName("editar a lista com validade no passado é recusado, como na criação (GR-04)")
+    void shouldRefusePastExpiryOnUpdate() {
+        String id = ana.json(ana.post("/api/v1/broadcasts", Map.of("name", "Festa", "recipientIds",
+                List.of(brunoId)))).get("id").asString();
+        assertThat(ana.put("/api/v1/broadcasts/" + id, Map.of("name", "Festa", "recipientIds", List.of(brunoId),
+                "expiresAt", "2020-01-01T00:00:00Z"))).hasStatus(400);
+        assertThat(ana.json(ana.get("/api/v1/conversations/" + id)).get("broadcast").get("expiresAt").isNull())
+                .isTrue();
     }
 
     private static void send(ApiClient client, String conversation, String body) {

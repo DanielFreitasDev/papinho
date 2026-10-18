@@ -23,6 +23,11 @@ Pegadinhas da primeira publicação em https://papinho.cepify.com.br (deploy/PRO
 - **CI no repositório privado:** ao passar para `DanielFreitasDev/papinho` (privado), o `ubuntu-latest` caiu de 4
   para 2 vCPUs e o e2e passou dos 30 min sem nenhuma falha (run 39087578514 cancelado por tempo no teste 81). O teto
   do job foi para 60 min.
+- **Cota de artifacts da conta:** em repositório privado, a cota de armazenamento de artifacts é da conta
+  `DanielFreitasDev` inteira (outros repositórios já a enchiam) e é recalculada a cada 6–12 h. O upload do JAR falhou
+  com "Artifact storage quota has been hit" (run 39089557035) e o deploy não rodou. O JAR passa ao deploy pelo
+  `actions/cache` (10 GB por repositório, chave `papinho-jar-<run_id>`) e os relatórios só sobem em falha, com
+  `continue-on-error`. O Cepify ainda usa artifacts e pode esbarrar na mesma cota.
 - **zsh:** em `"refs/remotes/$b:refs/heads/..."` o `:r` vira modificador do zsh e come o texto; use `${b}`.
 
 **Evidência:** sessão de 2026-10-17; `/api/v1/admin/settings` 200 com a conta criada, login e `wss://.../ws` pelo

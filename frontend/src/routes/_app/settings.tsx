@@ -27,10 +27,11 @@ function SettingsLayout() {
   return (
     <>
       <PageHeader title={t("settings.title")} />
-      {/* Lista de seções que rola de lado de propósito no celular (data-scroll-x, AR-02). */}
+      {/* Lista de seções que rola de lado de propósito no celular (data-scroll-x, AR-02). shrink-0: com
+          overflow, o item do flex do <main> perde a altura mínima e some numa seção alta (Privacidade). */}
       <nav
         aria-label={t("settings.title")}
-        className="overflow-x-auto px-2 pt-3 md:px-4"
+        className="shrink-0 overflow-x-auto px-2 pt-3 md:px-4"
         data-scroll-x=""
       >
         <div className={tabsListVariants({ className: "w-max" })}>

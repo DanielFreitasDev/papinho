@@ -376,6 +376,11 @@ test("bloqueio por inatividade e desbloqueio com passkey", async ({
   await page.clock.install()
   await page.goto("/settings/privacy")
   await page.getByLabel("Novo PIN").fill("8642")
+  // A seção é mais alta que a tela: a lista de seções não pode ser espremida pelo flex do <main>.
+  const sections = page.getByRole("navigation", { name: "Configurações" })
+  expect(
+    await sections.evaluate((nav) => nav.scrollHeight - nav.clientHeight)
+  ).toBeLessThanOrEqual(1)
   await page.getByLabel("Repita para confirmar").fill("8642")
   await page
     .getByRole("combobox", { name: "Bloquear depois de um tempo sem uso" })

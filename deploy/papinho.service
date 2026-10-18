@@ -1,0 +1,33 @@
+[Unit]
+Description=Papinho - chat self-hosted com privacidade (Spring Boot)
+After=network-online.target postgresql@18-main.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=papinho
+Group=papinho
+WorkingDirectory=/var/lib/papinho
+EnvironmentFile=/etc/papinho/papinho.env
+ExecStart=/usr/bin/java -jar /opt/papinho/papinho.jar
+SuccessExitStatus=143
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=45
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+ReadWritePaths=/var/lib/papinho
+UMask=0077
+MemoryMax=1536M
+CPUQuota=150%
+
+[Install]
+WantedBy=multi-user.target

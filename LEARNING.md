@@ -15,6 +15,7 @@ Leia as entradas relacionadas à tarefa. Os detalhes ficam em `docs/learning/`.
 - [Cadastros em fila pelo advisory lock do primeiro usuário](docs/learning/bug-cadastro-serializado-pela-trava.md) — trava global presa durante 11 hashes Argon2; só com a instância vazia.
 - [Invalidar lista ainda carregando não traz a mudança](docs/learning/bug-invalidar-lista-ainda-carregando.md) — invalidate sem dados reaproveita a 1ª busca; use refreshQueries.
 - [Hover grudado no toque revelava o modo privado](docs/learning/bug-hover-grudado-no-toque.md) — revelar com :hover só em @media (hover: hover); toque longo de verdade pelo CDP.
+- [Abas das configurações sumiam na Privacidade](docs/learning/bug-abas-das-configuracoes-espremidas.md) — item com overflow num flex-col é espremido; shrink-0.
 - [Sync perdia mensagens com o lastSeq lido depois](docs/learning/bug-sync-lastseq-lido-depois-da-busca.md) — leia o seq antes e limite a busca; corrida provada com spy.
 
 ## Pegadinhas de ambiente, dependências e bibliotecas

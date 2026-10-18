@@ -1,12 +1,72 @@
-# Papinho
+<p align="center">
+  <img src="docs/images/banner.svg" alt="Papinho — seu chat, no seu servidor, com privacidade de verdade" width="100%">
+</p>
 
-Chat web **auto-hospedado**, inspirado no WhatsApp Web, com **privacidade nativa**. Você inicia na sua
-máquina e usa com amigos pela rede local; depois pode levar para uma VPS com domínio e HTTPS.
+<p align="center">
+  <a href="https://github.com/DanielFreitasDev/papinho/actions/workflows/ci.yml"><img alt="CI/CD" src="https://github.com/DanielFreitasDev/papinho/actions/workflows/ci.yml/badge.svg?branch=main"></a>
+  <a href="https://github.com/DanielFreitasDev/papinho/releases"><img alt="Release" src="https://img.shields.io/github/v/release/DanielFreitasDev/papinho?color=16a34a&label=release"></a>
+  <img alt="Java 25" src="https://img.shields.io/badge/Java-25-ED8B00?logo=openjdk&logoColor=white">
+  <img alt="Spring Boot 4.1" src="https://img.shields.io/badge/Spring%20Boot-4.1-6DB33F?logo=springboot&logoColor=white">
+  <img alt="React 19" src="https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black">
+  <img alt="PostgreSQL 18" src="https://img.shields.io/badge/PostgreSQL-18-4169E1?logo=postgresql&logoColor=white">
+  <img alt="PWA" src="https://img.shields.io/badge/PWA-instal%C3%A1vel-5A0FC8?logo=pwa&logoColor=white">
+</p>
 
-Um único `papinho.jar` serve o SPA, a API e o WebSocket na mesma origem (ADR 0002), com PostgreSQL.
+<p align="center">
+  <b>Chat web auto-hospedado, inspirado no WhatsApp Web, com privacidade nativa.</b><br>
+  Comece na sua máquina com os amigos da rede local e leve para uma VPS com domínio e HTTPS quando quiser.
+</p>
 
-> Estado do projeto: em construção por fases. O progresso real, requisito por requisito e com evidência,
-> está em [`STATUS.md`](STATUS.md). As decisões de arquitetura estão em [`docs/adr/`](docs/adr/).
+<p align="center">
+  <a href="https://papinho.cepify.com.br"><b>🌐 papinho.cepify.com.br</b></a> ·
+  <a href="#-destaques">Destaques</a> ·
+  <a href="#-capturas-de-tela">Capturas</a> ·
+  <a href="#desenvolvimento">Desenvolvimento</a> ·
+  <a href="deploy/PRODUCAO.md">Produção</a>
+</p>
+
+<p align="center">
+  <img src="docs/images/hero.png" alt="Papinho no computador (tema claro) e no celular (tema escuro)" width="100%">
+</p>
+
+## ✨ Destaques
+
+| | |
+|---|---|
+| 🏠 **Seu servidor, suas regras** | Um único `papinho.jar` serve o app, a API e o WebSocket na mesma origem. Os dados ficam no seu PostgreSQL. |
+| 🔒 **Privacidade aplicada no servidor** | Visto por último, online, foto, recado e confirmação de leitura com reciprocidade; ninguém burla pelo navegador. |
+| 🙈 **Modo privado e conversas trancadas** | Desfoque de mensagens, nomes e mídia (Alt+Shift+P), bloqueio de tela por PIN e conversas que só abrem com código. |
+| ⚡ **Tempo real e offline** | STOMP sobre WebSocket com sincronização por sequência; PWA instalável, conversas recentes offline e fila de envio. |
+| 👥 **Tudo de um mensageiro moderno** | Grupos com admins e convite por QR Code, transmissões, enquetes, figurinhas, temporárias, agendadas e visualização única. |
+| 🎙️ **Áudio com transcrição** | Whisper no próprio navegador (o áudio não sai do aparelho) ou um provedor compatível com a API da OpenAI. |
+| 🔑 **Login sem senha** | Passkeys (WebAuthn), verificação em duas etapas (TOTP) com códigos de recuperação e sessão por cookie. |
+| 🔔 **Notificações push** | Web Push cifrado até o navegador, com opção de mostrar só "Nova mensagem". |
+| 🛡️ **HTTPS na rede local** | CA própria com Name Constraints e página `/setup` com QR Code para instalar o certificado nos aparelhos. |
+
+## 📸 Capturas de tela
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/images/desktop-light.png" alt="Conversa no tema claro"><p align="center"><sub>Tema claro</sub></p></td>
+    <td width="50%"><img src="docs/images/desktop-dark.png" alt="Conversa no tema escuro"><p align="center"><sub>Tema escuro</sub></p></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/images/modo-privado.png" alt="Modo privado desfocando mensagens e prévias"><p align="center"><sub>Modo privado: desfoca mensagens e prévias</sub></p></td>
+    <td width="50%"><img src="docs/images/grupo.png" alt="Conversa em grupo"><p align="center"><sub>Grupos</sub></p></td>
+  </tr>
+</table>
+
+<p align="center">
+  <img src="docs/images/mobile-lista-light.png" alt="Lista de conversas no celular, tema claro" width="22%">
+  <img src="docs/images/mobile-conversa-light.png" alt="Conversa no celular, tema claro" width="22%">
+  <img src="docs/images/mobile-lista-dark.png" alt="Lista de conversas no celular, tema escuro" width="22%">
+  <img src="docs/images/mobile-conversa-dark.png" alt="Conversa no celular, tema escuro" width="22%">
+</p>
+
+<p align="center"><sub>Pessoas e conversas fictícias, capturadas de uma instância local.</sub></p>
+
+> O progresso, requisito por requisito e com evidência, está em [`STATUS.md`](STATUS.md). As decisões de
+> arquitetura estão em [`docs/adr/`](docs/adr/).
 
 ## Stack
 
@@ -226,6 +286,10 @@ curl -fsSL http://papinho.lan:8080/setup/install-ca.sh | sh -s -- --uninstall
 `scripts/verify-install-ca.sh` testa esse script em contêineres Debian, Fedora e Arch.
 
 ## Produção (VPS)
+
+A instância oficial roda em **https://papinho.cepify.com.br** atrás de um Cloudflare Tunnel, com deploy automático
+a cada push na `main` (CI → deploy na VPS com rollback → GitHub Release). Detalhes em
+[`deploy/PRODUCAO.md`](deploy/PRODUCAO.md).
 
 - Rode **sem** o perfil `lan`: a PKI fica desligada e `/setup` não existe. O TLS vem do proxy reverso
   (Caddy, nginx, Traefik) ou de uma CA pública.

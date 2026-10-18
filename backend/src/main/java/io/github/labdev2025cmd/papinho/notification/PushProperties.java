@@ -17,7 +17,7 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  */
 @ConfigurationProperties(prefix = "app.push")
 public record PushProperties(@DefaultValue("true") boolean enabled,
-        @DefaultValue("https://github.com/labdev2025-cmd/papinho") String subject,
+        @DefaultValue("https://github.com/DanielFreitasDev/papinho") String subject,
         @DefaultValue({"fcm.googleapis.com", "push.services.mozilla.com", "notify.windows.com", "push.apple.com"})
         List<String> allowedHosts,
         @DefaultValue("12h") Duration ttl) {

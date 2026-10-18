@@ -152,7 +152,7 @@ app:
   # Web Push (NT-01): o servidor fala com os serviços de push dos navegadores (exige internet).
   push:
     enabled: ${PAPINHO_PUSH_ENABLED:true}
-    subject: ${PAPINHO_PUSH_SUBJECT:https://github.com/labdev2025-cmd/papinho}
+    subject: ${PAPINHO_PUSH_SUBJECT:https://github.com/DanielFreitasDev/papinho}
   identity:
     webauthn:
       rp-id: ${PAPINHO_RP_ID:localhost}

@@ -41,7 +41,8 @@ limite de 100 MB por requisição do plano gratuito.
 Todo push na `main` roda o CI (`.github/workflows/ci.yml`). Se os jobs `commits`, `backend`, `frontend` e `e2e`
 passarem:
 
-1. o job **deploy** roda no runner da VPS, baixa o `papinho.jar` testado no job `backend` e chama
+1. o job **deploy** roda no runner da VPS, recupera o `papinho.jar` testado no job `backend` (passado pelo cache do Actions, que tem cota própria
+   de 10 GB por repositório; a cota de artifacts é da conta inteira e enche com os outros projetos) e chama
    `sudo /opt/papinho/deploy.sh <jar> <versão>`: guarda o JAR atual, instala o novo, reinicia, espera o
    `/actuator/health` responder UP (até 3 min) e confere a versão no `/actuator/info`. Se falhar, volta o JAR
    anterior e o job fica vermelho;

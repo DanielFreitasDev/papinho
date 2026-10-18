@@ -36,7 +36,7 @@
     "i18next": "^26.4.5",
     "lowlight": "^3.3.0",
     "lucide-react": "^1.57.0",
-    "onnxruntime-web": "1.31.0-dev.20260914-8d85527a0",
+    "onnxruntime-web": "1.31.0-dev.20260918-bc8e7ed75",
     "react": "^19.3.0",
     "react-day-picker": "^10.0.2",
     "react-dom": "^19.3.0",

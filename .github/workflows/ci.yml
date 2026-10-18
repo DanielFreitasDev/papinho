@@ -53,17 +53,20 @@ jobs:
       - name: Versão do projeto (pom.xml)
         id: versao
         run: echo "version=$(./mvnw -B -q help:evaluate -Dexpression=project.version -DforceStdout)" >> "$GITHUB_OUTPUT"
-      # Só no push na main: o mesmo JAR testado vai para a produção e para a release.
-      - name: Publicar o papinho.jar
+      # Só no push na main: o mesmo JAR testado vai para a produção e para a release. Ele passa pelo cache do Actions
+      # (10 GB por repositório), não por artifact: a cota de artifacts é da conta inteira e enche com os outros projetos.
+      - name: Separar o papinho.jar
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: actions/upload-artifact@v6
+        run: mkdir -p dist && cp backend/target/papinho.jar dist/papinho.jar
+      - name: Guardar o papinho.jar para o deploy
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/cache/save@v6
         with:
-          name: papinho-jar
-          path: backend/target/papinho.jar
-          if-no-files-found: error
-          retention-days: 7
+          path: dist/papinho.jar
+          key: papinho-jar-${{ github.run_id }}
       - name: Relatórios de teste
         if: failure()
+        continue-on-error: true
         uses: actions/upload-artifact@v6
         with:
           name: backend-test-reports
@@ -172,9 +175,10 @@ jobs:
           # O WebKit recusa cookies Secure em http://localhost: ele usa a instância HTTPS do perfil lan.
           PAPINHO_E2E_HTTPS_URL: https://127.0.0.1:8443
         run: pnpm e2e
-      # Sempre: o relatório traz as capturas do UI-05 (Chromium, Firefox e WebKit, claro e escuro).
+      # Só em falha (a cota de artifacts é da conta inteira): o relatório traz as capturas e os traces.
       - name: Relatório do Playwright e logs
-        if: always()
+        if: failure()
+        continue-on-error: true
         uses: actions/upload-artifact@v6
         with:
           name: e2e-report
@@ -193,20 +197,21 @@ jobs:
     runs-on: [self-hosted, papinho]
     timeout-minutes: 15
     steps:
-      # O workspace do runner é persistente e o download extrai por cima: sem limpar, sobraria um JAR antigo.
-      - name: Limpar o artifact da rodada anterior
-        run: rm -rf artifact
-      - uses: actions/download-artifact@v7
+      # O workspace do runner é persistente: sem limpar, um JAR de outra rodada poderia ficar no lugar.
+      - name: Limpar o JAR da rodada anterior
+        run: rm -rf dist
+      - uses: actions/cache/restore@v6
         with:
-          name: papinho-jar
-          path: artifact
+          path: dist/papinho.jar
+          key: papinho-jar-${{ github.run_id }}
+          fail-on-cache-miss: true
       - name: Instalar, reiniciar e conferir (saúde, versão e rollback)
         run: |
           set -euo pipefail
           versao="${{ needs.backend.outputs.version }}"
-          test -n "$versao" && test -f artifact/papinho.jar
+          test -n "$versao" && test -f dist/papinho.jar
           echo "Publicando a versão $versao"
-          sudo /opt/papinho/deploy.sh "$(realpath artifact/papinho.jar)" "$versao"
+          sudo /opt/papinho/deploy.sh "$(realpath dist/papinho.jar)" "$versao"
 
   # Depois de um deploy bem-sucedido: tag anotada vX.Y.Z (versão do pom.xml) e GitHub Release com o JAR que foi para a
   # produção. Idempotente: com a versão já publicada, não cria nada (suba a versão no pom.xml para gerar outra).
@@ -223,10 +228,11 @@ jobs:
         with:
           fetch-depth: 0
           fetch-tags: true
-      - uses: actions/download-artifact@v7
+      - uses: actions/cache/restore@v6
         with:
-          name: papinho-jar
-          path: artifact
+          path: dist/papinho.jar
+          key: papinho-jar-${{ github.run_id }}
+          fail-on-cache-miss: true
       - name: Criar a tag e a release (se ainda não existirem)
         env:
           GH_TOKEN: ${{ github.token }}
@@ -248,5 +254,5 @@ jobs:
             echo "Release ${tag} já existe; nada a publicar."
             exit 0
           fi
-          mv artifact/papinho.jar "artifact/papinho-${versao}.jar"
-          gh release create "${tag}" "artifact/papinho-${versao}.jar" --title "Papinho ${tag}" --generate-notes --verify-tag
+          mv dist/papinho.jar "dist/papinho-${versao}.jar"
+          gh release create "${tag}" "dist/papinho-${versao}.jar" --title "Papinho ${tag}" --generate-notes --verify-tag

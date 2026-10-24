@@ -5,6 +5,8 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  # Rodada manual num branch: testes completos e a imagem publicada só com a tag do commit (sem deploy nem release).
+  workflow_dispatch:
 
 # Em PR, a rodada nova cancela a velha; na main, nunca: um deploy no meio (troca do JAR + restart) não pode parar.
 concurrency:
@@ -53,13 +55,14 @@ jobs:
       - name: Versão do projeto (pom.xml)
         id: versao
         run: echo "version=$(./mvnw -B -q help:evaluate -Dexpression=project.version -DforceStdout)" >> "$GITHUB_OUTPUT"
-      # Só no push na main: o mesmo JAR testado vai para a produção e para a release. Ele passa pelo cache do Actions
-      # (10 GB por repositório), não por artifact: a cota de artifacts é da conta inteira e enche com os outros projetos.
+      # No push na main (e na rodada manual): o mesmo JAR testado vai para a produção, para a imagem e para a release.
+      # Ele passa pelo cache do Actions (10 GB por repositório), não por artifact: a cota de artifacts é da conta
+      # inteira e enche com os outros projetos.
       - name: Separar o papinho.jar
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
         run: mkdir -p dist && cp backend/target/papinho.jar dist/papinho.jar
       - name: Guardar o papinho.jar para o deploy
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
         uses: actions/cache/save@v6
         with:
           path: dist/papinho.jar
@@ -213,35 +216,92 @@ jobs:
           echo "Publicando a versão $versao"
           sudo /opt/papinho/deploy.sh "$(realpath dist/papinho.jar)" "$versao"
 
-  # Depois de um deploy bem-sucedido: tag anotada vX.Y.Z (versão do pom.xml) e GitHub Release com o JAR que foi para a
-  # produção. Idempotente: com a versão já publicada, não cria nada (suba a versão no pom.xml para gerar outra).
+  # Depois de um deploy bem-sucedido: imagem Docker no GHCR (amd64 e arm64), tag anotada vX.Y.Z e GitHub Release, todas
+  # com o JAR que foi para a produção (versão do pom.xml). Idempotente: com a versão já publicada, não cria nada (suba
+  # a versão no pom.xml para gerar outra). Na rodada manual, publica só a imagem com a tag do commit, sem release.
   release:
-    name: Release (tag vX.Y.Z + GitHub Release)
-    needs: [backend, deploy]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    name: Release e imagem no GHCR
+    needs: [commits, backend, frontend, e2e, deploy]
+    if: >-
+      !cancelled() && needs.backend.result == 'success' && needs.e2e.result == 'success' &&
+      (needs.deploy.result == 'success' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 30
     permissions:
       contents: write
+      packages: write
+    env:
+      IMAGE: ghcr.io/danielfreitasdev/papinho
+      VERSAO: ${{ needs.backend.outputs.version }}
     steps:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
           fetch-tags: true
-      - uses: actions/cache/restore@v6
-        with:
-          path: dist/papinho.jar
-          key: papinho-jar-${{ github.run_id }}
-          fail-on-cache-miss: true
-      - name: Criar a tag e a release (se ainda não existirem)
+      - name: Decidir o que publicar
+        id: plano
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          versao="${{ needs.backend.outputs.version }}"
-          test -n "$versao"
-          case "$versao" in *-SNAPSHOT) echo "Versão $versao é SNAPSHOT: sem release."; exit 0 ;; esac
-          tag="v${versao}"
+          test -n "$VERSAO"
+          curto="${GITHUB_SHA::7}"
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            echo "Rodada manual: só a imagem ${IMAGE}:sha-${curto}."
+            echo "modo=teste" >> "$GITHUB_OUTPUT"
+            echo "tags=${IMAGE}:sha-${curto}" >> "$GITHUB_OUTPUT"
+          elif [[ "$VERSAO" == *-SNAPSHOT ]]; then
+            echo "Versão $VERSAO é SNAPSHOT: sem release nem imagem."
+            echo "modo=nada" >> "$GITHUB_OUTPUT"
+          elif gh release view "v${VERSAO}" >/dev/null 2>&1; then
+            echo "Release v${VERSAO} já existe; nada a publicar."
+            echo "modo=nada" >> "$GITHUB_OUTPUT"
+          else
+            echo "modo=release" >> "$GITHUB_OUTPUT"
+            {
+              echo "tags<<FIM"
+              echo "${IMAGE}:${VERSAO}"
+              echo "${IMAGE}:latest"
+              echo "${IMAGE}:sha-${curto}"
+              echo "FIM"
+            } >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/cache/restore@v6
+        if: steps.plano.outputs.modo != 'nada'
+        with:
+          path: dist/papinho.jar
+          key: papinho-jar-${{ github.run_id }}
+          fail-on-cache-miss: true
+      # O JAR é o mesmo nas duas arquiteturas; o QEMU só roda o passo que cria o usuário da imagem no arm64.
+      - uses: docker/setup-qemu-action@v4
+        if: steps.plano.outputs.modo != 'nada'
+      - uses: docker/setup-buildx-action@v4
+        if: steps.plano.outputs.modo != 'nada'
+      - uses: docker/login-action@v4
+        if: steps.plano.outputs.modo != 'nada'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - name: Construir e publicar a imagem (linux/amd64 e linux/arm64)
+        if: steps.plano.outputs.modo != 'nada'
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          build-contexts: jar=dist
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.plano.outputs.tags }}
+          build-args: |
+            VERSION=${{ env.VERSAO }}
+            REVISION=${{ github.sha }}
+      - name: Criar a tag e a release (com o JAR, o .sha256 e o docker pull)
+        if: steps.plano.outputs.modo == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag="v${VERSAO}"
           if git rev-parse -q --verify "refs/tags/${tag}" >/dev/null; then
             echo "Tag ${tag} já existe."
           else
@@ -250,9 +310,15 @@ jobs:
             git tag -a "${tag}" -m "Papinho ${tag}"
             git push origin "${tag}"
           fi
-          if gh release view "${tag}" >/dev/null 2>&1; then
-            echo "Release ${tag} já existe; nada a publicar."
-            exit 0
-          fi
-          mv dist/papinho.jar "dist/papinho-${versao}.jar"
-          gh release create "${tag}" "dist/papinho-${versao}.jar" --title "Papinho ${tag}" --generate-notes --verify-tag
+          (cd dist && sha256sum papinho.jar > papinho.jar.sha256)
+          cat > dist/notas.md <<EOF
+          Imagem Docker (linux/amd64 e linux/arm64):
+
+          \`\`\`sh
+          docker pull ${IMAGE}:${VERSAO}
+          \`\`\`
+
+          JAR: \`papinho.jar\` (Java 25), conferido com \`sha256sum -c papinho.jar.sha256\`.
+          EOF
+          gh release create "${tag}" dist/papinho.jar dist/papinho.jar.sha256 --title "Papinho ${tag}" \
+            --notes-file dist/notas.md --generate-notes --verify-tag

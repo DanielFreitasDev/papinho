@@ -1,0 +1,27 @@
+Papinho — chat web auto-hospedado com privacidade nativa
+Copyright (C) 2026 Daniel Freitas
+
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
+Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
+later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
+warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more
+details.
+
+You should have received a copy of the GNU Affero General Public License along with this program (the LICENSE file).
+If not, see <https://www.gnu.org/licenses/>.
+
+Additional permission under GNU AGPL version 3 section 7
+
+If you modify this Program, or any covered work, by linking or combining it with AspectJ (org.aspectj:aspectjweaver)
+or a modified version of that library, containing parts covered by the terms of the Eclipse Public License 2.0, the
+Apache Software License 1.1 or the BSD 3-Clause License, the licensors of this Program grant you additional permission
+to convey the resulting work. Corresponding Source for a non-source form of such a combination shall include the
+source code for the parts of AspectJ used as well as that of the covered work.
+
+Third-party software
+
+The distributed papinho.jar and the container image bundle third-party libraries under their own licenses (mostly
+Apache-2.0, MIT and BSD; see the license files inside each library). The source code of the AspectJ parts is available
+at https://eclipse.org/aspectj.

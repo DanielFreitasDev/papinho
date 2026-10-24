@@ -1,0 +1,18 @@
+# Contexto do docker build: só o código-fonte e os arquivos de licença (o estágio "build" compila tudo de novo).
+.git
+.github
+.idea
+.vscode
+.claude
+**/node_modules
+**/target
+**/*.log
+frontend/dist
+frontend/test-results
+frontend/playwright-report
+frontend/.vite
+data
+docs
+deploy
+.env
+.env.*

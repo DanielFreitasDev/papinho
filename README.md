@@ -5,6 +5,8 @@
 <p align="center">
   <a href="https://github.com/DanielFreitasDev/papinho/actions/workflows/ci.yml"><img alt="CI/CD" src="https://github.com/DanielFreitasDev/papinho/actions/workflows/ci.yml/badge.svg?branch=main"></a>
   <a href="https://github.com/DanielFreitasDev/papinho/releases"><img alt="Release" src="https://img.shields.io/github/v/release/DanielFreitasDev/papinho?color=16a34a&label=release"></a>
+  <a href="LICENSE"><img alt="Licença AGPL-3.0" src="https://img.shields.io/badge/licen%C3%A7a-AGPL--3.0-blue"></a>
+  <a href="#rodar-com-docker"><img alt="Docker (ghcr.io)" src="https://img.shields.io/badge/docker-ghcr.io-2496ED?logo=docker&logoColor=white"></a>
   <img alt="Java 25" src="https://img.shields.io/badge/Java-25-ED8B00?logo=openjdk&logoColor=white">
   <img alt="Spring Boot 4.1" src="https://img.shields.io/badge/Spring%20Boot-4.1-6DB33F?logo=springboot&logoColor=white">
   <img alt="React 19" src="https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black">
@@ -22,6 +24,7 @@
   <a href="#-destaques">Destaques</a> ·
   <a href="#-capturas-de-tela">Capturas</a> ·
   <a href="#desenvolvimento">Desenvolvimento</a> ·
+  <a href="#rodar-com-docker">Docker</a> ·
   <a href="deploy/PRODUCAO.md">Produção</a>
 </p>
 
@@ -285,10 +288,83 @@ curl -fsSL http://papinho.lan:8080/setup/install-ca.sh | sh -s -- --uninstall
 
 `scripts/verify-install-ca.sh` testa esse script em contêineres Debian, Fedora e Arch.
 
+## Rodar com Docker
+
+A cada release, o CI publica a imagem no GitHub Container Registry, para `linux/amd64` e `linux/arm64` (roda
+também num Raspberry Pi 4 ou 5 com sistema de 64 bits). As tags são a versão (`1.1.0`), `latest` e o commit
+(`sha-xxxxxxx`); a mesma versão da release e do `papinho.jar` anexado a ela.
+
+```bash
+docker pull ghcr.io/danielfreitasdev/papinho:latest
+```
+
+Um `compose.yaml` com o Papinho e o PostgreSQL 18:
+
+```yaml
+# Papinho + PostgreSQL 18. Antes de subir: troque as duas senhas (iguais) e, fora do localhost, o endereço público.
+services:
+  papinho:
+    image: ghcr.io/danielfreitasdev/papinho:latest
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/papinho
+      DATABASE_USERNAME: papinho
+      DATABASE_PASSWORD: troque-esta-senha
+      # Endereço que as pessoas usam: passkeys e links de e-mail dependem dele. Num domínio, com HTTPS no proxy:
+      # https://chat.exemplo.com.br nas três variáveis (no RP_ID, só o domínio) e as duas linhas comentadas abaixo.
+      PAPINHO_PUBLIC_URL: http://localhost:8080
+      PAPINHO_ALLOWED_ORIGINS: http://localhost:8080
+      PAPINHO_RP_ID: localhost
+      # PAPINHO_FORWARD_HEADERS: native
+      # PAPINHO_HSTS: "true"
+    volumes:
+      - papinho-data:/data
+
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: papinho
+      POSTGRES_USER: papinho
+      POSTGRES_PASSWORD: troque-esta-senha
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U papinho -d papinho"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  papinho-data:
+  postgres-data:
+```
+
+```bash
+docker compose up -d   # depois, http://localhost:8080: a primeira conta criada vira admin
+```
+
+- A imagem roda como usuário sem privilégios (uid 10001) e guarda tudo em `/data` (`PAPINHO_DATA_DIR`): arquivos
+  enviados, uploads em andamento e a chave de cifra `secret.key`. Faça backup dos dois volumes (veja
+  [Backup](#backup)); num diretório do host no lugar do volume, dê a ele o dono certo:
+  `sudo chown -R 10001:10001 ./dados`.
+- `docker ps` mostra a saúde (`healthy`), conferida em `/actuator/health`. A JVM usa até 75% da memória do
+  contêiner; para mudar, `JAVA_TOOL_OPTIONS`.
+- Fora do `localhost`, sirva por HTTPS num proxy reverso (Caddy, nginx, Traefik): os cookies de sessão são
+  `Secure` e as passkeys exigem um endereço seguro. As regras do proxy estão em [Produção](#produção-vps); as
+  outras variáveis, em [Configuração](#configuração). O perfil `lan` (CA própria) é para rodar o JAR direto na
+  máquina.
+- Para construir a imagem a partir do código: `docker build -t papinho .`.
+
 ## Produção (VPS)
 
 A instância oficial roda em **https://papinho.cepify.com.br** atrás de um Cloudflare Tunnel, com deploy automático
-a cada push na `main` (CI → deploy na VPS com rollback → GitHub Release). Detalhes em
+a cada push na `main` (CI → deploy na VPS com rollback → GitHub Release e imagem no GHCR). Detalhes em
 [`deploy/PRODUCAO.md`](deploy/PRODUCAO.md).
 
 - Rode **sem** o perfil `lan`: a PKI fica desligada e `/setup` não existe. O TLS vem do proxy reverso
@@ -341,3 +417,10 @@ mídia opcional) e todos os seus dados (Configurações > Conta > Seus dados), e
 - [`PROMPT.md`](PROMPT.md): especificação e contrato de trabalho; [`STATUS.md`](STATUS.md): progresso.
 - [`docs/adr/`](docs/adr/): decisões de arquitetura.
 - Guias na raiz: `STRUCTURE.md`, `JAVA.md`, `UI.md`, `RESPONSIVENESS.md`, `COMMITS.md`, `CONTEXT.md`.
+
+## Licença
+
+O Papinho é software livre, sob a [GNU Affero General Public License v3.0](LICENSE) ou (a seu critério) qualquer
+versão posterior. Em resumo: pode usar, estudar, modificar e redistribuir; quem oferece uma versão modificada pela
+rede precisa disponibilizar o código-fonte dela às pessoas que a usam. O aviso de copyright e a permissão adicional
+(seção 7) para combinar o programa com o AspectJ, que vem com o Spring, estão em [`NOTICE`](NOTICE).

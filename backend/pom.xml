@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>io.github.labdev2025cmd</groupId>
 		<artifactId>papinho</artifactId>
-		<version>1.0.0</version>
+		<version>1.1.0</version>
 	</parent>
 	<artifactId>papinho-backend</artifactId>
 	<name>papinho-backend</name>
@@ -292,6 +292,32 @@
 						<goals>
 							<goal>build-info</goal>
 						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-resources-plugin</artifactId>
+				<executions>
+					<!-- AGPL-3.0: a licença e o aviso (com a permissão adicional) vão dentro do JAR distribuído. -->
+					<execution>
+						<id>licenca-no-jar</id>
+						<phase>process-resources</phase>
+						<goals>
+							<goal>copy-resources</goal>
+						</goals>
+						<configuration>
+							<outputDirectory>${project.build.outputDirectory}/META-INF</outputDirectory>
+							<resources>
+								<resource>
+									<directory>${project.basedir}/..</directory>
+									<includes>
+										<include>LICENSE</include>
+										<include>NOTICE</include>
+									</includes>
+								</resource>
+							</resources>
+						</configuration>
 					</execution>
 				</executions>
 			</plugin>

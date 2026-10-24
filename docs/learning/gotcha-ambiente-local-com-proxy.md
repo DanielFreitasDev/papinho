@@ -1,14 +1,17 @@
 ---
 name: Máquina local do dono — proxy no Maven, portas ocupadas e /tmp
-description: proxy do settings.xml virava argumento do vite; 5432 ocupada; /tmp some no reboot; conta do gh (push só no repositório novo); internet só pelo proxy; 12 workers e ambiente e2e local
+description: proxy do settings.xml virava argumento do vite (sem proxy em 2026-10-24); 5432 ocupada; /tmp some no reboot; conta do gh (push só no repositório novo); 12 workers e ambiente e2e local
 type: project
 category: gotcha
 date: 2026-10-16
-updated: 2026-10-16
+updated: 2026-10-24
 ---
 Diferenças da máquina local em relação ao sandbox de nuvem das passadas 1 a 6:
 
-- O `~/.m2/settings.xml` tem proxy. O `frontend-maven-plugin` repassa `--proxy/--https-proxy/--noproxy` a todo
+- Em 2026-10-24 a máquina estava sem proxy: sem `~/.m2/settings.xml`, nada escutando em 3128 e acesso direto ao
+  Maven Central e ao registro do npm (o `docker build` da imagem baixa as dependências direto). Quando o proxy
+  volta, valem as duas notas abaixo; confira antes com `ss -ltn | grep 3128`.
+- O `~/.m2/settings.xml` tinha proxy. O `frontend-maven-plugin` repassa `--proxy/--https-proxy/--noproxy` a todo
   comando do pnpm; no `pnpm run build` eles viram argumentos do vite ("Unknown option --httpsProxy"). O passo de
   build desliga `pnpmInheritsProxyConfigFromMaven` (o `pnpm install` continua usando o proxy). Para compilar um
   commit antigo: `-Dfrontend.pnpm.pnpmInheritsProxyConfigFromMaven=false`.
@@ -23,7 +26,7 @@ Diferenças da máquina local em relação ao sandbox de nuvem das passadas 1 a 
   de um comando só (`git -c credential.helper= -c 'credential.helper=!f() {...}; f' push`), sem gravar nada no git
   config nem mexer no `gh`; o token fica num arquivo 0600 temporário, apagado no fim (passada 8).
 - O servidor usa threads virtuais: `jstack` não as mostra; use `jcmd <pid> Thread.dump_to_file -format=text`.
-- A internet só sai pelo proxy local (`127.0.0.1:3128`, nas variáveis `*_proxy`); conexão direta não passa. O JVM
+- Com o proxy ligado, a internet só sai por ele (`127.0.0.1:3128`, nas variáveis `*_proxy`); conexão direta não passa. O JVM
   ignora essas variáveis. No e2e, o Chromium só precisa de internet no `whisper.spec.ts`, que recebe o proxy por
   `PAPINHO_E2E_PROXY` (a instância local continua direta pelo `bypass`).
 - O Playwright usa por padrão metade dos núcleos (12 workers aqui; 2 no runner do CI): fluxos longos estouram os

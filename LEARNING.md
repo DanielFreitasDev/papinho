@@ -38,7 +38,7 @@ Leia as entradas relacionadas à tarefa. Os detalhes ficam em `docs/learning/`.
 - [Detail do PostgreSQL e erros fora do MVC](docs/learning/gotcha-detalhe-do-postgres-e-erros-fora-do-mvc.md) — logServerErrorDetail=false; /error próprio; válvula do Tomcat; socket cru no teste.
 - [Frontend: salto, service worker, toque e foco](docs/learning/gotcha-frontend-auditoria-2026-10-17.md) — scrollToMessage sem item, workbox.register sem catch, data-slot do Base UI, TabsContent sem foco.
 - [S3 nos testes sem MinIO](docs/learning/gotcha-s3-nos-testes-sem-minio.md) — adobe/s3mock, espera pelo log, skip vira Range.
-- [Máquina local: proxy no Maven, portas e /tmp](docs/learning/gotcha-ambiente-local-com-proxy.md) — proxy virava argumento do vite, e2e local em portas altas (receita), navegadores do Playwright desatualizados, gh com push só no repositório novo, internet só pelo proxy.
+- [Máquina local: proxy no Maven, portas e /tmp](docs/learning/gotcha-ambiente-local-com-proxy.md) — proxy virava argumento do vite, e2e local em portas altas (receita), navegadores do Playwright desatualizados, gh com push só no repositório novo, proxy às vezes (sem ele em 2026-10-24).
 - [Correção dos Baixos de 2026-10-17](docs/learning/gotcha-correcao-baixos-2026-10-17.md) — Enter no celular, safe area pelo CDP, Mockito com varargs, mutação equivalente, 416 do Spring, shadcn add.
 - [Janela de mensagens sobre o MessageScroller](docs/learning/gotcha-janela-de-mensagens-e-message-scroller.md) — âncora que volta ao DOM salta, root e observador recriado após o commit, lado do corte pela borda, compensação pela linha visível.
 - [Duração de áudio: WebM do MediaRecorder, pre-skip e Tika](docs/learning/gotcha-duracao-de-audio-mediarecorder.md) — fim do último bloco − início − CodecDelay; Firefox grava Duration 0,0; .aac e .flac viravam documento.
@@ -55,6 +55,7 @@ Leia as entradas relacionadas à tarefa. Os detalhes ficam em `docs/learning/`.
 - [Destaque da busca pela mesma regra do servidor](docs/learning/decisao-destaque-da-busca.md) — Snowball português igual ao portuguese_stem, fixture conferida nos dois lados, termo pelo estado do histórico.
 - [Escala de espaçamento e auditoria das bordas](docs/learning/decisao-escala-de-espacamento.md) — tokens na forma de variável (cn), menu com largura própria, fieldset min-w-0, addons presos embaixo, data-scroll-x.
 - [Animações sem biblioteca, com tokens e só ao vivo](docs/learning/decisao-animacoes.md) — nada de Motion nem ViewTransition do React na lista, entrada decidida antes de pintar, chave remetente+clientMessageId.
+- [Licença AGPL-3.0 e imagem Docker no GHCR](docs/learning/decisao-licenca-e-imagem-docker.md) — permissão da seção 7 para o AspectJ, Alpine com o JAR testado via build-context, release idempotente.
 - [Limpeza dos arquivos nunca usados](docs/learning/decisao-limpeza-de-arquivos-nao-usados.md) — porta MediaReferences, in_use preguiçoso, trava contra o anexo simultâneo.
 - [Correção da auditoria de 2026-10-17](docs/learning/decisao-auditoria-2026-10-17.md) — convite do admin no fechado, foto view-once, HEIC recusado, exportação sem trancadas, presença.
 - [Correção dos Baixos de 2026-10-17](docs/learning/decisao-auditoria-baixos-2026-10-17.md) — login por IP e conta, grant dos anexos trancados, reservas da conta apagada, antivírus fora.

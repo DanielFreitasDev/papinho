@@ -138,7 +138,7 @@ export function ConversationSearch({
     <div
       role="search"
       aria-label={t("search.inConversation")}
-      className="flex flex-col gap-2 border-b bg-muted/40 px-2 py-2 md:px-4"
+      className="flex flex-col gap-2 border-b bg-muted/40 px-(--spacing-gutter) py-2"
       onKeyDown={(event) => {
         if (event.key === "Escape") {
           event.preventDefault()

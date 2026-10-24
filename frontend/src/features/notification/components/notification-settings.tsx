@@ -128,7 +128,7 @@ export function NotificationSettings() {
             {TOGGLES.map((key) => (
               <li key={key}>
                 <label className="flex min-h-12 items-center justify-between gap-3 py-1 text-sm">
-                  <span className="flex flex-col">
+                  <span className="flex min-w-0 flex-col">
                     {t(`notifications.toggle.${key}`)}
                     <span className="text-xs text-muted-foreground">
                       {t(`notifications.toggleHint.${key}`)}

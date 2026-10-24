@@ -25,7 +25,7 @@ export function PasswordInput({
       <InputGroupInput type={visible ? "text" : "password"} {...props} />
       <InputGroupAddon align="inline-end">
         <InputGroupButton
-          size="icon-xs"
+          size="icon-sm"
           aria-label={
             visible ? t("common.hidePassword") : t("common.showPassword")
           }

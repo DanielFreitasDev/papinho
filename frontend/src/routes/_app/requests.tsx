@@ -15,7 +15,7 @@ function RequestsPage() {
   return (
     <>
       <PageHeader title={t("chat.requests")} />
-      <div className="p-2 md:p-4">
+      <div className="px-(--spacing-gutter) py-3 md:py-4">
         <ConversationList meId={me.account.id} requests />
       </div>
     </>

@@ -48,7 +48,7 @@ export function SearchInput({
       {value ? (
         <InputGroupAddon align="inline-end">
           <InputGroupButton
-            size="icon-xs"
+            size="icon-sm"
             aria-label={t("common.clearSearch")}
             onClick={() => {
               onValueChange("")

@@ -49,7 +49,8 @@ export function DeleteMessagesDialog({
         }
       }}
     >
-      <AlertDialogContent>
+      {/* Três ações: mais largo que o padrão para caberem lado a lado no desktop (no celular, empilhadas). */}
+      <AlertDialogContent className="sm:max-w-md">
         <AlertDialogHeader>
           <AlertDialogTitle>
             {t("chat.deleteTitle", { count: messageIds.length })}

@@ -55,6 +55,9 @@ const MAX_LENGTH = 65_536
  * Campo de mensagem fora da área rolável (UI.md §8.12): Enter envia no computador, Shift+Enter quebra linha;
  * no celular o Enter quebra linha e o botão envia. Avisa "digitando…" (MS-03).
  */
+/** Grupo de ícones do campo: preso à linha de baixo e com a altura de uma linha (44 px do campo menos a borda). */
+const COMPOSER_ADDON = "h-[calc(2.75rem-2px)] self-end py-0"
+
 export function Composer({
   conversationId,
   replyTo,
@@ -217,7 +220,7 @@ export function Composer({
   return (
     <form
       noValidate
-      className="flex flex-col gap-2 border-t bg-background px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]"
+      className="flex flex-col gap-2 border-t bg-background px-(--spacing-gutter) pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]"
       onSubmit={(event) => {
         event.preventDefault()
         submit()
@@ -282,7 +285,9 @@ export function Composer({
       <div className="flex items-end gap-2">
         {recording ? null : (
           <InputGroup className="flex-1">
-            <InputGroupAddon align="inline-start">
+            {/* Os ícones ficam na linha de baixo, da altura de uma linha do campo: com várias linhas de texto, continuam
+                alinhados ao botão do microfone, como no WhatsApp. */}
+            <InputGroupAddon align="inline-start" className={COMPOSER_ADDON}>
               <InputGroupButton
                 type="button"
                 size="icon-sm"
@@ -369,7 +374,8 @@ export function Composer({
               rows={1}
               disabled={disabled}
               enterKeyHint="send"
-              className="field-sizing-content max-h-40 min-h-11 resize-none"
+              // Com a borda, o campo tem os mesmos 44 px do botão do microfone: os ícones de dentro e o dele ficam alinhados.
+              className="field-sizing-content max-h-40 min-h-[calc(2.75rem-2px)] resize-none"
               onChange={(event) => typing(event.target.value)}
               onPaste={(event) => {
                 const pasted = [...event.clipboardData.files]
@@ -407,7 +413,7 @@ export function Composer({
               }}
             />
             {value.trim() !== "" || editing ? (
-              <InputGroupAddon align="inline-end">
+              <InputGroupAddon align="inline-end" className={COMPOSER_ADDON}>
                 {!editing && onSchedule ? (
                   <DropdownMenu>
                     <DropdownMenuTrigger

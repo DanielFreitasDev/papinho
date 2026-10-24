@@ -174,26 +174,31 @@ export function ContactDetails({
               {t("chat.addContact")}
             </Button>
           ) : null}
+          {/* Nome longo: o rótulo corta com reticências dentro do painel; o nome acessível continua inteiro. */}
           <Button
             variant="ghost"
-            className="justify-start text-destructive hover:text-destructive"
+            className="max-w-full justify-start text-destructive hover:text-destructive"
             disabled={block.isPending}
             onClick={() =>
               blocked ? setBlocked(false) : setConfirmBlock(true)
             }
           >
             <BanIcon data-icon="inline-start" />
-            {blocked
-              ? t("chat.unblockName", { name: peer.label })
-              : t("chat.blockName", { name: peer.label })}
+            <span className="min-w-0 truncate">
+              {blocked
+                ? t("chat.unblockName", { name: peer.label })
+                : t("chat.blockName", { name: peer.label })}
+            </span>
           </Button>
           <Button
             variant="ghost"
-            className="justify-start text-destructive hover:text-destructive"
+            className="max-w-full justify-start text-destructive hover:text-destructive"
             onClick={() => setReporting(true)}
           >
             <FlagIcon data-icon="inline-start" />
-            {t("moderation.reportName", { name: peer.label })}
+            <span className="min-w-0 truncate">
+              {t("moderation.reportName", { name: peer.label })}
+            </span>
           </Button>
         </div>
       </div>

@@ -40,7 +40,7 @@ export function ContactPicker({
         value={filter}
         onValueChange={setFilter}
       />
-      <fieldset className="flex max-h-64 flex-col gap-1 overflow-y-auto">
+      <fieldset className="flex max-h-64 min-w-0 flex-col gap-1 overflow-y-auto">
         <legend className="sr-only">{t("groups.chooseMembers")}</legend>
         {contacts.isPending ? (
           <Skeleton className="h-10 w-full" />

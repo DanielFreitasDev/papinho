@@ -34,12 +34,12 @@ export function ConnectionBanner() {
   return (
     <div role="status" aria-live="polite">
       {offline ? (
-        <p className="flex items-center gap-2 border-b bg-muted px-3 pt-[max(0.5rem,env(safe-area-inset-top))] pb-2 text-sm">
+        <p className="flex items-center gap-2 border-b bg-muted px-(--spacing-gutter) pt-[max(0.5rem,env(safe-area-inset-top))] pb-2 text-sm">
           <CloudOffIcon aria-hidden="true" className="size-4 shrink-0" />
           {t("connection.offline")}
         </p>
       ) : reconnecting ? (
-        <p className="flex items-center gap-2 border-b bg-muted px-3 pt-[max(0.5rem,env(safe-area-inset-top))] pb-2 text-sm">
+        <p className="flex items-center gap-2 border-b bg-muted px-(--spacing-gutter) pt-[max(0.5rem,env(safe-area-inset-top))] pb-2 text-sm">
           <LoaderCircleIcon
             aria-hidden="true"
             className="size-4 shrink-0 animate-spin motion-reduce:animate-none"

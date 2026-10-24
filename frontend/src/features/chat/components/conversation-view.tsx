@@ -914,7 +914,7 @@ function LoadedConversation({
       }}
     >
       <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col">
-        <header className="z-10 flex min-h-14 items-center gap-2 border-b bg-background px-2 pt-[env(safe-area-inset-top)] md:px-4">
+        <header className="z-10 flex min-h-14 items-center gap-2 border-b bg-background px-(--spacing-gutter) pt-[env(safe-area-inset-top)]">
           <Link
             to={conversation.state === "REQUEST" ? "/requests" : "/"}
             className={buttonVariants({
@@ -994,7 +994,7 @@ function LoadedConversation({
           <button
             type="button"
             onClick={() => void jumpTo(latestPinned.id)}
-            className="flex items-center gap-2 border-b bg-muted/50 px-4 py-2 text-left text-sm outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="flex items-center gap-2 border-b bg-muted/50 px-(--spacing-gutter) py-2 text-left text-sm outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50"
           >
             <PinIcon aria-hidden="true" className="size-4 shrink-0" />
             <span className="sr-only">{t("chat.pinnedMessages")}: </span>
@@ -1010,7 +1010,7 @@ function LoadedConversation({
           <button
             type="button"
             onClick={() => setScheduledOpen(true)}
-            className="flex items-center gap-2 border-b bg-muted/50 px-4 py-2 text-left text-sm outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="flex items-center gap-2 border-b bg-muted/50 px-(--spacing-gutter) py-2 text-left text-sm outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50"
           >
             <CalendarClockIcon aria-hidden="true" className="size-4 shrink-0" />
             {t("chat.scheduledCount", { count: scheduled.data.length })}
@@ -1089,7 +1089,7 @@ function LoadedConversation({
             ref={viewportRef}
             aria-label={t("chat.messages")}
             preserveScrollOnPrepend
-            className="px-2 md:px-4"
+            className="px-(--spacing-gutter)"
           >
             <MessageScrollerContent className="gap-1 py-3">
               {start > 0 || cache.hasOlder ? (
@@ -1244,8 +1244,10 @@ function LoadedConversation({
               {t("chat.jumpToUnread")}
             </Button>
           ) : null}
+          {/* No canto direito, com a margem da tela, como no WhatsApp: no centro cobria o meio dos balões. */}
           <MessageScrollerButton
             direction="end"
+            className="inset-s-auto inset-e-(--spacing-gutter) size-10 translate-x-0 rounded-full shadow-md"
             onClick={() =>
               // Fora do fim do histórico, volta para as últimas antes de rolar.
               setMessageWindow((window) =>
@@ -1255,7 +1257,7 @@ function LoadedConversation({
           />
         </MessageScroller>
         {selection !== null ? (
-          <div className="flex items-center gap-2 border-t bg-background px-3 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+          <div className="flex items-center gap-2 border-t bg-background px-(--spacing-gutter) py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
             <Button
               variant="ghost"
               size="icon"

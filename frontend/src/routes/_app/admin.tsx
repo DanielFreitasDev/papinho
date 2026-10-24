@@ -22,11 +22,11 @@ function AdminPage() {
   return (
     <>
       <PageHeader title={t("admin.title")} />
-      <div className="mx-auto w-full max-w-2xl p-2 md:p-4">
+      <div className="mx-auto w-full max-w-2xl px-(--spacing-gutter) pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] md:pt-4">
         <Tabs defaultValue="settings">
           {/* A 320 px as abas não cabem: rolam dentro da própria lista, não a página (AR-02). */}
           <TabsList
-            className="max-w-full justify-start overflow-x-auto"
+            className="max-w-full scroll-fade-x justify-start overflow-x-auto"
             data-scroll-x=""
           >
             <TabsTrigger value="settings">{t("admin.settings")}</TabsTrigger>

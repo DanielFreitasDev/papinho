@@ -5,6 +5,20 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/*
+ * Espaçamento: a escala de 4 px do Tailwind, mais nomes para os respiros que se repetem em toda a interface. Nada
+ * encosta na borda: as áreas da tela (cabeçalhos, campo de mensagem, buscas, páginas) têm a margem lateral de 16 px
+ * (gutter); menus e listas de opções têm o padding interno (inset), os itens o respiro horizontal (item) e a mesma
+ * distância entre ícone e texto (icon). Nas classes, a forma é px-(--spacing-gutter): o cn só junta as sobrescritas
+ * (px-1.5 por cima de px-(--spacing-item)) com a forma de variável, não com nomes próprios.
+ */
+@theme static {
+  --spacing-gutter: 1rem;
+  --spacing-inset: 0.375rem;
+  --spacing-item: 0.75rem;
+  --spacing-icon: 0.75rem;
+}
+
 @theme inline {
   --font-heading: var(--font-sans);
   --font-sans: "Geist Variable", sans-serif;

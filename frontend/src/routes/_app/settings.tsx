@@ -1,4 +1,10 @@
-import { createFileRoute, Link, Outlet } from "@tanstack/react-router"
+import { useEffect, useRef } from "react"
+import {
+  createFileRoute,
+  Link,
+  Outlet,
+  useRouterState,
+} from "@tanstack/react-router"
 import { useTranslation } from "react-i18next"
 
 import { PageHeader } from "@/components/layout/page-header"
@@ -24,14 +30,29 @@ export const Route = createFileRoute("/_app/settings")({
 /** Configurações com navegação por seções; cada seção tem rota própria (deep link). */
 function SettingsLayout() {
   const { t } = useTranslation()
+  const nav = useRef<HTMLElement>(null)
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  })
+  // A seção aberta fica à vista na faixa que rola de lado (no celular, "Privacidade" em diante ficava cortada).
+  useEffect(() => {
+    const strip = nav.current
+    const active = strip?.querySelector<HTMLElement>("[data-status=active]")
+    if (strip && active) {
+      const box = active.getBoundingClientRect()
+      const area = strip.getBoundingClientRect()
+      strip.scrollLeft += box.left - area.left - (area.width - box.width) / 2
+    }
+  }, [pathname])
   return (
     <>
       <PageHeader title={t("settings.title")} />
       {/* Lista de seções que rola de lado de propósito no celular (data-scroll-x, AR-02). shrink-0: com
           overflow, o item do flex do <main> perde a altura mínima e some numa seção alta (Privacidade). */}
       <nav
+        ref={nav}
         aria-label={t("settings.title")}
-        className="shrink-0 overflow-x-auto px-2 pt-3 md:px-4"
+        className="shrink-0 scroll-fade-x overflow-x-auto px-(--spacing-gutter) pt-3"
         data-scroll-x=""
       >
         <div className={tabsListVariants({ className: "w-max" })}>
@@ -46,7 +67,7 @@ function SettingsLayout() {
           ))}
         </div>
       </nav>
-      <div className="mx-auto w-full max-w-2xl p-2 pb-[max(1rem,env(safe-area-inset-bottom))] md:p-4">
+      <div className="mx-auto w-full max-w-2xl px-(--spacing-gutter) pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] md:pt-4">
         <Outlet />
       </div>
     </>

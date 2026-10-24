@@ -157,10 +157,12 @@ export function ConversationList({
       {main ? (
         <>
           <SearchBox query={query} onChange={setQuery} />
+          {/* Filtros e listas do usuário rolam de lado de propósito quando não cabem (data-scroll-x, AR-02). */}
           <div
             role="group"
             aria-label={t("organize.filter.label")}
-            className="flex gap-1.5 overflow-x-auto px-1 pb-1"
+            className="flex scroll-fade-x gap-1.5 overflow-x-auto px-2 pb-1"
+            data-scroll-x=""
           >
             {filters.map((item) => (
               <Button
@@ -189,7 +191,7 @@ export function ConversationList({
         </button>
       ) : null}
       {main && filter.kind === "archived" ? (
-        <div className="flex items-center gap-2 px-1">
+        <div className="flex items-center gap-2 px-2">
           <h2 className="flex-1 text-sm font-semibold">
             {t("organize.archivedFolder")}
           </h2>
@@ -426,7 +428,7 @@ function SearchBox({
 }) {
   const { t } = useTranslation()
   return (
-    <div role="search" className="px-1">
+    <div role="search" className="px-2">
       <SearchInput
         value={query}
         aria-label={t("search.global")}

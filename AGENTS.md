@@ -61,6 +61,9 @@ the product's own name-constrained CA) and may later deploy it on a VPS behind a
   `<form>` gets `noValidate`; ESLint enforces it outside `src/components/ui/` (tested in `frontend/lint/`).
 - A failed API action must be visible: never leave `await mutateAsync(...)` without try/catch; show
   `errorMessage(error, t("common.genericError"))` in a toast (`type: "error"`) or in the screen's own error state.
+- Spacing: screen areas use the `--spacing-gutter` token (16 px); menus and option lists `--spacing-inset`,
+  `--spacing-item` and `--spacing-icon`, always in variable form (`px-(--spacing-gutter)`, so `cn` merges overrides).
+  A strip that scrolls sideways on purpose gets `data-scroll-x`; `e2e/spacing.spec.ts` audits edges with long names.
 - Effects that reveal or hide content on `:hover` go inside `@media (hover: hover)`: on touch screens the tapped
   element stays `:hover` until the next tap (PV-01 uses long press there).
 - Never mark a STATUS item `feito` without executed evidence; blocked items need the concrete reason.

@@ -159,7 +159,7 @@ function SignedInShell({ me }: { me: Me }) {
             isHome ? "flex" : "hidden md:flex"
           )}
         >
-          <header className="flex min-h-14 items-center gap-2 px-3 pt-[env(safe-area-inset-top)]">
+          <header className="flex min-h-14 items-center gap-2 px-(--spacing-gutter) pt-[env(safe-area-inset-top)]">
             <Link
               to="/settings/profile"
               className="flex min-w-0 flex-1 items-center gap-2 rounded-lg p-1 outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
@@ -293,7 +293,7 @@ function SignedInShell({ me }: { me: Me }) {
             onValueChange={(value) => setTab(String(value))}
             className="min-h-0 flex-1 gap-1"
           >
-            <TabsList className="mx-3 w-[calc(100%-1.5rem)]">
+            <TabsList className="mx-(--spacing-gutter) w-[calc(100%-2*var(--spacing-gutter))]">
               <TabsTrigger value="conversations">
                 {t("chat.conversations")}
               </TabsTrigger>

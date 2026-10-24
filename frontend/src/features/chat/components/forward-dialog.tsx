@@ -60,7 +60,7 @@ export function ForwardDialog({
           <DialogTitle>{t("chat.forwardTitle")}</DialogTitle>
           <DialogDescription>{t("chat.forwardDescription")}</DialogDescription>
         </DialogHeader>
-        <fieldset className="flex max-h-80 flex-col gap-1 overflow-y-auto">
+        <fieldset className="flex max-h-80 min-w-0 flex-col gap-1 overflow-y-auto">
           <legend className="sr-only">{t("chat.conversations")}</legend>
           {conversations.data
             ?.filter((conversation) => conversation.canSend)

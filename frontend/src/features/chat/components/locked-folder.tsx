@@ -49,7 +49,7 @@ export function LockedFolder({ meId }: { meId: string }) {
           ) : null
         }
       />
-      <div className="p-2 md:p-4">
+      <div className="px-(--spacing-gutter) py-3 md:py-4">
         {token ? (
           <ConversationList meId={meId} locked />
         ) : (

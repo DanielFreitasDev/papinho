@@ -33,7 +33,7 @@ export function StarredMessages() {
   if (starred.isPending) {
     return (
       <Skeleton
-        className="m-4 h-24"
+        className="mx-(--spacing-gutter) my-4 h-24"
         role="status"
         aria-label={t("common.loading")}
       />
@@ -64,7 +64,10 @@ export function StarredMessages() {
     ])
   )
   return (
-    <ItemGroup className="p-4" aria-label={t("chat.starredMessages")}>
+    <ItemGroup
+      className="px-(--spacing-gutter) py-4"
+      aria-label={t("chat.starredMessages")}
+    >
       {starred.data.map((message) => (
         <Item
           key={message.id}

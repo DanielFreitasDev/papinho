@@ -100,7 +100,7 @@ export function EmojiPicker({
         : t(`emoji.group.${shownGroup}`)
 
   return (
-    <div className="flex w-[min(20rem,calc(100vw-2rem))] flex-col gap-2">
+    <div className="flex w-[min(20rem,calc(100vw-3rem))] flex-col gap-2">
       <SearchInput
         aria-label={t("emoji.search")}
         placeholder={t("emoji.search")}
@@ -112,7 +112,8 @@ export function EmojiPicker({
         <div
           role="tablist"
           aria-label={t("emoji.categories")}
-          className="flex gap-0.5 overflow-x-auto"
+          // As dez categorias numa grade que cabe na largura do seletor: nada cortado na borda nem rolagem de lado.
+          className="grid grid-cols-10 gap-0.5"
         >
           {(["recent", ...GROUPS] as const).map((key) => {
             const name =
@@ -129,7 +130,7 @@ export function EmojiPicker({
                       disabled={key === "recent" && recent.length === 0}
                       onClick={() => setGroup(key)}
                       className={cn(
-                        "flex size-9 shrink-0 items-center justify-center rounded-md text-lg outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-40",
+                        "flex aspect-square w-full items-center justify-center rounded-md text-lg outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-40",
                         shownGroup === key && "bg-muted"
                       )}
                     />

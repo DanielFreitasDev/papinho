@@ -320,6 +320,7 @@ export function VoiceRecorder({
       size="icon"
       aria-label={t("audio.record")}
       disabled={disabled}
+      className="size-11 rounded-full"
       onPointerDown={(event) => {
         if (event.button !== 0 || event.pointerType === "mouse") {
           return

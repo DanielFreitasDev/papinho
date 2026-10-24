@@ -167,7 +167,7 @@ function FolderDialog({
               onChange={(event) => setName(event.target.value)}
             />
           </Field>
-          <fieldset className="flex max-h-64 flex-col gap-1 overflow-y-auto">
+          <fieldset className="flex max-h-64 min-w-0 flex-col gap-1 overflow-y-auto">
             <legend className="mb-1 text-sm font-medium">
               {t("organize.folderChats")}
             </legend>
@@ -218,7 +218,7 @@ export function KeepArchivedSetting() {
       description={t("organize.keepArchivedDescription")}
     >
       <label className="flex min-h-11 items-center justify-between gap-3 text-sm">
-        {t("organize.keepArchived")}
+        <span className="min-w-0">{t("organize.keepArchived")}</span>
         <Switch
           checked={preferences.data?.keepArchived ?? false}
           disabled={preferences.isPending || change.isPending}

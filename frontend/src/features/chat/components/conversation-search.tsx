@@ -25,22 +25,32 @@ const TYPES = ["MEDIA", "LINKS", "DOCUMENTS", "AUDIO"] as const
 
 /**
  * Busca dentro da conversa (GR-06): texto, remetente, dia e tipo, com "anterior" e "próximo" levando à mensagem
- * (Enter vai para a próxima mais antiga, Shift+Enter volta). Esc fecha.
+ * (Enter vai para a próxima mais antiga, Shift+Enter volta). Esc fecha. O termo vai para a conversa destacar os
+ * trechos achados.
  */
 export function ConversationSearch({
   conversationId,
   people,
+  initialQuery,
+  initialMessageId,
+  onQueryChange,
   onJump,
   onClose,
 }: {
   conversationId: string
   /** Quem pode ser escolhido como remetente (eu e a outra pessoa, ou os membros do grupo). */
   people: { userId: string; label: string }[]
+  /** Termo já buscado na busca global; com ele, a busca abre preenchida e sem levar o foco (nem o teclado). */
+  initialQuery?: string
+  /** Resultado escolhido na busca global: o primeiro salto vai para ele, não para o mais recente. */
+  initialMessageId?: string
+  /** O termo (já com a espera da digitação) mudou. */
+  onQueryChange?: (query: string) => void
   onJump: (messageId: string) => void
   onClose: () => void
 }) {
   const { t } = useTranslation()
-  const [query, setQuery] = useState("")
+  const [query, setQuery] = useState(initialQuery ?? "")
   const [senderId, setSenderId] = useState<string | null>(null)
   const [date, setDate] = useState<string | null>(null)
   const [type, setType] = useState<SearchFilters["type"]>(null)
@@ -58,12 +68,35 @@ export function ConversationSearch({
   const inputRef = useRef<HTMLInputElement>(null)
   const found = results.data?.messages ?? []
 
-  useEffect(() => inputRef.current?.focus(), [])
-  // Resultado novo: vai para a mensagem mais recente que bate.
   useEffect(() => {
-    const first = results.data?.messages[0]
-    if (first) {
-      onJump(first.id)
+    if (initialQuery === undefined) {
+      inputRef.current?.focus()
+    }
+    // Só ao abrir.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  useEffect(() => {
+    onQueryChange?.(debounced)
+    // onQueryChange é o setState da conversa; só o termo dispara.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debounced])
+  // Resultado novo: vai para a mensagem mais recente que bate, ou, na primeira vez, para a escolhida na busca global.
+  const target = useRef(initialMessageId)
+  useEffect(() => {
+    const messages = results.data?.messages
+    if (!messages) {
+      return
+    }
+    const chosen = target.current
+    target.current = undefined
+    if (chosen) {
+      const index = messages.findIndex((message) => message.id === chosen)
+      if (index >= 0) {
+        setCursor({ of: results.data, index })
+      }
+      onJump(chosen)
+    } else if (messages[0]) {
+      onJump(messages[0].id)
     }
     // onJump muda a cada desenho da conversa; só os resultados disparam o salto.
     // eslint-disable-next-line react-hooks/exhaustive-deps

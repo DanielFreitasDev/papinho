@@ -2,6 +2,7 @@ import { fireEvent, render, waitFor } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 
 import { MessageText } from "./message-text"
+import { searchTerms } from "./search-match"
 
 /** Elementos ou atributos que só existiriam se o HTML do usuário virasse DOM. */
 function injected(container: HTMLElement) {
@@ -76,5 +77,44 @@ describe("MessageText", () => {
     expect(anchors[0].getAttribute("href")).toBe("https://exemplo.com/a?b=1")
     expect(anchors[0].getAttribute("rel")).toContain("noopener")
     expect(anchors[0].getAttribute("target")).toBe("_blank")
+  })
+})
+
+/** GR-06: o termo buscado ganha <mark> dentro da formatação, sem virar HTML e sem aparecer no spoiler fechado. */
+describe("MessageText com a busca aberta", () => {
+  const marks = (container: HTMLElement) =>
+    [...container.querySelectorAll("mark[data-search-match]")].map(
+      (mark) => mark.textContent
+    )
+
+  it("marca o termo sem acento e sem maiúsculas, dentro de negrito, código e link", () => {
+    const { container } = render(
+      <MessageText
+        text={"*AÇÃO* hoje, `acao()` e https://acao.example/ação"}
+        highlight={searchTerms("acao")}
+      />
+    )
+    expect(marks(container)).toEqual(["AÇÃO", "acao", "acao", "ação"])
+    expect(
+      container.querySelector("strong mark, code mark, a mark")
+    ).not.toBeNull()
+  })
+
+  it("não marca dentro do spoiler fechado: o amarelo mostraria onde está o termo", () => {
+    const { container } = render(
+      <MessageText
+        text="||ação secreta|| e ação"
+        highlight={searchTerms("ação")}
+      />
+    )
+    expect(marks(container)).toEqual(["ação"])
+  })
+
+  it.each(PAYLOADS)("com destaque, o HTML continua texto: %s", (payload) => {
+    const { container } = render(
+      <MessageText text={payload} highlight={searchTerms("alert")} />
+    )
+    expect(injected(container)).toEqual([])
+    expect(container.textContent).toContain(payload)
   })
 })

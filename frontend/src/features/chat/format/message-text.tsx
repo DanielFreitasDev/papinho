@@ -1,27 +1,41 @@
-import { useEffect, useState, type ReactNode } from "react"
+import { Fragment, useEffect, useState, type ReactNode } from "react"
 import { Link } from "@tanstack/react-router"
 import { useTranslation } from "react-i18next"
 import { cn } from "cn"
 
 import type { HastNode } from "./highlight"
 import { parseMessage, type Block, type Inline } from "./parse"
+import { highlightText } from "./search-highlight"
+import type { SearchTerms } from "./search-match"
 
-/** Corpo de uma mensagem com a formatação do WhatsApp, sem HTML do usuário (MS-01). */
-export function MessageText({ text }: { text: string }) {
+/**
+ * Corpo de uma mensagem com a formatação do WhatsApp, sem HTML do usuário (MS-01). Com uma busca aberta, os trechos
+ * achados ganham o marca-texto (GR-06).
+ */
+export function MessageText({
+  text,
+  highlight,
+}: {
+  text: string
+  highlight?: SearchTerms | null
+}) {
   return (
     <div className="flex flex-col gap-1.5">
-      {renderBlocks(parseMessage(text))}
+      {renderBlocks(parseMessage(text), highlight)}
     </div>
   )
 }
 
-function renderBlocks(blocks: Block[]): ReactNode[] {
+function renderBlocks(
+  blocks: Block[],
+  highlight: SearchTerms | null | undefined
+): ReactNode[] {
   return blocks.map((block, index) => {
     switch (block.type) {
       case "paragraph":
         return (
           <p key={index} className="whitespace-pre-wrap">
-            {renderInline(block.children)}
+            {renderInline(block.children, highlight)}
           </p>
         )
       case "code":
@@ -30,6 +44,7 @@ function renderBlocks(blocks: Block[]): ReactNode[] {
             key={index}
             language={block.language}
             value={block.value}
+            highlight={highlight}
           />
         )
       case "quote":
@@ -38,12 +53,12 @@ function renderBlocks(blocks: Block[]): ReactNode[] {
             key={index}
             className="border-l-4 border-current/30 pl-2 opacity-90"
           >
-            {renderBlocks(block.children)}
+            {renderBlocks(block.children, highlight)}
           </blockquote>
         )
       case "list": {
         const items = block.items.map((item, position) => (
-          <li key={position}>{renderInline(item)}</li>
+          <li key={position}>{renderInline(item, highlight)}</li>
         ))
         return block.ordered ? (
           <ol key={index} start={block.start} className="list-decimal pl-5">
@@ -59,11 +74,18 @@ function renderBlocks(blocks: Block[]): ReactNode[] {
   })
 }
 
-function renderInline(nodes: Inline[]): ReactNode[] {
+function renderInline(
+  nodes: Inline[],
+  highlight: SearchTerms | null | undefined
+): ReactNode[] {
   return nodes.map((node, index) => {
     switch (node.type) {
       case "text":
-        return node.value
+        return (
+          <Fragment key={index}>
+            {highlightText(node.value, highlight)}
+          </Fragment>
+        )
       case "break":
         return <br key={index} />
       case "code":
@@ -72,7 +94,7 @@ function renderInline(nodes: Inline[]): ReactNode[] {
             key={index}
             className="rounded bg-black/10 px-1 font-mono text-[0.9em] dark:bg-white/15"
           >
-            {node.value}
+            {highlightText(node.value, highlight)}
           </code>
         )
       case "mention":
@@ -92,7 +114,7 @@ function renderInline(nodes: Inline[]): ReactNode[] {
             params={{ username: node.username }}
             className="font-medium underline-offset-2 hover:underline"
           >
-            @{node.username}
+            {highlightText(`@${node.username}`, highlight)}
           </Link>
         )
       case "link":
@@ -104,17 +126,22 @@ function renderInline(nodes: Inline[]): ReactNode[] {
             rel="noopener noreferrer nofollow"
             className="break-all underline underline-offset-2"
           >
-            {node.href}
+            {highlightText(node.href, highlight)}
           </a>
         )
       case "bold":
-        return <strong key={index}>{renderInline(node.children)}</strong>
+        return (
+          <strong key={index}>{renderInline(node.children, highlight)}</strong>
+        )
       case "italic":
-        return <em key={index}>{renderInline(node.children)}</em>
+        return <em key={index}>{renderInline(node.children, highlight)}</em>
       case "strike":
-        return <s key={index}>{renderInline(node.children)}</s>
+        return <s key={index}>{renderInline(node.children, highlight)}</s>
       case "spoiler":
-        return <Spoiler key={index}>{renderInline(node.children)}</Spoiler>
+        // Sem marca-texto no spoiler: o fundo amarelo mostraria onde está o termo antes de revelar.
+        return (
+          <Spoiler key={index}>{renderInline(node.children, null)}</Spoiler>
+        )
     }
   })
 }
@@ -143,9 +170,11 @@ function Spoiler({ children }: { children: ReactNode }) {
 function CodeBlock({
   language,
   value,
+  highlight,
 }: {
   language: string | null
   value: string
+  highlight: SearchTerms | null | undefined
 }) {
   const [tree, setTree] = useState<HastNode[] | null>(null)
   useEffect(() => {
@@ -167,18 +196,23 @@ function CodeBlock({
       className="max-w-full overflow-x-auto rounded-md bg-black/10 p-2 font-mono text-[0.85em] dark:bg-white/10"
       data-language={language ?? undefined}
     >
-      <code className="hljs">{tree ? renderHast(tree) : value}</code>
+      <code className="hljs">
+        {tree ? renderHast(tree, highlight) : highlightText(value, highlight)}
+      </code>
     </pre>
   )
 }
 
-function renderHast(nodes: HastNode[]): ReactNode[] {
+function renderHast(
+  nodes: HastNode[],
+  highlight: SearchTerms | null | undefined
+): ReactNode[] {
   return nodes.map((node, index) =>
     node.type === "text" ? (
-      node.value
+      <Fragment key={index}>{highlightText(node.value, highlight)}</Fragment>
     ) : (
       <span key={index} className={cn(node.properties?.className)}>
-        {renderHast(node.children)}
+        {renderHast(node.children, highlight)}
       </span>
     )
   )

@@ -44,6 +44,7 @@ import { mediaUrl, type Track } from "@/features/media"
 import { formatTime } from "@/lib/format"
 import { LinkPreviewCard } from "@/features/linkpreview"
 import { MessageText } from "../format/message-text"
+import type { SearchTerms } from "../format/search-match"
 import { PollView } from "./poll-view"
 import { firstLink, plainText } from "../format/parse"
 import type {
@@ -151,6 +152,8 @@ function MessageRowView({
   canEdit = false,
   showSender = false,
   canReplyPrivately = false,
+  highlight = null,
+  flash = false,
 }: {
   message: DisplayMessage
   mine: boolean
@@ -172,6 +175,10 @@ function MessageRowView({
   showSender?: boolean
   /** Mensagem de outra pessoa num grupo: "Responder em privado". */
   canReplyPrivately?: boolean
+  /** Busca aberta na conversa: os trechos achados ganham o marca-texto (GR-06). Estável entre desenhos. */
+  highlight?: SearchTerms | null
+  /** Destino de um salto (resultado da busca, citação): a bolha pisca uma vez. */
+  flash?: boolean
 }) {
   const { t } = useTranslation()
   const onAction = (action: MessageAction) => onMessageAction(message, action)
@@ -216,6 +223,7 @@ function MessageRowView({
           variant={mine ? "tinted" : "muted"}
           align={mine ? "end" : "start"}
           className={cn("max-w-[min(80%,36rem)]", grouped.length > 0 && "mb-3")}
+          data-flash={flash ? "" : undefined}
         >
           <BubbleContent
             className="flex flex-col gap-1"
@@ -315,7 +323,7 @@ function MessageRowView({
                 nameOf={nameOf}
               />
             ) : message.body ? (
-              <MessageText text={message.body} />
+              <MessageText text={message.body} highlight={highlight} />
             ) : null}
             {message.id && !message.attachment && firstLink(message.body) ? (
               <LinkPreviewCard url={firstLink(message.body)!} />

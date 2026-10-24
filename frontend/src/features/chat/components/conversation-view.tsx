@@ -79,6 +79,7 @@ import { groupQueries } from "../groups"
 import { describeNotice } from "../system-notice"
 import { clearReplyDraft, peekReplyDraft, setReplyDraft } from "../reply-drafts"
 import { plainText } from "../format/parse"
+import { searchTerms } from "../format/search-match"
 import type {
   Attachment,
   Conversation,
@@ -116,11 +117,14 @@ export function ConversationView({
   conversationId,
   meId,
   focusMessageId,
+  focusQuery,
 }: {
   conversationId: string
   meId: string
   /** Mensagem para mostrar ao abrir (resultado da busca global, GR-06). */
   focusMessageId?: string
+  /** Busca global que levou à mensagem: a busca da conversa abre com ela, com o destaque e a navegação. */
+  focusQuery?: string
 }) {
   const { t } = useTranslation()
   const conversation = useQuery(chatQueries.detail(conversationId))
@@ -214,10 +218,14 @@ export function ConversationView({
         cache={cache.data}
         meId={meId}
         focusMessageId={focusMessageId}
+        focusQuery={focusQuery}
       />
     </MessageScrollerProvider>
   )
 }
+
+/** Quanto dura o destaque da bolha depois de um salto (a animação em index.css usa o mesmo tempo). */
+const FLASH_MS = 1_600
 
 function nextFrame() {
   return new Promise<void>((resolve) =>
@@ -250,11 +258,13 @@ function LoadedConversation({
   cache,
   meId,
   focusMessageId,
+  focusQuery,
 }: {
   conversation: Conversation
   cache: ConversationCache
   meId: string
   focusMessageId?: string
+  focusQuery?: string
 }) {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
@@ -458,6 +468,18 @@ function LoadedConversation({
     setMessageWindow(next)
   }, [display, end, messageWindow, seqs, start])
 
+  // Destino de um salto: a bolha pisca uma vez (index.css, [data-flash]).
+  const [flashId, setFlashId] = useState<string | null>(null)
+  const flashTimer = useRef<number | undefined>(undefined)
+  useEffect(() => () => window.clearTimeout(flashTimer.current), [])
+  function flash(messageId: string) {
+    window.clearTimeout(flashTimer.current)
+    setFlashId(null)
+    // Um quadro sem o atributo recomeça a animação quando o destino é o mesmo do salto anterior.
+    window.requestAnimationFrame(() => setFlashId(messageId))
+    flashTimer.current = window.setTimeout(() => setFlashId(null), FLASH_MS)
+  }
+
   async function jumpTo(messageId: string) {
     // Resultados da busca podem estar bem para trás: carrega até 100 páginas antigas.
     for (let page = 0; page < 100; page++) {
@@ -484,6 +506,7 @@ function LoadedConversation({
           setMessageWindow(windowAround(loaded, target.seq))
         }
         await settleOn(messageId)
+        flash(messageId)
         return
       }
       if (!current?.hasOlder) {
@@ -560,14 +583,40 @@ function LoadedConversation({
     }
   }
 
-  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(focusQuery !== undefined)
+  const [searchQuery, setSearchQuery] = useState("")
+  // Vinda da busca global: a busca da conversa abre com o termo e salta ela mesma para a mensagem escolhida.
+  const [searchSeed, setSearchSeed] = useState(() =>
+    focusQuery === undefined
+      ? null
+      : { id: 0, query: focusQuery, messageId: focusMessageId }
+  )
+  const highlight = useMemo(
+    () => (searchOpen ? searchTerms(searchQuery) : null),
+    [searchOpen, searchQuery]
+  )
+  // Outro resultado da busca global com a conversa já aberta: a busca recomeça com o termo e a mensagem novos.
+  const [seededFor, setSeededFor] = useState(focusMessageId)
+  if (focusQuery !== undefined && focusMessageId !== seededFor) {
+    setSeededFor(focusMessageId)
+    setSearchOpen(true)
+    setSearchSeed((seed) => ({
+      id: (seed?.id ?? 0) + 1,
+      query: focusQuery,
+      messageId: focusMessageId,
+    }))
+  }
   const focused = useRef<string | null>(null)
   useEffect(() => {
-    if (focusMessageId && focused.current !== focusMessageId) {
+    if (
+      focusMessageId &&
+      focusQuery === undefined &&
+      focused.current !== focusMessageId
+    ) {
       focused.current = focusMessageId
       void jumpTo(focusMessageId)
     }
-    // jumpTo lê o cache na hora; só a mensagem pedida dispara o salto.
+    // jumpTo lê o cache na hora; só a mensagem pedida dispara o salto (com busca, quem salta é a busca).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusMessageId])
 
@@ -915,6 +964,10 @@ function LoadedConversation({
         </header>
         {searchOpen ? (
           <ConversationSearch
+            key={searchSeed?.id ?? -1}
+            initialQuery={searchSeed?.query}
+            initialMessageId={searchSeed?.messageId}
+            onQueryChange={setSearchQuery}
             conversationId={conversation.id}
             people={
               group
@@ -930,7 +983,11 @@ function LoadedConversation({
                   : []
             }
             onJump={(id) => void jumpTo(id)}
-            onClose={() => setSearchOpen(false)}
+            onClose={() => {
+              setSearchOpen(false)
+              setSearchQuery("")
+              setSearchSeed(null)
+            }}
           />
         ) : null}
         {latestPinned ? (
@@ -1156,6 +1213,8 @@ function LoadedConversation({
                           message.senderId !== meId &&
                           memberLabels.has(message.senderId ?? "")
                         }
+                        highlight={highlight}
+                        flash={message.id !== null && message.id === flashId}
                       />
                     </MessageScrollerItem>
                   </Fragment>

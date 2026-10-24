@@ -14,4 +14,8 @@ declare module "@tanstack/react-router" {
   interface Register {
     router: typeof router
   }
+  interface HistoryState {
+    /** Termo da busca global que abriu a conversa (GR-06): fica no histórico do navegador, fora da URL e dos logs. */
+    searchQuery?: string
+  }
 }

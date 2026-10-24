@@ -1,3 +1,4 @@
+import { useMemo } from "react"
 import { Link, useNavigate } from "@tanstack/react-router"
 import { useQuery } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
@@ -11,6 +12,8 @@ import { errorMessage } from "@/lib/api-client"
 import { formatListTime } from "@/lib/format"
 import { useOpenDirect } from "../api"
 import { plainText } from "../format/parse"
+import { highlightText } from "../format/search-highlight"
+import { excerpt, searchTerms } from "../format/search-match"
 import { normalize, organizationQueries } from "../organization"
 import type { Conversation } from "../types"
 import { ConversationAvatar, useConversationLabel } from "./conversation-avatar"
@@ -20,7 +23,8 @@ const ROW =
 
 /**
  * Resultados da busca global (GR-06): conversas e contatos pelo nome (no cliente, sem acentos) e mensagens pela
- * busca do servidor (português, sem acentos, trechos de palavra).
+ * busca do servidor (português, sem acentos, trechos de palavra), com o termo no marca-texto. A mensagem aberta leva
+ * o termo para a conversa, que abre com a busca preenchida.
  */
 export function GlobalSearchResults({
   query,
@@ -37,6 +41,8 @@ export function GlobalSearchResults({
   const labelOf = useConversationLabel()
   const debounced = useDebouncedValue(query.trim(), 300)
   const messages = useQuery(organizationQueries.search(debounced))
+  const nameTerms = useMemo(() => searchTerms(query), [query])
+  const messageTerms = useMemo(() => searchTerms(debounced), [debounced])
   const contacts = useQuery(contactQueries.list())
   const needle = normalize(query.trim())
   const labels = new Map(conversations.map((c) => [c.id, labelOf(c)]))
@@ -86,7 +92,10 @@ export function GlobalSearchResults({
                     data-private="names"
                     className="truncate text-sm font-medium"
                   >
-                    {labels.get(conversation.id)}
+                    {highlightText(
+                      labels.get(conversation.id) ?? "",
+                      nameTerms
+                    )}
                   </span>
                 </Link>
               </li>
@@ -138,10 +147,10 @@ export function GlobalSearchResults({
                       data-private="names"
                       className="truncate text-sm font-medium"
                     >
-                      {contact.label}
+                      {highlightText(contact.label, nameTerms)}
                     </span>
                     <span className="truncate text-xs text-muted-foreground">
-                      @{contact.username}
+                      {highlightText(`@${contact.username}`, nameTerms)}
                     </span>
                   </span>
                 </button>
@@ -181,6 +190,8 @@ export function GlobalSearchResults({
                     to="/c/$conversationId"
                     params={{ conversationId: message.conversationId }}
                     search={{ m: message.id }}
+                    // O que está escrito na caixa (o resultado pode ser da busca anterior à espera da digitação).
+                    state={{ searchQuery: query.trim() }}
                     className={ROW}
                     data-private-scope=""
                   >
@@ -205,7 +216,12 @@ export function GlobalSearchResults({
                         className="truncate text-xs text-muted-foreground"
                       >
                         {message.senderId === meId ? `${t("chat.you")}: ` : ""}
-                        {plainText(message.body)}
+                        {messageTerms
+                          ? highlightText(
+                              excerpt(plainText(message.body), messageTerms),
+                              messageTerms
+                            )
+                          : plainText(message.body)}
                       </span>
                     </span>
                   </Link>

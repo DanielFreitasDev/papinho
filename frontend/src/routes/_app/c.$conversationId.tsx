@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router"
+import { createFileRoute, useRouterState } from "@tanstack/react-router"
 
 import { ConversationView } from "@/features/chat"
 
@@ -14,12 +14,16 @@ function ConversationPage() {
   const { conversationId } = Route.useParams()
   const { me } = Route.useRouteContext()
   const { m } = Route.useSearch()
+  const searchQuery = useRouterState({
+    select: (state) => state.location.state.searchQuery,
+  })
   return (
     <ConversationView
       key={conversationId}
       conversationId={conversationId}
       meId={me.account.id}
       focusMessageId={m}
+      focusQuery={m ? searchQuery : undefined}
     />
   )
 }

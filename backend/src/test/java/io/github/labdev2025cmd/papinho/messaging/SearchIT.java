@@ -2,7 +2,11 @@ package io.github.labdev2025cmd.papinho.messaging;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -142,6 +146,28 @@ class SearchIT {
         ApiClient carla = clients.create();
         Accounts.register(carla, "carla", Accounts.invite(ana));
         assertThat(carla.get(path() + "?q=bom")).hasStatus(404);
+    }
+
+    @Test
+    @DisplayName("o destaque do cliente usa os radicais da busca: a fixture do frontend bate com o PostgreSQL (GR-06)")
+    void shouldAgreeWithTheLexemesTheClientHighlights() throws IOException {
+        // O stemmer do frontend (stem-pt.ts) é provado contra esta fixture; aqui ela é provada contra o banco, para a
+        // configuração da busca não mudar sem o destaque mudar junto.
+        Path fixture = Path.of("../frontend/src/features/chat/format/stem-pt.fixture.tsv");
+        assertThat(fixture).as("fixture do frontend (o backend roda na pasta backend/)").exists();
+        List<String[]> rows = Files.readAllLines(fixture).stream()
+                .filter(line -> !line.isEmpty() && !line.startsWith("#")).map(line -> line.split("\t", -1)).toList();
+        String[] words = rows.stream().map(row -> row[0]).toArray(String[]::new);
+        Map<String, String> lexemes = new HashMap<>();
+        jdbc.query("""
+                select w, coalesce(array_to_string(tsvector_to_array(
+                    to_tsvector('papinho_portuguese', papinho_search_text(w))), ' '), '')
+                from unnest(?::text[]) w
+                """, rs -> {
+            lexemes.put(rs.getString(1), rs.getString(2));
+        }, (Object) words);
+        assertThat(rows).hasSizeGreaterThan(5000);
+        assertThat(rows).allSatisfy(row -> assertThat(lexemes.get(row[0])).as(row[0]).isEqualTo(row[1]));
     }
 
     private List<String> global(ApiClient client, String query) {

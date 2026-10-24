@@ -41,7 +41,7 @@ Leia as entradas relacionadas à tarefa. Os detalhes ficam em `docs/learning/`.
 - [Correção dos Baixos de 2026-10-17](docs/learning/gotcha-correcao-baixos-2026-10-17.md) — Enter no celular, safe area pelo CDP, Mockito com varargs, mutação equivalente, 416 do Spring, shadcn add.
 - [Janela de mensagens sobre o MessageScroller](docs/learning/gotcha-janela-de-mensagens-e-message-scroller.md) — âncora que volta ao DOM salta, root e observador recriado após o commit, lado do corte pela borda, compensação pela linha visível.
 - [Duração de áudio: WebM do MediaRecorder, pre-skip e Tika](docs/learning/gotcha-duracao-de-audio-mediarecorder.md) — fim do último bloco − início − CodecDelay; Firefox grava Duration 0,0; .aac e .flac viravam documento.
-- [JSON dos idiomas reescrito por script reordena chaves](docs/learning/gotcha-json-dos-idiomas-reordena-chaves.md) — chaves numéricas vão para o topo; edite o texto.
+- [JSON dos idiomas e CSS fora do format:check](docs/learning/gotcha-json-dos-idiomas-reordena-chaves.md) — reescrever o JSON reordena chaves numéricas; prettier no CSS reformata regras alheias.
 - [Produção na VPS atrás do Cloudflare Tunnel](docs/learning/gotcha-producao-vps-cloudflare-tunnel.md) — admin pelo loopback antes do hostname, cookie Secure no curl, beacon barrado pela CSP, e2e lento e cota de artifacts no repositório privado.
 
 ## Decisões de arquitetura
@@ -50,6 +50,7 @@ Leia as entradas relacionadas à tarefa. Os detalhes ficam em `docs/learning/`.
 - [Fase 5: privacidade](docs/learning/decisao-fase5-privacidade.md) — reciprocidade por par, leitura no grupo, token das trancadas, cache offline.
 - [Fase 6: lista, busca, notificações e offline](docs/learning/decisao-fase6-organizacao-notificacoes.md) — arquivo calculado, apagar com removed_seq, push decidido no servidor, Dexie por conta.
 - [UI-05: aparência própria](docs/learning/decisao-ui05-aparencia-propria.md) — data/hora, senha, busca, mídia, noValidate, regra de lint e a prova no e2e.
+- [Destaque da busca pela mesma regra do servidor](docs/learning/decisao-destaque-da-busca.md) — Snowball português igual ao portuguese_stem, fixture conferida nos dois lados, termo pelo estado do histórico.
 - [Limpeza dos arquivos nunca usados](docs/learning/decisao-limpeza-de-arquivos-nao-usados.md) — porta MediaReferences, in_use preguiçoso, trava contra o anexo simultâneo.
 - [Correção da auditoria de 2026-10-17](docs/learning/decisao-auditoria-2026-10-17.md) — convite do admin no fechado, foto view-once, HEIC recusado, exportação sem trancadas, presença.
 - [Correção dos Baixos de 2026-10-17](docs/learning/decisao-auditoria-baixos-2026-10-17.md) — login por IP e conta, grant dos anexos trancados, reservas da conta apagada, antivírus fora.

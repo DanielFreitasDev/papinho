@@ -95,11 +95,11 @@ test("organizar a lista e buscar conversas e mensagens", async ({
   await messages.getByRole("link", { name: /Reunião às três/ }).click()
   await expect(row(gil.page, "Reunião às três")).toBeVisible()
 
-  // Busca dentro da conversa por texto e por remetente.
-  await gil.page.getByRole("button", { name: "Buscar nesta conversa" }).click()
+  // A conversa abre com a busca dela já preenchida com o termo (GR-06); busca por outro texto.
   const inside = gil.page.getByRole("search", {
     name: "Buscar nesta conversa",
   })
+  await expect(inside.getByRole("searchbox")).toHaveValue("reuniao")
   await inside.getByRole("searchbox").fill("combinado")
   await expect(inside.getByRole("status")).toHaveText("1 de 1")
   await expectNoSeriousA11yViolations(gil.page)

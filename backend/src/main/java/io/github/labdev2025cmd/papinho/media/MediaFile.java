@@ -54,6 +54,13 @@ class MediaFile {
     @Column(nullable = false)
     private boolean inUse;
 
+    /** Duração do áudio lida do arquivo (AU-02); nula quando o arquivo não diz. */
+    private @Nullable Long durationMs;
+
+    /** Áudio enviado antes de a duração ser lida no upload, à espera do job que a preenche. */
+    @Column(nullable = false)
+    private boolean durationPending;
+
     protected MediaFile() {
         this.id = new UUID(0, 0);
         this.kind = MediaKind.DOCUMENT;
@@ -65,7 +72,7 @@ class MediaFile {
 
     MediaFile(UUID id, UUID ownerId, MediaKind kind, String contentType, long size, String filename, String sha256,
             @Nullable Integer width, @Nullable Integer height, @Nullable String thumbhash, boolean hasThumbnail,
-            Instant now) {
+            @Nullable Long durationMs, Instant now) {
         this.id = id;
         this.ownerId = ownerId;
         this.kind = kind;
@@ -77,6 +84,7 @@ class MediaFile {
         this.height = height;
         this.thumbhash = thumbhash;
         this.hasThumbnail = hasThumbnail;
+        this.durationMs = durationMs;
         this.createdAt = now;
     }
 
@@ -112,8 +120,14 @@ class MediaFile {
         return "media/" + id + "-thumb";
     }
 
+    /** Duração lida pelo job dos áudios antigos; nula se o arquivo não disser (não volta a ser lido). */
+    void durationRead(@Nullable Long millis) {
+        this.durationMs = millis;
+        this.durationPending = false;
+    }
+
     MediaView toView() {
         return new MediaView(id, ownerId == null ? new UUID(0, 0) : ownerId, kind, contentType, size, filename, width,
-                height, thumbhash, hasThumbnail, createdAt);
+                height, thumbhash, hasThumbnail, durationMs, createdAt);
     }
 }

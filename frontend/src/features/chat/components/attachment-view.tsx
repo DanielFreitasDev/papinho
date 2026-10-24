@@ -23,6 +23,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import {
+  AudioControls,
   formatBytes,
   LocalAudioPlayer,
   mediaUrl,
@@ -145,6 +146,7 @@ export function AttachmentView({
         <LocalAudioPlayer
           src={mediaUrl(attachment)}
           label={attachment.filename}
+          durationMs={attachment.durationMs}
           className="w-64 max-w-full"
         />
       )
@@ -207,6 +209,16 @@ export function LocalAttachmentView({
           src={attachment.previewUrl}
           muted
           className="max-h-80 w-full rounded-md bg-black opacity-80"
+        />
+      ) : attachment.kind === "AUDIO" ? (
+        // Mesmo formato do áudio enviado, já com a duração medida no aparelho (AU-02).
+        <AudioControls
+          playing={false}
+          position={0}
+          duration={(attachment.durationMs ?? 0) / 1000}
+          unavailable
+          onToggle={() => undefined}
+          onSeek={() => undefined}
         />
       ) : (
         <span className="flex min-w-0 items-center gap-3 rounded-md bg-black/5 p-2 dark:bg-white/10">

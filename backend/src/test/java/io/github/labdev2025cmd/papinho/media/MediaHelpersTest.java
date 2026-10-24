@@ -56,6 +56,33 @@ class MediaHelpersTest {
     }
 
     @ParameterizedTest
+    @CsvSource(delimiter = '|', nullValues = "-", value = {
+        "audio/x-aac|audio/aac|audio/aac",
+        "audio/x-flac|audio/flac|audio/flac",
+        "audio/x-flac|-|audio/flac",
+        "audio/vorbis|-|audio/ogg",
+        "audio/vorbis|audio/ogg|audio/ogg",
+        "audio/opus|audio/ogg|audio/ogg",
+        "audio/vnd.wave|audio/wav|audio/wav",
+        "audio/x-wav|-|audio/wav",
+        "audio/x-m4a|-|audio/mp4",
+    })
+    @DisplayName("arquivo de áudio com o nome que o Tika dá vira áudio com o tipo que o navegador toca")
+    void shouldNormalizeAudioTypes(String detected, String declared, String expected) {
+        assertThat(ContentTypes.resolve(detected, declared)).isEqualTo(expected);
+        assertThat(ContentTypes.kind(expected)).isEqualTo(MediaKind.AUDIO);
+        assertThat(ContentTypes.inline(expected)).isTrue();
+    }
+
+    @Test
+    @DisplayName("áudio guardado com o nome antigo continua abrindo no navegador")
+    void shouldStillServeOldAudioTypesInline() {
+        assertThat(ContentTypes.inline("audio/vnd.wave")).isTrue();
+        assertThat(ContentTypes.inline("audio/x-m4a")).isTrue();
+        assertThat(ContentTypes.inline("audio/opus")).isTrue();
+    }
+
+    @ParameterizedTest
     @CsvSource({"1,40,20,RED", "3,40,20,BLUE", "6,20,40,RED", "8,20,40,BLUE"})
     @DisplayName("orientação EXIF é aplicada antes de descartar os metadados")
     void shouldApplyExifOrientation(int orientation, int width, int height, String topLeft) throws IOException {

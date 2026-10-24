@@ -263,6 +263,7 @@ function MessageRowView({
                           conversationId: "",
                           messageId: message.id ?? message.key,
                           title: senderName,
+                          durationMs: message.attachment.durationMs,
                         },
                         queue: audioQueue,
                         received: !mine,

@@ -40,6 +40,7 @@ export function MiniPlayer() {
       </Link>
       <span className="text-xs tabular-nums">
         {formatDuration(state.position)}
+        {state.duration > 0 ? ` / ${formatDuration(state.duration)}` : ""}
       </span>
       <Button
         variant="outline"

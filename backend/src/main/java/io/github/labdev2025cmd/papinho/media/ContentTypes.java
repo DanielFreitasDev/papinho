@@ -1,6 +1,7 @@
 package io.github.labdev2025cmd.papinho.media;
 
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 import org.jspecify.annotations.Nullable;
@@ -16,8 +17,16 @@ final class ContentTypes {
     static final Set<String> UNCLEANABLE_PHOTOS = Set.of("image/heic", "image/heif", "image/heic-sequence",
             "image/heif-sequence", "image/avif");
     private static final Set<String> VIDEOS = Set.of("video/mp4", "video/webm", "video/quicktime");
+    /** Os nomes antigos continuam aqui para os arquivos guardados antes da troca pelos nomes de {@link #ALIASES}. */
     private static final Set<String> AUDIOS = Set.of("audio/ogg", "audio/webm", "audio/mp4", "audio/mpeg",
-            "audio/aac", "audio/wav", "audio/x-wav", "audio/vnd.wave", "audio/opus", "audio/x-m4a");
+            "audio/aac", "audio/wav", "audio/x-wav", "audio/vnd.wave", "audio/opus", "audio/x-m4a", "audio/flac");
+    /**
+     * Outros nomes que o Tika dá ao mesmo formato de áudio, trocados pelo que todo navegador toca: sem isso, AAC
+     * (.aac) e FLAC viravam documento e o WAV ia como {@code audio/vnd.wave}.
+     */
+    private static final Map<String, String> ALIASES = Map.of("audio/x-aac", "audio/aac", "audio/x-flac",
+            "audio/flac", "audio/vorbis", "audio/ogg", "audio/opus", "audio/ogg", "audio/x-wav", "audio/wav",
+            "audio/vnd.wave", "audio/wav", "audio/wave", "audio/wav", "audio/x-m4a", "audio/mp4");
 
     private ContentTypes() {
     }
@@ -30,22 +39,14 @@ final class ContentTypes {
         String type = detected.toLowerCase(Locale.ROOT);
         String hint = declared == null ? "" : declared.toLowerCase(Locale.ROOT).split(";", 2)[0].strip();
         if (hint.startsWith("audio/")) {
-            switch (type) {
-                case "video/webm", "audio/webm" -> {
-                    return "audio/webm";
-                }
-                case "application/ogg", "audio/ogg", "audio/vorbis", "audio/opus" -> {
-                    return "audio/ogg";
-                }
-                case "video/mp4", "audio/mp4", "video/quicktime", "audio/x-m4a" -> {
-                    return "audio/mp4";
-                }
-                default -> {
-                    return type;
-                }
-            }
+            type = switch (type) {
+                case "video/webm" -> "audio/webm";
+                case "application/ogg" -> "audio/ogg";
+                case "video/mp4", "video/quicktime" -> "audio/mp4";
+                default -> type;
+            };
         }
-        return type;
+        return ALIASES.getOrDefault(type, type);
     }
 
     static MediaKind kind(String type) {

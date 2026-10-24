@@ -574,6 +574,8 @@
     "play": "Tocar áudio",
     "pause": "Pausar áudio",
     "position": "Posição do áudio",
+    "duration": "Duração",
+    "elapsed": "Tempo decorrido",
     "speed": "Velocidade {{rate}}; tocar para trocar",
     "miniPlayer": "Áudio tocando",
     "closePlayer": "Fechar o tocador"

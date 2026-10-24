@@ -16,6 +16,7 @@ export {
   type PlayerState,
   type Track,
 } from "./player"
+export { measureAudioDuration } from "./audio-duration"
 export { MiniPlayer } from "./components/mini-player"
 export { AudioControls, LocalAudioPlayer } from "./components/audio-controls"
 export { VideoPlayer } from "./components/video-player"

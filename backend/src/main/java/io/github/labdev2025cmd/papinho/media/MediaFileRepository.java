@@ -5,6 +5,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -31,4 +32,8 @@ interface MediaFileRepository extends JpaRepository<MediaFile, UUID> {
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("update MediaFile f set f.inUse = true where f.id in :ids")
     void markInUse(Collection<UUID> ids);
+
+    /** Áudios enviados antes de a duração ser lida no upload (AU-02), dos mais antigos aos mais novos. */
+    @Query("select f from MediaFile f where f.durationPending = true order by f.createdAt")
+    List<MediaFile> findDurationPending(Pageable page);
 }

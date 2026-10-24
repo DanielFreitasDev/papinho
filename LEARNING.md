@@ -37,9 +37,11 @@ Leia as entradas relacionadas à tarefa. Os detalhes ficam em `docs/learning/`.
 - [Detail do PostgreSQL e erros fora do MVC](docs/learning/gotcha-detalhe-do-postgres-e-erros-fora-do-mvc.md) — logServerErrorDetail=false; /error próprio; válvula do Tomcat; socket cru no teste.
 - [Frontend: salto, service worker, toque e foco](docs/learning/gotcha-frontend-auditoria-2026-10-17.md) — scrollToMessage sem item, workbox.register sem catch, data-slot do Base UI, TabsContent sem foco.
 - [S3 nos testes sem MinIO](docs/learning/gotcha-s3-nos-testes-sem-minio.md) — adobe/s3mock, espera pelo log, skip vira Range.
-- [Máquina local: proxy no Maven, portas e /tmp](docs/learning/gotcha-ambiente-local-com-proxy.md) — proxy virava argumento do vite, e2e em portas altas, gh sem push, jcmd, internet só pelo proxy, 12 workers.
+- [Máquina local: proxy no Maven, portas e /tmp](docs/learning/gotcha-ambiente-local-com-proxy.md) — proxy virava argumento do vite, e2e local em portas altas (receita), navegadores do Playwright desatualizados, gh com push só no repositório novo, internet só pelo proxy.
 - [Correção dos Baixos de 2026-10-17](docs/learning/gotcha-correcao-baixos-2026-10-17.md) — Enter no celular, safe area pelo CDP, Mockito com varargs, mutação equivalente, 416 do Spring, shadcn add.
 - [Janela de mensagens sobre o MessageScroller](docs/learning/gotcha-janela-de-mensagens-e-message-scroller.md) — âncora que volta ao DOM salta, root e observador recriado após o commit, lado do corte pela borda, compensação pela linha visível.
+- [Duração de áudio: WebM do MediaRecorder, pre-skip e Tika](docs/learning/gotcha-duracao-de-audio-mediarecorder.md) — fim do último bloco − início − CodecDelay; Firefox grava Duration 0,0; .aac e .flac viravam documento.
+- [JSON dos idiomas reescrito por script reordena chaves](docs/learning/gotcha-json-dos-idiomas-reordena-chaves.md) — chaves numéricas vão para o topo; edite o texto.
 - [Produção na VPS atrás do Cloudflare Tunnel](docs/learning/gotcha-producao-vps-cloudflare-tunnel.md) — admin pelo loopback antes do hostname, cookie Secure no curl, beacon barrado pela CSP, e2e lento e cota de artifacts no repositório privado.
 
 ## Decisões de arquitetura

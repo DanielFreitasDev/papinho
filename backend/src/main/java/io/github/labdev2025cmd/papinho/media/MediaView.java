@@ -12,8 +12,9 @@ import org.jspecify.annotations.Nullable;
  * @param filename nome sanitizado, só para exibição e download
  * @param thumbhash placeholder borrado em Base64 (imagens)
  * @param hasThumbnail há miniatura em {@code /api/v1/media/{id}/thumbnail}
+ * @param durationMs duração do áudio lida do arquivo (AU-02); nula quando o arquivo não diz
  */
 public record MediaView(UUID id, UUID ownerId, MediaKind kind, String contentType, long size, String filename,
         @Nullable Integer width, @Nullable Integer height, @Nullable String thumbhash, boolean hasThumbnail,
-        Instant createdAt) {
+        @Nullable Long durationMs, Instant createdAt) {
 }

@@ -383,6 +383,7 @@ function LoadedConversation({
           conversationId: conversation.id,
           messageId: message.id,
           title: `${nameOf(message.senderId)} · ${t("media.kind.AUDIO")}`,
+          durationMs: message.attachment!.durationMs,
         })),
     // nameOf depende de peerName e dos membros.
     // eslint-disable-next-line react-hooks/exhaustive-deps

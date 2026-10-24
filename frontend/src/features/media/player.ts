@@ -10,6 +10,8 @@ export type Track = {
   conversationId: string
   messageId: string
   title: string
+  /** Duração lida do arquivo pelo servidor (AU-02): vale enquanto o navegador não sabe (WebM gravado). */
+  durationMs?: number | null
 }
 
 export type PlayerState = {
@@ -61,9 +63,12 @@ class AudioPlayer {
       element.addEventListener("timeupdate", () =>
         this.set({ position: element.currentTime })
       )
+      // O WebM do MediaRecorder chega sem duração (Infinity): vale a que o servidor leu do arquivo.
       element.addEventListener("durationchange", () =>
         this.set({
-          duration: Number.isFinite(element.duration) ? element.duration : 0,
+          duration: Number.isFinite(element.duration)
+            ? element.duration
+            : knownDuration(this.state.current),
         })
       )
       element.addEventListener("play", () => this.set({ playing: true }))
@@ -83,7 +88,12 @@ class AudioPlayer {
     }
     audio.src = mediaUrl({ id: track.mediaId, grant: track.grant })
     audio.playbackRate = this.state.rate
-    this.set({ current: track, queue, position: 0, duration: 0 })
+    this.set({
+      current: track,
+      queue,
+      position: 0,
+      duration: knownDuration(track),
+    })
     void audio.play().catch(() => this.set({ playing: false }))
   }
 
@@ -135,6 +145,11 @@ class AudioPlayer {
       this.set({ playing: false, position: 0 })
     }
   }
+}
+
+/** Duração em segundos que o servidor leu do arquivo; 0 quando não se sabe. */
+function knownDuration(track: Track | null): number {
+  return (track?.durationMs ?? 0) / 1000
 }
 
 export const player = new AudioPlayer()

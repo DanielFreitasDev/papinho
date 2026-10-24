@@ -1,8 +1,18 @@
 import { useSyncExternalStore } from "react"
 import type { QueryClient } from "@tanstack/react-query"
 
-import { guessKind, uploadFile, type UploadHandle } from "@/features/media"
-import { addPending, markPendingFailed, type ConversationCache } from "./cache"
+import {
+  guessKind,
+  measureAudioDuration,
+  uploadFile,
+  type UploadHandle,
+} from "@/features/media"
+import {
+  addPending,
+  markPendingFailed,
+  patchPendingAttachment,
+  type ConversationCache,
+} from "./cache"
 import type { LocalAttachment, PendingMessage, ReplyPreview } from "./types"
 
 /**
@@ -58,7 +68,7 @@ export function sendFile(
   viewOnce = false
 ): Promise<void> {
   const kind = guessKind(file)
-  const attachment: LocalAttachment = {
+  let attachment: LocalAttachment = {
     kind,
     filename: file.name,
     size: file.size,
@@ -81,6 +91,21 @@ export function sendFile(
     messagesKey(conversationId),
     (current) => (current ? addPending(current, pending) : current)
   )
+  if (kind === "AUDIO") {
+    // A bolha mostra a duração enquanto sobe (AU-02); o envio leva o anexo com ela, se já tiver sido medida.
+    void measureAudioDuration(file).then((durationMs) => {
+      if (durationMs !== null) {
+        attachment = { ...attachment, durationMs }
+        queryClient.setQueryData<ConversationCache>(
+          messagesKey(conversationId),
+          (current) =>
+            current
+              ? patchPendingAttachment(current, clientMessageId, attachment)
+              : current
+        )
+      }
+    })
+  }
   files.set(clientMessageId, file)
   progress.set(clientMessageId, 0)
   const handle = uploadFile(file, (fraction) => {

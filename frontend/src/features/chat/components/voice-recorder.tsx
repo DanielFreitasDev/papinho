@@ -10,7 +10,11 @@ import {
 
 import { Button } from "@/components/ui/button"
 import { toast } from "@/components/ui/toast"
-import { formatDuration, LocalAudioPlayer } from "@/features/media"
+import {
+  formatDuration,
+  LocalAudioPlayer,
+  measureAudioDuration,
+} from "@/features/media"
 import { realtime } from "@/lib/realtime"
 
 /** Formatos na ordem de preferência: Opus em WebM/Ogg; AAC em MP4 no Safari (AU-01). */
@@ -58,9 +62,11 @@ export function VoiceRecorder({
   const [phase, setPhase] = useState<Phase>("idle")
   const [locked, setLocked] = useState(true)
   const [elapsed, setElapsed] = useState(0)
-  const [preview, setPreview] = useState<{ file: File; url: string } | null>(
-    null
-  )
+  const [preview, setPreview] = useState<{
+    file: File
+    url: string
+    durationMs: number | null
+  } | null>(null)
   const recording = useRef<Recording | null>(null)
   const canvas = useRef<HTMLCanvasElement>(null)
   const suppressClick = useRef(false)
@@ -181,8 +187,15 @@ export function VoiceRecorder({
       onSend(file)
       setPhase("idle")
     } else {
-      setPreview({ file, url: URL.createObjectURL(file) })
+      const url = URL.createObjectURL(file)
+      setPreview({ file, url, durationMs: null })
       setPhase("preview")
+      // O WebM gravado não diz a duração ao elemento: medida aqui, a pré-escuta já mostra o total (AU-02).
+      void measureAudioDuration(file).then((durationMs) =>
+        setPreview((current) =>
+          current?.url === url ? { ...current, durationMs } : current
+        )
+      )
     }
   }
 
@@ -222,6 +235,7 @@ export function VoiceRecorder({
         <LocalAudioPlayer
           src={preview.url}
           label={t("audio.preview")}
+          durationMs={preview.durationMs}
           className="min-w-0 flex-1"
         />
         <Button

@@ -1,4 +1,9 @@
-import type { Message, MessagePage, PendingMessage } from "./types"
+import type {
+  LocalAttachment,
+  Message,
+  MessagePage,
+  PendingMessage,
+} from "./types"
 
 /**
  * Estado local de uma conversa aberta: mensagens carregadas (em ordem de seq), mensagens pendentes e o cursor
@@ -103,6 +108,20 @@ export function addPending(
       ),
       pending,
     ],
+  }
+}
+
+/** Troca o anexo local de uma pendente (a duração do áudio medida depois de ela aparecer, AU-02). */
+export function patchPendingAttachment(
+  cache: ConversationCache,
+  clientMessageId: string,
+  attachment: LocalAttachment
+): ConversationCache {
+  return {
+    ...cache,
+    pending: cache.pending.map((item) =>
+      item.clientMessageId === clientMessageId ? { ...item, attachment } : item
+    ),
   }
 }
 

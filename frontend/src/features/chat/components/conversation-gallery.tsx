@@ -128,6 +128,7 @@ function GalleryTabContent({
       conversationId,
       messageId: message.id,
       title: `${t("media.kind.AUDIO")} · ${formatDate(message.createdAt)}`,
+      durationMs: message.attachment!.durationMs,
     }))
   return (
     <div className="flex flex-col gap-2">

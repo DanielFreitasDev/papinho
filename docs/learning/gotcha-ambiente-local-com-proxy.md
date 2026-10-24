@@ -1,6 +1,6 @@
 ---
 name: Máquina local do dono — proxy no Maven, portas ocupadas e /tmp
-description: proxy do settings.xml virava argumento do vite; 5432 ocupada; /tmp some no reboot; conta do gh sem push; internet só pelo proxy; 12 workers no e2e
+description: proxy do settings.xml virava argumento do vite; 5432 ocupada; /tmp some no reboot; conta do gh (push só no repositório novo); internet só pelo proxy; 12 workers e ambiente e2e local
 type: project
 category: gotcha
 date: 2026-10-16
@@ -17,8 +17,9 @@ Diferenças da máquina local em relação ao sandbox de nuvem das passadas 1 a 
   existem. Com o JAR fora da 8080, declare `PAPINHO_ALLOWED_ORIGINS` com a porta usada, senão o passkey falha.
 - O `/tmp` é limpo no reboot (scratchpad, logs, PKI de teste e cópias do JAR somem); um reinício do Docker para
   todos os contêineres sem política de reinício.
-- O `gh` está logado numa conta só com leitura no repositório: commits ficam locais até alguém com escrita dar
-  `git push origin main`. Com um token da conta `labdev2025-cmd` dado pelo dono, o push sai com um credential helper
+- Até a passada 11, o `gh` estava logado numa conta só com leitura no repositório antigo (`labdev2025-cmd/papinho`):
+  commits ficavam locais até alguém com escrita dar `git push origin main`. Desde a mudança do `origin` para
+  `DanielFreitasDev/papinho` (privado), a conta do `gh` desta máquina tem `push` e `admin` nele (2026-10-24). Com um token da conta `labdev2025-cmd` dado pelo dono, o push sai com um credential helper
   de um comando só (`git -c credential.helper= -c 'credential.helper=!f() {...}; f' push`), sem gravar nada no git
   config nem mexer no `gh`; o token fica num arquivo 0600 temporário, apagado no fim (passada 8).
 - O servidor usa threads virtuais: `jstack` não as mostra; use `jcmd <pid> Thread.dump_to_file -format=text`.
@@ -27,6 +28,16 @@ Diferenças da máquina local em relação ao sandbox de nuvem das passadas 1 a 
   `PAPINHO_E2E_PROXY` (a instância local continua direta pelo `bypass`).
 - O Playwright usa por padrão metade dos núcleos (12 workers aqui; 2 no runner do CI): fluxos longos estouram os
   30 s padrão e corridas de teste aparecem aqui antes do CI. Fluxo longo ganha `test.slow()`.
+- Os navegadores em `~/.cache/ms-playwright` podem ser de uma versão anterior do `@playwright/test` do lockfile
+  ("Executable doesn't exist at .../chromium_headless_shell-1248"): `pnpm exec playwright install chromium
+  chromium-headless-shell firefox webkit` em `frontend/` baixa os certos pelo proxy (passada 12).
+- Ambiente e2e local que reproduz o CI: PostgreSQL 18 num contêiner próprio em 55432, `pki init --ip 127.0.0.1
+  --network 127.0.0.0/8` num `PAPINHO_PKI_DIR` temporário e as duas instâncias com o **mesmo** `PAPINHO_DATA_DIR`:
+  padrão com `--server.port=18080` e `PAPINHO_ALLOWED_ORIGINS=http://localhost:18080`; lan com `--server.port=18443
+  --app.pki.http-port=18081 --app.pki.public-http-port=18081 --app.pki.public-https-port=18443` e
+  `PAPINHO_ALLOWED_ORIGINS=https://127.0.0.1:18443`; `PAPINHO_RATE_LIMIT_MULTIPLIER=10` nas duas. Os specs rodam com
+  `PAPINHO_E2E_URL`, `PAPINHO_E2E_SETUP_URL` e `PAPINHO_E2E_HTTPS_URL` apontando para essas portas. A imagem do
+  Mailpit não está no cache local: o `email.spec.ts` precisa dela (passada 12).
 
 **Evidência:** build falhando no `pnpm-build` e verde depois de `0434f61`; `403 Permission denied` no push (de novo
 na passada 8, também sem chave SSH autorizada); dump com `jcmd` mostrando requisições esperando o pool do Hikari

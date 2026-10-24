@@ -2,8 +2,15 @@ import { expect, expectNoSeriousA11yViolations, test } from "./fixtures"
 import { openMenuItem, RUN, twoFriends } from "./support"
 
 /**
+ * Gravações de poucos segundos (a primeira dura também as conferências feitas durante ela): a bolha mostra o total
+ * com o rótulo para leitor de tela.
+ */
+const DURATION = /^Duração 0:0[1-9]$/
+const ELAPSED = /^Tempo decorrido 0:0\d$/
+
+/**
  * Fase 3: mensagem de voz gravada com o microfone falso do Chromium (AU-01, MS-03) e tocador com velocidade,
- * sequência e mini-player global (AU-02).
+ * sequência e mini-player global (AU-02), com a duração visível antes de tocar e durante o envio.
  */
 test("grava, pré-escuta e envia voz; o outro lado toca em sequência e no mini-player", async ({
   browser,
@@ -28,8 +35,32 @@ test("grava, pré-escuta e envia voz; o outro lado toca em sequência e no mini-
   await expectNoSeriousA11yViolations(gil.page)
   await gil.page.waitForTimeout(1500)
   await recorder.getByRole("button", { name: "Parar e ouvir" }).click()
-  await expect(gil.page.getByLabel("Pré-escuta do áudio")).toBeVisible()
+  const preview = gil.page.getByLabel("Pré-escuta do áudio")
+  await expect(preview).toBeVisible()
+  // A pré-escuta já mostra o total (o WebM gravado não diz a duração ao elemento; ela é medida, AU-02).
+  await expect(preview.getByText(DURATION)).toBeVisible()
+
+  // Enquanto o arquivo sobe, a bolha já tem a duração (AU-02).
+  await gil.page.route("**/api/v1/uploads/*", async (route) => {
+    if (route.request().method() === "PATCH") {
+      await new Promise((resolve) => setTimeout(resolve, 2_000))
+    }
+    await route.continue().catch(() => undefined)
+  })
   await gil.page.getByRole("button", { name: "Enviar áudio" }).click()
+  const uploading = gil.page.getByRole("progressbar", {
+    name: /^Enviando audio-/,
+  })
+  await expect(uploading).toBeVisible()
+  const pending = gil.page
+    .locator('[data-slot="message"]')
+    .filter({ has: uploading })
+  await expect(pending.getByText(DURATION)).toBeVisible()
+  await expect(
+    pending.getByRole("button", { name: "Tocar áudio" })
+  ).toBeDisabled()
+  await expect(uploading).toBeHidden({ timeout: 15_000 })
+  await gil.page.unroute("**/api/v1/uploads/*")
 
   // Segunda: enviada direto durante a gravação; a primeira gravação cancelada não chega.
   await gil.page.getByRole("button", { name: "Gravar mensagem de voz" }).click()
@@ -41,7 +72,17 @@ test("grava, pré-escuta e envia voz; o outro lado toca em sequência e no mini-
 
   const plays = hana.page.getByRole("button", { name: "Tocar áudio" })
   await expect(plays).toHaveCount(2)
+  // A duração aparece antes de qualquer play, para quem recebeu e para quem enviou (AU-02).
+  await expect(hana.page.getByRole("main").getByText(DURATION)).toHaveCount(2)
+  await expect(gil.page.getByRole("main").getByText(DURATION)).toHaveCount(2)
   await expectNoSeriousA11yViolations(hana.page)
+
+  // Tocando, mostra o tempo decorrido; pausado, volta ao total.
+  await plays.first().click()
+  await expect(hana.page.getByRole("main").getByText(ELAPSED)).toHaveCount(1)
+  await hana.page.getByRole("button", { name: "Pausar áudio" }).click()
+  await expect(hana.page.getByRole("main").getByText(ELAPSED)).toHaveCount(0)
+  await expect(hana.page.getByRole("main").getByText(DURATION)).toHaveCount(2)
 
   // Transcrição sob demanda (AU-03): o provedor é simulado; a busca real é coberta pelo TranscriptionIT.
   await hana.context.route("**/api/v1/media/*/transcript", (route) =>
@@ -94,6 +135,8 @@ test("grava, pré-escuta e envia voz; o outro lado toca em sequência e no mini-
   await expect(
     hana.page.getByRole("button", { name: "Transcrever" })
   ).toHaveCount(0)
+  // Depois de tocar até o fim, cada bolha volta a mostrar a duração total.
+  await expect(hana.page.getByRole("main").getByText(DURATION)).toHaveCount(2)
 
   await Promise.all([gil.context.close(), hana.context.close()])
 })

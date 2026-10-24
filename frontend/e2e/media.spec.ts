@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises"
 import type { Locator, Page } from "@playwright/test"
 
 import { expect, expectNoSeriousA11yViolations, test } from "./fixtures"
@@ -45,8 +46,8 @@ async function sendFromDialog(page: Page) {
 }
 
 /**
- * Fase 3: fotos com legenda e visualizador (MD-01, MD-02), documento para baixar e cancelamento de upload, entre
- * dois navegadores.
+ * Fase 3: fotos com legenda e visualizador (MD-01, MD-02), documento para baixar, áudio com a duração antes de
+ * tocar (AU-02) e cancelamento de upload, entre dois navegadores.
  */
 test("fotos, documento e cancelamento de envio entre dois navegadores", async ({
   browser,
@@ -173,6 +174,20 @@ test("fotos, documento e cancelamento de envio entre dois navegadores", async ({
   expect(response.headers()["content-disposition"]).toContain(
     "filename*=UTF-8''ata%20da%20reuni%C3%A3o.pdf"
   )
+
+  // Áudio enviado como arquivo (AU-02): a duração aparece nos dois lados antes de tocar.
+  await attach(gil.page, [
+    {
+      name: "fala.ogg",
+      mimeType: "audio/ogg",
+      buffer: await readFile(new URL("./assets/fala.ogg", import.meta.url)),
+    },
+  ])
+  for (const page of [gil.page, hana.page]) {
+    await expect(
+      page.getByRole("main").getByText("Duração 0:11", { exact: true })
+    ).toBeVisible()
+  }
 
   // Upload preso no meio: cancelar tira a mensagem da conversa.
   await gil.page.route("**/api/v1/uploads/*", async (route) => {

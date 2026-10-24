@@ -30,14 +30,16 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import io.github.labdev2025cmd.papinho.admin.InstanceSettingsService;
+import io.github.labdev2025cmd.papinho.media.internal.audio.AudioDuration;
 import io.github.labdev2025cmd.papinho.shared.id.Uuids;
 import io.github.labdev2025cmd.papinho.shared.security.RateLimiter;
 
 /**
  * Upload retomável pelo protocolo tus 1.0 (MD-01, ADR 0009): criação com tamanho declarado (limite de 1 GB e
  * cota por usuário), escrita em pedaços com {@code Upload-Offset}, consulta do deslocamento para retomar e
- * cancelamento. Ao completar, o tipo é detectado pelo conteúdo (Tika), imagens são tratadas (MD-02), o
- * antivírus opcional analisa (MD-06) e o arquivo vai para a porta de armazenamento.
+ * cancelamento. Ao completar, o tipo é detectado pelo conteúdo (Tika), imagens são tratadas (MD-02), a duração
+ * dos áudios é lida do arquivo (AU-02), o antivírus opcional analisa (MD-06) e o arquivo vai para a porta de
+ * armazenamento.
  *
  * <p>Os pedaços ficam num diretório local até completar; um pedaço por vez por upload (marca em memória:
  * instância única, ADR 0004).</p>
@@ -262,8 +264,14 @@ public class UploadService {
             discard(id, file);
             throw invalid;
         }
+        Long duration = null;
+        if (kind == MediaKind.AUDIO) {
+            try (InputStream in = Files.newInputStream(file)) {
+                duration = AudioDuration.millis(in, type);
+            }
+        }
         MediaFile media = new MediaFile(id, upload.ownerId(), kind, type, size, filename, sha256, width, height,
-                thumbhash, thumbnail, clock.instant());
+                thumbhash, thumbnail, duration, clock.instant());
         MediaFile saved = transactions.execute(status -> {
             uploads.deleteById(id);
             return files.save(media);

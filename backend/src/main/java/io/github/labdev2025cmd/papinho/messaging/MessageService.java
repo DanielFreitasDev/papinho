@@ -1042,15 +1042,17 @@ public class MessageService {
 
     /**
      * Anexo como o cliente o vê; o conteúdo vem de {@code /api/v1/media/{id}/content}. Em conversa que a pessoa
-     * trancou, {@code grant} vai na URL do conteúdo (PV-03).
+     * trancou, {@code grant} vai na URL do conteúdo (PV-03). Áudio traz a duração para aparecer antes de tocar
+     * (AU-02).
      */
     public record AttachmentView(UUID id, String kind, String contentType, long size, String filename,
             @Nullable Integer width, @Nullable Integer height, @Nullable String thumbhash, boolean hasThumbnail,
-            @Nullable String grant) {
+            @Nullable Long durationMs, @Nullable String grant) {
 
         static AttachmentView of(MediaView view, @Nullable String grant) {
             return new AttachmentView(view.id(), view.kind().name(), view.contentType(), view.size(),
-                    view.filename(), view.width(), view.height(), view.thumbhash(), view.hasThumbnail(), grant);
+                    view.filename(), view.width(), view.height(), view.thumbhash(), view.hasThumbnail(),
+                    view.durationMs(), grant);
         }
     }
 

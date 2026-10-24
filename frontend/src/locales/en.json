@@ -574,6 +574,8 @@
     "play": "Play audio",
     "pause": "Pause audio",
     "position": "Audio position",
+    "duration": "Duration",
+    "elapsed": "Elapsed time",
     "speed": "Speed {{rate}}; tap to change",
     "miniPlayer": "Audio playing",
     "closePlayer": "Close player"

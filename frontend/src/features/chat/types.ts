@@ -102,6 +102,11 @@ export type Attachment = {
   height: number | null
   thumbhash: string | null
   hasThumbnail: boolean
+  /**
+   * Duração do áudio lida do arquivo pelo servidor (AU-02); nula quando o arquivo não diz e ausente nas mensagens
+   * guardadas offline antes de o campo existir.
+   */
+  durationMs?: number | null
   /** Só em conversa que a pessoa trancou: vai na URL do conteúdo (PV-03). */
   grant?: string | null
 }
@@ -116,6 +121,8 @@ export type LocalAttachment = {
   previewUrl: string | null
   /** Enviar como visualização única (MS-08). */
   viewOnce?: boolean
+  /** Duração do áudio medida no aparelho, para a bolha mostrar enquanto envia (AU-02). */
+  durationMs?: number | null
 }
 
 export type Conversation = {

@@ -54,6 +54,9 @@ class MediaIT {
     private UnusedFileCleanupJob unusedFiles;
 
     @Autowired
+    private AudioDurationBackfillJob durationBackfill;
+
+    @Autowired
     private FileStorage storage;
 
     @Autowired
@@ -313,6 +316,64 @@ class MediaIT {
     }
 
     @Test
+    @DisplayName("áudio gravado ou enviado como arquivo chega com a duração lida do arquivo, também na mensagem (AU-02)")
+    void shouldReadAudioDuration() {
+        String voice = upload(ana, audio("chromium.webm"), "audio-2026-10-24.webm", "audio/webm;codecs=opus");
+        JsonNode view = ana.json(ana.get("/api/v1/media/" + voice));
+        assertThat(view.get("kind").asString()).isEqualTo("AUDIO");
+        assertThat(view.get("durationMs").asLong()).as("WebM do MediaRecorder, sem duração no cabeçalho")
+                .isEqualTo(2280);
+        sendWith(ana, voice, "");
+        JsonNode received = bruno.json(bruno.get("/api/v1/conversations/" + conversation + "/messages"))
+                .get("messages").get(0).get("attachment");
+        assertThat(received.get("durationMs").asLong()).as("para quem recebe, antes de tocar").isEqualTo(2280);
+
+        // Arquivos de áudio comuns, inclusive os que antes viravam documento (AAC cru e FLAC).
+        record Case(String file, String declared, String type, long millis) {
+        }
+        for (Case audio : List.of(new Case("adts.aac", "audio/aac", "audio/aac", 2624),
+                new Case("flac.flac", "audio/flac", "audio/flac", 2500),
+                new Case("pcm.wav", "audio/wav", "audio/wav", 1000),
+                new Case("lame-cbr.mp3", "audio/mpeg", "audio/mpeg", 2500),
+                new Case("aac.m4a", "audio/x-m4a", "audio/mp4", 2500),
+                new Case("firefox.ogg", "audio/ogg", "audio/ogg", 2251))) {
+            JsonNode file = ana.json(ana.get("/api/v1/media/" + upload(ana, audio(audio.file()), audio.file(),
+                    audio.declared())));
+            assertThat(file.get("kind").asString()).as(audio.file()).isEqualTo("AUDIO");
+            assertThat(file.get("contentType").asString()).as(audio.file()).isEqualTo(audio.type());
+            assertThat(file.get("durationMs").asLong()).as(audio.file()).isEqualTo(audio.millis());
+        }
+
+        String doc = upload(ana, "%PDF-1.4 doc".getBytes(StandardCharsets.US_ASCII), "doc.pdf", "application/pdf");
+        assertThat(ana.json(ana.get("/api/v1/media/" + doc)).get("durationMs").isNull()).isTrue();
+        String odd = upload(ana, Uploads.ogg(4096), "estranho.ogg", "audio/ogg");
+        assertThat(ana.json(ana.get("/api/v1/media/" + odd)).get("durationMs").isNull())
+                .as("áudio que não diz a duração").isTrue();
+    }
+
+    @Test
+    @DisplayName("áudios enviados antes da duração a ganham em segundo plano; os que não dizem não são relidos (AU-02)")
+    void shouldBackfillDurationOfOldAudios() throws Exception {
+        String old = upload(ana, audio("firefox.webm"), "antigo.webm", "audio/webm");
+        String odd = upload(ana, Uploads.ogg(4096), "estranho.ogg", "audio/ogg");
+        String gone = upload(ana, audio("lame-cbr.mp3"), "sumiu.mp3", "audio/mpeg");
+        String photo = upload(ana, Images.png(20, 20), "foto.png", "image/png");
+        // Como estavam antes da migration: sem duração e marcados para o job.
+        jdbc.update("update media_files set duration_ms = null, duration_pending = (kind = 'AUDIO')");
+        storage.delete(MediaFile.contentKey(UUID.fromString(gone)));
+
+        assertThat(durationBackfill.fillBatch()).isEqualTo(3);
+
+        assertThat(ana.json(ana.get("/api/v1/media/" + old)).get("durationMs").asLong()).isEqualTo(2274);
+        assertThat(ana.json(ana.get("/api/v1/media/" + odd)).get("durationMs").isNull()).isTrue();
+        assertThat(ana.json(ana.get("/api/v1/media/" + gone)).get("durationMs").isNull()).isTrue();
+        assertThat(ana.json(ana.get("/api/v1/media/" + photo)).get("durationMs").isNull()).isTrue();
+        assertThat(jdbc.queryForObject("select count(*) from media_files where duration_pending", Integer.class))
+                .isZero();
+        assertThat(durationBackfill.fillBatch()).as("nada mais a ler").isZero();
+    }
+
+    @Test
     @DisplayName("limite de 1 GB, cota por usuário e cancelamento que devolve a cota")
     void shouldEnforceLimitsAndQuota() {
         assertThat(ana.perform(tusCreate(1_073_741_825L, "grande.bin", null))).hasStatus(413);
@@ -404,6 +465,16 @@ class MediaIT {
                             UUID.fromString(sticker), UUID.fromString(photo));
         } finally {
             updateQuota(current, (int) (current.userQuotaBytes() / (1024 * 1024)));
+        }
+    }
+
+    /** Áudio de {@code src/test/resources/audio} (ver {@code AudioDurationTest}). */
+    private static byte[] audio(String file) {
+        try (var in = MediaIT.class.getResourceAsStream("/audio/" + file)) {
+            assertThat(in).as(file).isNotNull();
+            return in.readAllBytes();
+        } catch (java.io.IOException exception) {
+            throw new java.io.UncheckedIOException(exception);
         }
     }
 

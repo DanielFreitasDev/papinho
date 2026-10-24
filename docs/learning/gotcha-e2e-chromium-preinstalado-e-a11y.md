@@ -4,6 +4,7 @@ description: nome de download, headless shell nega notificações, toast com rol
 type: project
 category: gotcha
 date: 2026-10-15
+updated: 2026-10-24
 ---
 - O Playwright 1.64 pede o Chromium 1248; o sandbox tem o 1194 em `/opt/pw-browsers`. Com
   `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/opt/pw-browsers/chromium-1194/chrome-linux/chrome` tudo roda, mas
@@ -27,10 +28,15 @@ date: 2026-10-15
 - O vermelho `destructive` padrão (oklch 0.577) dá 3,8:1 no botão destrutivo sobre o próprio fundo tingido;
   foi para 0.5.
 - `twoFriends(tag)` cadastra `gil.<tag>`/`hana.<tag>`: cada spec precisa de um sufixo próprio na tag, senão a
-  suíte completa falha no cadastro (rodando um spec sozinho passa).
+  suíte completa falha no cadastro (rodando um spec sozinho passa). O `RUN` é calculado quando cada worker carrega o
+  módulo: a colisão só aparece quando os dois specs caem no mesmo worker, então falha às vezes ("Este @usuario já está
+  em uso" no alerta do cadastro, 15 s esperando o diálogo dos códigos). Antes de escolher a letra, veja as usadas:
+  `grep -rhoE '"m" : "d"\}[a-z]`' e2e/*.ts`.
 
 **Evidência:** falhas do axe e dos seletores em `media.spec.ts`, `audio.spec.ts` e `moderation.spec.ts`;
-29/29 verdes depois, 2026-10-15.
+29/29 verdes depois, 2026-10-15. `spacing.spec.ts` (sufixo `e`, o mesmo do `messages.spec.ts`) e
+`animations.spec.ts` (`n`, o mesmo do `pwa.spec.ts`) derrubaram o `pwa.spec.ts` e o `spacing.spec.ts` em duas
+rodadas completas de 2026-10-24; sufixos `s` e `r` depois.
 
 Passada 6 (2026-10-16):
 - O `Spinner` do shadcn já tem `role="status"` e `aria-label="Loading"` (em inglês); dentro de outro

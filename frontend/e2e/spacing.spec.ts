@@ -52,7 +52,7 @@ test("nada encosta nas bordas, com nomes longos", async ({
   const { gil } = await twoFriends(
     browser,
     pageErrors,
-    `${RUN}${mobile ? "m" : "d"}e`,
+    `${RUN}${mobile ? "m" : "d"}s`,
     LONG
   )
   const peer = `Hana ${LONG}`

@@ -17,6 +17,10 @@ spring:
     username: ${DATABASE_USERNAME:papinho}
     password: ${DATABASE_PASSWORD:}
     hikari:
+      # Sessão sempre em UTC: o driver manda o fuso da JVM ao conectar, e o que o banco calcula com horário sem fuso
+      # (as travas do ShedLock com a hora do banco) mudava com o fuso da máquina. O "options=-c TimeZone" não serve:
+      # o fuso que o driver manda vence.
+      connection-init-sql: SET TIME ZONE 'UTC'
       data-source-properties:
         # Sem o "Detail: Key (username)=(...)" do PostgreSQL nas exceções e nos logs: são dados pessoais.
         logServerErrorDetail: false

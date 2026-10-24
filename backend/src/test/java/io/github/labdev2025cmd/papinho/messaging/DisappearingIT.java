@@ -2,7 +2,9 @@ package io.github.labdev2025cmd.papinho.messaging;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
+import static org.awaitility.Awaitility.await;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
@@ -131,13 +133,17 @@ class DisappearingIT {
     void shouldSkipPurgeWhileAnotherInstanceHoldsTheLock() {
         String conversation = open(ana, "bruno");
         String expired = send(ana, conversation, "vencida");
-        jdbc.update("update messages set expires_at = now() - interval '1 minute' where id = ?",
-                UUID.fromString(expired));
-        jdbc.update("""
+        // A trava só é tomada quando está livre, e a mensagem só vence depois: o job agendado (a cada 60 s em todo
+        // contexto de teste vivo) apagava a mensagem se rodasse entre vencê-la e travar.
+        await().atMost(Duration.ofSeconds(30)).until(() -> jdbc.update("""
                 insert into shedlock (name, lock_until, locked_at, locked_by)
                 values ('disappearing-messages', now() + interval '5 minutes', now(), 'outra-instancia')
-                on conflict (name) do update set lock_until = excluded.lock_until, locked_by = excluded.locked_by
-                """);
+                on conflict (name) do update set lock_until = excluded.lock_until, locked_at = excluded.locked_at,
+                    locked_by = excluded.locked_by
+                where shedlock.lock_until <= now()
+                """) == 1);
+        jdbc.update("update messages set expires_at = now() - interval '1 minute' where id = ?",
+                UUID.fromString(expired));
         try {
             job.purge();
             assertThat(countMessage(expired)).as("outra instância está apagando").isOne();

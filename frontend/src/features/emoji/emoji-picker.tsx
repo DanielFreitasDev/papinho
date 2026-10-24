@@ -171,7 +171,7 @@ export function EmojiPicker({
               onClick={() => choose(emoji.unicode)}
               onPointerEnter={() => setPointed(emoji)}
               onFocus={() => setPointed(emoji)}
-              className="flex aspect-square items-center justify-center rounded-md text-xl outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50"
+              className="flex aspect-square items-center justify-center rounded-md text-xl transition-transform duration-(--duration-fast) ease-(--ease-spring) outline-none hover:scale-110 hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-95"
             >
               {emoji.unicode}
             </button>

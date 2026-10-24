@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
+import { cn } from "cn"
 import {
   BellOffIcon,
   CalendarClockIcon,
@@ -124,6 +125,19 @@ export function Composer({
   const textarea = useRef<HTMLTextAreaElement>(null)
   const fileInput = useRef<HTMLInputElement>(null)
   const [recording, setRecording] = useState(false)
+  const showSend = value.trim() !== "" || Boolean(editing)
+  // A troca entre o microfone e o enviar e a volta do campo depois da gravação animam só depois de uma mudança: na
+  // primeira tela nada pula.
+  const [previous, setPrevious] = useState({ showSend, recording })
+  const [swap, setSwap] = useState(false)
+  const [returning, setReturning] = useState(false)
+  if (previous.showSend !== showSend || previous.recording !== recording) {
+    setPrevious({ showSend, recording })
+    setSwap(true)
+    if (previous.recording !== recording) {
+      setReturning(!recording)
+    }
+  }
   const [emojiOpen, setEmojiOpen] = useState(false)
   const [managingStickers, setManagingStickers] = useState(false)
   const gifStatus = useQuery({
@@ -227,7 +241,7 @@ export function Composer({
       }}
     >
       {editing ? (
-        <div className="flex items-start gap-2 rounded-md border-l-4 border-primary bg-muted px-2 py-1 text-xs">
+        <div className="flex animate-in items-start gap-2 rounded-md border-l-4 border-primary bg-muted px-2 py-1 text-xs duration-(--duration-base) ease-(--ease-enter) fade-in slide-in-from-bottom-2">
           <PencilIcon aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
           <div className="min-w-0 flex-1">
             <p className="font-medium">{t("chat.editing")}</p>
@@ -247,7 +261,7 @@ export function Composer({
         </div>
       ) : null}
       {replyTo && !editing ? (
-        <div className="flex items-start gap-2 rounded-md border-l-4 border-primary bg-muted px-2 py-1 text-xs">
+        <div className="flex animate-in items-start gap-2 rounded-md border-l-4 border-primary bg-muted px-2 py-1 text-xs duration-(--duration-base) ease-(--ease-enter) fade-in slide-in-from-bottom-2">
           <div className="min-w-0 flex-1">
             <p className="font-medium">
               {t("chat.replyingTo", { name: replyName })}
@@ -284,7 +298,13 @@ export function Composer({
       />
       <div className="flex items-end gap-2">
         {recording ? null : (
-          <InputGroup className="flex-1">
+          <InputGroup
+            className={cn(
+              "flex-1",
+              returning &&
+                "animate-in duration-(--duration-base) ease-(--ease-enter) fade-in slide-in-from-left-4"
+            )}
+          >
             {/* Os ícones ficam na linha de baixo, da altura de uma linha do campo: com várias linhas de texto, continuam
                 alinhados ao botão do microfone, como no WhatsApp. */}
             <InputGroupAddon align="inline-start" className={COMPOSER_ADDON}>
@@ -412,71 +432,70 @@ export function Composer({
                 }
               }}
             />
-            {value.trim() !== "" || editing ? (
+            {showSend && !editing && onSchedule ? (
               <InputGroupAddon align="inline-end" className={COMPOSER_ADDON}>
-                {!editing && onSchedule ? (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger
-                      render={
-                        <InputGroupButton
-                          type="button"
-                          size="icon-sm"
-                          aria-label={t("chat.sendOptions")}
-                          disabled={disabled}
-                        />
-                      }
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    render={
+                      <InputGroupButton
+                        type="button"
+                        size="icon-sm"
+                        aria-label={t("chat.sendOptions")}
+                        disabled={disabled}
+                      />
+                    }
+                  >
+                    <ChevronUpIcon />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" side="top">
+                    <DropdownMenuItem onClick={() => submit({ silent: true })}>
+                      <BellOffIcon />
+                      {t("chat.sendSilently")}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        const body = value.trim()
+                        if (body !== "") {
+                          onSchedule(body)
+                          savedDraft.current = ""
+                          setValue("")
+                          void saveDraft(conversationId, "").catch(
+                            () => undefined
+                          )
+                        }
+                      }}
                     >
-                      <ChevronUpIcon />
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" side="top">
-                      <DropdownMenuItem
-                        onClick={() => submit({ silent: true })}
-                      >
-                        <BellOffIcon />
-                        {t("chat.sendSilently")}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => {
-                          const body = value.trim()
-                          if (body !== "") {
-                            onSchedule(body)
-                            savedDraft.current = ""
-                            setValue("")
-                            void saveDraft(conversationId, "").catch(
-                              () => undefined
-                            )
-                          }
-                        }}
-                      >
-                        <CalendarClockIcon />
-                        {t("chat.schedule")}
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                ) : null}
-                <InputGroupButton
-                  type="submit"
-                  size="icon-sm"
-                  variant="default"
-                  aria-label={editing ? t("chat.saveEdit") : t("chat.send")}
-                  disabled={disabled || value.trim() === ""}
-                >
-                  {editing ? <CheckIcon /> : <SendHorizontalIcon />}
-                </InputGroupButton>
+                      <CalendarClockIcon />
+                      {t("chat.schedule")}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </InputGroupAddon>
             ) : null}
           </InputGroup>
         )}
-        {(value.trim() === "" && !editing) || recording ? (
+        {/* O enviar ocupa o lugar redondo do microfone (como no WhatsApp) e os dois chegam com o "pop" na troca. */}
+        {showSend && !recording ? (
+          <Button
+            type="submit"
+            size="icon"
+            className={cn("size-11 rounded-full", swap && "animate-pop")}
+            aria-label={editing ? t("chat.saveEdit") : t("chat.send")}
+            disabled={disabled || value.trim() === ""}
+          >
+            {editing ? <CheckIcon /> : <SendHorizontalIcon />}
+          </Button>
+        ) : (
           <div className={recording ? "flex min-w-0 flex-1" : "flex"}>
             <VoiceRecorder
               conversationId={conversationId}
               disabled={disabled}
+              animateIn={swap}
               onActiveChange={setRecording}
               onSend={onVoice}
             />
           </div>
-        ) : null}
+        )}
       </div>
       <StickerManager
         open={managingStickers}

@@ -29,7 +29,7 @@ export function StickerPanel({
           type="button"
           aria-label={t("sticker.send", { emoji: sticker.emoji ?? "" })}
           onClick={() => onSelect(sticker)}
-          className="flex aspect-square items-center justify-center rounded-md outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="flex aspect-square items-center justify-center rounded-md transition-transform duration-(--duration-fast) ease-(--ease-spring) outline-none hover:scale-110 hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-95"
         >
           <img
             src={mediaUrl(sticker.mediaId)}

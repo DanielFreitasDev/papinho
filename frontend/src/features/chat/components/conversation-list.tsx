@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Link, useParams } from "@tanstack/react-router"
 import { useQuery } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
@@ -24,6 +24,7 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty"
 import { Item, ItemActions, ItemGroup } from "@/components/ui/item"
+import { useFlip } from "@/hooks/use-flip"
 import { Skeleton } from "@/components/ui/skeleton"
 import { formatListTime } from "@/lib/format"
 import { privacyQueries } from "@/features/privacy"
@@ -38,6 +39,7 @@ import { plainText } from "../format/parse"
 import { useActivity } from "../activity"
 import { describeNotice } from "../system-notice"
 import type { Conversation } from "../types"
+import { ActivityText } from "./activity-text"
 import { ConversationAvatar, useConversationLabel } from "./conversation-avatar"
 import { ConversationMenu } from "./conversation-menu"
 import { GlobalSearchResults } from "./global-search"
@@ -68,6 +70,9 @@ export function ConversationList({
   const folders = useQuery({ ...organizationQueries.folders(), enabled: main })
   const [filter, setFilter] = useState<ListFilter>({ kind: "all" })
   const [query, setQuery] = useState("")
+  // Conversa que sobe com mensagem nova, fixada, arquivada: as outras deslizam até o lugar novo.
+  const group = useRef<HTMLDivElement>(null)
+  useFlip(group)
 
   // Abrir o app confirma a entrega do que chegou enquanto estava fora (MS-02).
   useEffect(() => {
@@ -258,6 +263,7 @@ export function ConversationList({
         </Empty>
       ) : (
         <ItemGroup
+          ref={group}
           aria-label={
             requests
               ? t("chat.requests")
@@ -290,6 +296,8 @@ function ConversationItem({
   const { t } = useTranslation()
   const params = useParams({ strict: false })
   const activity = useActivity(conversation.id)
+  // A contagem de não lidas que muda depois de a linha aparecer chega com o "pop" (a de quando montou, não).
+  const [initialUnread] = useState(conversation.unreadCount)
   const labelOf = useConversationLabel()
   const label = labelOf(conversation)
   const active = params.conversationId === conversation.id
@@ -326,6 +334,7 @@ function ConversationItem({
   return (
     <Item
       size="sm"
+      data-flip-key={conversation.id}
       className={cn(
         "relative gap-0 p-0 has-[a:hover]:bg-muted/50",
         active && "bg-muted/50"
@@ -378,7 +387,7 @@ function ConversationItem({
                     : "text-muted-foreground"
               )}
             >
-              {preview}
+              {activity ? <ActivityText text={preview} /> : preview}
             </span>
             {isMuted(conversation) ? (
               <BellOffIcon
@@ -395,7 +404,13 @@ function ConversationItem({
               />
             ) : null}
             {conversation.unreadCount > 0 ? (
-              <Badge className="min-w-5 justify-center">
+              <Badge
+                key={conversation.unreadCount}
+                className={cn(
+                  "min-w-5 justify-center",
+                  conversation.unreadCount !== initialUnread && "animate-pop"
+                )}
+              >
                 <span aria-hidden="true">{conversation.unreadCount}</span>
                 <span className="sr-only">
                   {t("chat.unreadCount", { count: conversation.unreadCount })}

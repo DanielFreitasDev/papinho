@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react"
 import { useTranslation } from "react-i18next"
 import { CheckIcon } from "lucide-react"
 import { cn } from "cn"
@@ -100,9 +101,11 @@ export function PollView({
                   aria-hidden="true"
                   className="h-1.5 w-full overflow-hidden rounded-full bg-black/10 dark:bg-white/15"
                 >
+                  {/* Barra cheia deslocada para a esquerda (só transform, sem achatar as pontas redondas): cresce do zero
+                      ao aparecer e desliza quando os votos mudam. */}
                   <span
-                    className="block h-full rounded-full bg-primary transition-[width] motion-reduce:transition-none"
-                    style={{ width: `${Math.round(share * 100)}%` }}
+                    className="block h-full [translate:calc((var(--share)-1)*100%)_0] rounded-full bg-primary transition-[translate] duration-(--duration-slow) ease-(--ease-standard) starting:[translate:-100%_0]"
+                    style={{ "--share": share } as CSSProperties}
                   />
                 </span>
                 {option.voters.length > 0 ? (

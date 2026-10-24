@@ -97,8 +97,11 @@ function SignedInShell({ me }: { me: Me }) {
     )
   )
   const screenLock = useQuery(privacyQueries.screenLock())
+  // A localização resolvida muda junto com o conteúdo da rota (dentro da view transition da navegação): no celular, a
+  // troca entre a lista e a conversa entra na animação, e a tela que sai é capturada inteira. A location muda antes,
+  // no início da navegação.
   const pathname = useRouterState({
-    select: (state) => state.location.pathname,
+    select: (state) => (state.resolvedLocation ?? state.location).pathname,
   })
   const isHome = pathname === "/"
   const [addOpen, setAddOpen] = useState(false)
@@ -335,7 +338,7 @@ function SignedInShell({ me }: { me: Me }) {
         </aside>
         <main
           className={cn(
-            "min-h-0 min-w-0 flex-col overflow-y-auto",
+            "min-h-0 min-w-0 flex-col overflow-y-auto md:[view-transition-name:main-pane]",
             isHome ? "hidden md:flex" : "flex"
           )}
         >

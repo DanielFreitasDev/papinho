@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next"
 import { formatWhen } from "@/lib/format"
 import { chatQueries } from "../api"
 import { useActivity } from "../activity"
+import { ActivityText } from "./activity-text"
 import type { Conversation, GroupMember } from "../types"
 
 /**
@@ -62,7 +63,7 @@ export function PresenceLine({
       className="block truncate text-xs font-normal text-muted-foreground"
       aria-live="polite"
     >
-      {text}
+      {activity ? <ActivityText text={text} /> : text}
     </span>
   )
 }

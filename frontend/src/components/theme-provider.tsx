@@ -1,6 +1,9 @@
 // custom: troca de tema sem <style> inline (CSP estrita) e sem o atalho global "d" do template,
 // que disparava ao digitar fora de campos; o tema é escolhido nas configurações (UI-02).
 import * as React from "react"
+import { flushSync } from "react-dom"
+
+import { prefersReducedMotion } from "@/lib/motion"
 
 type Theme = "dark" | "light" | "system"
 type ResolvedTheme = "dark" | "light"
@@ -58,6 +61,29 @@ function disableTransitionsTemporarily() {
   }
 }
 
+/** Último toque ou clique: a troca de tema cresce a partir dele (sem toque, do centro da tela). */
+let lastPointer: { x: number; y: number } | null = null
+
+/**
+ * Troca o tema com um círculo que cresce de onde a pessoa tocou (view transition, index.css). Sem suporte no
+ * navegador ou com movimento reduzido, troca direto. As coordenadas vão por propriedades do CSSOM (a CSP só barra
+ * estilo inline no HTML).
+ */
+function revealTheme(update: () => void) {
+  const root = document.documentElement
+  const { innerWidth: width, innerHeight: height } = window
+  const { x, y } = lastPointer ?? { x: width / 2, y: height / 2 }
+  const radius = Math.hypot(Math.max(x, width - x), Math.max(y, height - y))
+  root.style.setProperty("--theme-reveal-x", `${x}px`)
+  root.style.setProperty("--theme-reveal-y", `${y}px`)
+  root.style.setProperty("--theme-reveal-r", `${radius}px`)
+  root.dataset.themeReveal = ""
+  const transition = document.startViewTransition(update)
+  void transition.finished.finally(() => {
+    delete root.dataset.themeReveal
+  })
+}
+
 export function ThemeProvider({
   children,
   defaultTheme = "system",
@@ -73,14 +99,6 @@ export function ThemeProvider({
 
     return defaultTheme
   })
-
-  const setTheme = React.useCallback(
-    (nextTheme: Theme) => {
-      localStorage.setItem(storageKey, nextTheme)
-      setThemeState(nextTheme)
-    },
-    [storageKey]
-  )
 
   const applyTheme = React.useCallback(
     (nextTheme: Theme) => {
@@ -100,6 +118,36 @@ export function ThemeProvider({
     },
     [disableTransitionOnChange]
   )
+
+  const setTheme = React.useCallback(
+    (nextTheme: Theme) => {
+      localStorage.setItem(storageKey, nextTheme)
+      const resolved = nextTheme === "system" ? getSystemTheme() : nextTheme
+      const changes = !document.documentElement.classList.contains(resolved)
+      if (
+        !changes ||
+        prefersReducedMotion() ||
+        typeof document.startViewTransition !== "function"
+      ) {
+        setThemeState(nextTheme)
+        return
+      }
+      revealTheme(() => {
+        flushSync(() => setThemeState(nextTheme))
+        applyTheme(nextTheme)
+      })
+    },
+    [storageKey, applyTheme]
+  )
+
+  React.useEffect(() => {
+    const remember = (event: PointerEvent) => {
+      lastPointer = { x: event.clientX, y: event.clientY }
+    }
+    window.addEventListener("pointerdown", remember, { capture: true })
+    return () =>
+      window.removeEventListener("pointerdown", remember, { capture: true })
+  }, [])
 
   React.useEffect(() => {
     applyTheme(theme)

@@ -43,6 +43,7 @@ Leia as entradas relacionadas à tarefa. Os detalhes ficam em `docs/learning/`.
 - [Janela de mensagens sobre o MessageScroller](docs/learning/gotcha-janela-de-mensagens-e-message-scroller.md) — âncora que volta ao DOM salta, root e observador recriado após o commit, lado do corte pela borda, compensação pela linha visível.
 - [Duração de áudio: WebM do MediaRecorder, pre-skip e Tika](docs/learning/gotcha-duracao-de-audio-mediarecorder.md) — fim do último bloco − início − CodecDelay; Firefox grava Duration 0,0; .aac e .flac viravam documento.
 - [JSON dos idiomas e CSS fora do format:check](docs/learning/gotcha-json-dos-idiomas-reordena-chaves.md) — reescrever o JSON reordena chaves numéricas; prettier no CSS reformata regras alheias.
+- [Animações nos testes e no roteador](docs/learning/gotcha-animacoes-e-testes.md) — CDP desacelera o rAF e não os timers, resolvedLocation na view transition, toque longo sem clique, caixa durante a escala.
 - [Produção na VPS atrás do Cloudflare Tunnel](docs/learning/gotcha-producao-vps-cloudflare-tunnel.md) — admin pelo loopback antes do hostname, cookie Secure no curl, beacon barrado pela CSP, e2e lento e cota de artifacts no repositório privado.
 
 ## Decisões de arquitetura
@@ -53,6 +54,7 @@ Leia as entradas relacionadas à tarefa. Os detalhes ficam em `docs/learning/`.
 - [UI-05: aparência própria](docs/learning/decisao-ui05-aparencia-propria.md) — data/hora, senha, busca, mídia, noValidate, regra de lint e a prova no e2e.
 - [Destaque da busca pela mesma regra do servidor](docs/learning/decisao-destaque-da-busca.md) — Snowball português igual ao portuguese_stem, fixture conferida nos dois lados, termo pelo estado do histórico.
 - [Escala de espaçamento e auditoria das bordas](docs/learning/decisao-escala-de-espacamento.md) — tokens na forma de variável (cn), menu com largura própria, fieldset min-w-0, addons presos embaixo, data-scroll-x.
+- [Animações sem biblioteca, com tokens e só ao vivo](docs/learning/decisao-animacoes.md) — nada de Motion nem ViewTransition do React na lista, entrada decidida antes de pintar, chave remetente+clientMessageId.
 - [Limpeza dos arquivos nunca usados](docs/learning/decisao-limpeza-de-arquivos-nao-usados.md) — porta MediaReferences, in_use preguiçoso, trava contra o anexo simultâneo.
 - [Correção da auditoria de 2026-10-17](docs/learning/decisao-auditoria-2026-10-17.md) — convite do admin no fechado, foto view-once, HEIC recusado, exportação sem trancadas, presença.
 - [Correção dos Baixos de 2026-10-17](docs/learning/decisao-auditoria-baixos-2026-10-17.md) — login por IP e conta, grant dos anexos trancados, reservas da conta apagada, antivírus fora.

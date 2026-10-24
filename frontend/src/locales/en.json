@@ -570,6 +570,8 @@
     "preview": "Audio preview",
     "locked": "Recording locked",
     "slideToLock": "Slide up to lock",
+    "slideToCancel": "Slide to cancel",
+    "discarded": "Recording discarded",
     "microphoneDenied": "Could not use the microphone. Check the browser permission.",
     "play": "Play audio",
     "pause": "Pause audio",

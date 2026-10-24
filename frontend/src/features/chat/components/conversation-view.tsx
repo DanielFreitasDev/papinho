@@ -1,4 +1,5 @@
 import {
+  type ComponentProps,
   Fragment,
   useEffect,
   useLayoutEffect,
@@ -111,6 +112,7 @@ import { PresenceLine } from "./presence-line"
 import { ConversationSearch } from "./conversation-search"
 import { UnlockForm } from "@/features/privacy"
 import { useErrorToast } from "@/hooks/use-error-toast"
+import { scrollBehavior } from "@/lib/motion"
 
 /** Tela de uma conversa individual (Fase 2): cabeçalho, fixadas, mensagens e campo de envio. */
 export function ConversationView({
@@ -226,6 +228,44 @@ export function ConversationView({
 
 /** Quanto dura o destaque da bolha depois de um salto (a animação em index.css usa o mesmo tempo). */
 const FLASH_MS = 1_600
+/** Mensagem criada há mais tempo que isso não "chega" animada (veio de uma sincronização, não ao vivo). */
+const ENTRANCE_WINDOW_MS = 15_000
+
+/** Como a linha entra: a bolha própria sobe do campo; a recebida surge do lado dela; aviso do sistema, do centro. */
+type Entrance = "sent" | "in-start" | "in-end" | "in-center"
+
+/**
+ * Item da lista que entra animado quando a conversa decide. A decisão é uma vez só, na montagem e antes de pintar:
+ * a linha que sai e volta à janela de renderização não entra de novo.
+ */
+function EnteringItem({
+  message,
+  decide,
+  ...props
+}: ComponentProps<typeof MessageScrollerItem> & {
+  message: DisplayMessage
+  decide: (message: DisplayMessage) => Entrance | null
+}) {
+  const item = useRef<HTMLDivElement>(null)
+  useLayoutEffect(() => {
+    const entrance = decide(message)
+    if (entrance && item.current) {
+      item.current.dataset.enter = entrance
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  return (
+    <MessageScrollerItem
+      ref={item}
+      onAnimationEnd={(event) => {
+        if (event.target === event.currentTarget) {
+          delete event.currentTarget.dataset.enter
+        }
+      }}
+      {...props}
+    />
+  )
+}
 
 function nextFrame() {
   return new Promise<void>((resolve) =>
@@ -539,7 +579,10 @@ function LoadedConversation({
       return
     }
     await nextFrame()
-    scroller.scrollToMessage(messageId, { align: "center", behavior: "smooth" })
+    scroller.scrollToMessage(messageId, {
+      align: "center",
+      behavior: scrollBehavior(),
+    })
     let interrupted = false
     const interrupt = () => {
       interrupted = true
@@ -838,6 +881,58 @@ function LoadedConversation({
     }
   }
 
+  // Entrada das linhas (EnteringItem): anima o que chega ao vivo no fim da conversa e a bolha própria que acabou de
+  // sair do campo; nunca a conversa recém-aberta, o histórico, páginas carregadas nem a confirmação da bolha
+  // pendente (outra chave, mesma mensagem). O estado é atualizado depois de cada commit; as linhas novas desse
+  // commit decidem antes, comparando com o anterior.
+  const entrances = useRef({
+    seen: new Set<string>(),
+    sent: new Set<string>(),
+    maxSeq: Number.NEGATIVE_INFINITY,
+    live: true,
+    ready: false,
+  })
+  useLayoutEffect(() => {
+    const state = entrances.current
+    for (const seq of seqs) {
+      if (seq !== null && seq > state.maxSeq) {
+        state.maxSeq = seq
+      }
+    }
+    state.live = messageWindow.toSeq === null
+    state.ready = true
+  })
+  const [decideEntrance] = useState(
+    () =>
+      (message: DisplayMessage): Entrance | null => {
+        const state = entrances.current
+        if (state.seen.has(message.key)) {
+          return null
+        }
+        state.seen.add(message.key)
+        if (message.id === null) {
+          state.sent.add(message.key)
+          return state.ready ? "sent" : null
+        }
+        const fresh =
+          message.seq !== null &&
+          message.seq > state.maxSeq &&
+          Date.now() - Date.parse(message.createdAt) < ENTRANCE_WINDOW_MS
+        if (
+          !state.ready ||
+          !state.live ||
+          !fresh ||
+          state.sent.has(message.clientMessageId ?? "")
+        ) {
+          return null
+        }
+        if (message.kind === "SYSTEM") {
+          return "in-center"
+        }
+        return message.senderId === meId ? "in-end" : "in-start"
+      }
+  )
+
   // Callbacks estáveis para as linhas memoizadas (UI-04): a referência não muda, a lógica é sempre a atual.
   const latest = useRef({ onAction, jumpTo, nameOf })
   useEffect(() => {
@@ -1128,6 +1223,9 @@ function LoadedConversation({
                 </Empty>
               ) : null}
               {display.slice(start, end).map((message, offset) => {
+                // Chave estável da pendente à confirmada (a mesma bolha não remonta: o tique muda no lugar). O banco
+                // garante remetente + clientMessageId únicos; o id sozinho, de outra pessoa, poderia repetir.
+                const rowKey = `${message.senderId ?? ""}:${message.clientMessageId ?? message.key}`
                 const previous = display[start + offset - 1]
                 const newDay =
                   !previous ||
@@ -1135,7 +1233,7 @@ function LoadedConversation({
                 const unreadHere = unread !== null && message.seq === unread.seq
                 if (message.kind === "SYSTEM") {
                   return (
-                    <Fragment key={message.key}>
+                    <Fragment key={rowKey}>
                       {newDay ? (
                         <Marker
                           variant="separator"
@@ -1147,18 +1245,22 @@ function LoadedConversation({
                           </MarkerContent>
                         </Marker>
                       ) : null}
-                      <MessageScrollerItem messageId={message.key}>
+                      <EnteringItem
+                        messageId={message.key}
+                        message={message}
+                        decide={decideEntrance}
+                      >
                         <Marker className="mx-auto my-1 max-w-[90%] justify-center rounded-md bg-muted px-3 py-1 text-center text-xs text-muted-foreground">
                           <MarkerContent>
                             {describeNotice(message.body, meId, t)}
                           </MarkerContent>
                         </Marker>
-                      </MessageScrollerItem>
+                      </EnteringItem>
                     </Fragment>
                   )
                 }
                 return (
-                  <Fragment key={message.key}>
+                  <Fragment key={rowKey}>
                     {newDay ? (
                       <Marker
                         variant="separator"
@@ -1181,8 +1283,10 @@ function LoadedConversation({
                         </MarkerContent>
                       </Marker>
                     ) : null}
-                    <MessageScrollerItem
+                    <EnteringItem
                       messageId={message.id ?? message.key}
+                      message={message}
+                      decide={decideEntrance}
                       scrollAnchor={
                         unreadHere && messageWindow === openingWindow
                       }
@@ -1216,7 +1320,7 @@ function LoadedConversation({
                         highlight={highlight}
                         flash={message.id !== null && message.id === flashId}
                       />
-                    </MessageScrollerItem>
+                    </EnteringItem>
                   </Fragment>
                 )
               })}
@@ -1525,6 +1629,7 @@ function toDisplay(
   const confirmed: DisplayMessage[] = live.map((message) => ({
     key: message.id,
     id: message.id,
+    clientMessageId: message.clientMessageId,
     seq: message.seq,
     senderId: message.senderId,
     body: message.body,
@@ -1549,6 +1654,7 @@ function toDisplay(
   const pending: DisplayMessage[] = cache.pending.map((message) => ({
     key: message.clientMessageId,
     id: null,
+    clientMessageId: message.clientMessageId,
     seq: null,
     senderId: meId,
     body: message.body,

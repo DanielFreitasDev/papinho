@@ -1,4 +1,4 @@
-import { memo } from "react"
+import { memo, useState } from "react"
 import { useTranslation } from "react-i18next"
 import {
   BanIcon,
@@ -71,6 +71,8 @@ export const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "🙏"
 export type DisplayMessage = {
   key: string
   id: string | null
+  /** Id gerado por quem enviou: liga a bolha pendente à confirmada. */
+  clientMessageId: string | null
   seq: number | null
   senderId: string | null
   body: string
@@ -181,6 +183,10 @@ function MessageRowView({
   flash?: boolean
 }) {
   const { t } = useTranslation()
+  // Reações que já estavam quando a linha montou entram paradas; as que chegam depois, com o "pop".
+  const [initialReactions] = useState(
+    () => new Set(message.reactions.map((reaction) => reaction.emoji))
+  )
   const onAction = (action: MessageAction) => onMessageAction(message, action)
   const confirmed = message.id !== null
   if (message.deleted) {
@@ -365,12 +371,12 @@ function MessageRowView({
               aria-label={t("chat.reactions")}
             >
               {grouped.map(([emoji, count]) => (
-                <span key={emoji}>
-                  {emoji}
-                  {count > 1 ? (
-                    <span className="ml-0.5 text-xs">{count}</span>
-                  ) : null}
-                </span>
+                <ReactionChip
+                  key={emoji}
+                  emoji={emoji}
+                  count={count}
+                  arrived={!initialReactions.has(emoji)}
+                />
               ))}
             </BubbleReactions>
           ) : null}
@@ -646,28 +652,77 @@ function groupReactions(reactions: Reaction[]): [string, number][] {
   return [...counts.entries()]
 }
 
-/** Relógio, um tique, dois tiques ou dois tiques azuis (MS-02). */
+/** Emoji de uma reação com a contagem; a que chega depois da linha montar e a contagem que muda, com o "pop". */
+function ReactionChip({
+  emoji,
+  count,
+  arrived,
+}: {
+  emoji: string
+  count: number
+  arrived: boolean
+}) {
+  const [initialCount] = useState(count)
+  return (
+    <span className={cn(arrived && "animate-pop")}>
+      {emoji}
+      {count > 1 ? (
+        <span
+          key={count}
+          className={cn(
+            "ml-0.5 inline-block text-xs",
+            count !== initialCount && "animate-pop"
+          )}
+        >
+          {count}
+        </span>
+      ) : null}
+    </span>
+  )
+}
+
+/**
+ * Relógio, um tique, dois tiques ou dois tiques azuis (MS-02). A troca de estado chega com um "pop"; o estado de
+ * quando a linha montou, não (a lista não pisca ao rolar).
+ */
 export function StatusIcon({ status }: { status: MessageStatus }) {
   const { t } = useTranslation()
+  const [initial] = useState(status)
   const label = t(`chat.status.${status}`)
-  const common = { "aria-label": label, role: "img", className: "size-3.5" }
+  const pop = status !== initial && "animate-pop"
+  const common = { "aria-label": label, role: "img" }
   switch (status) {
     case "uploading":
     case "sending":
-      return <ClockIcon {...common} />
+      return (
+        <ClockIcon key={status} {...common} className={cn("size-3.5", pop)} />
+      )
     case "failed":
       return (
-        <TriangleAlertIcon {...common} className="size-3.5 text-destructive" />
+        <TriangleAlertIcon
+          key={status}
+          {...common}
+          className={cn("size-3.5 text-destructive", pop)}
+        />
       )
     case "sent":
-      return <CheckIcon {...common} />
+      return (
+        <CheckIcon key={status} {...common} className={cn("size-3.5", pop)} />
+      )
     case "delivered":
-      return <CheckCheckIcon {...common} />
+      return (
+        <CheckCheckIcon
+          key={status}
+          {...common}
+          className={cn("size-3.5", pop)}
+        />
+      )
     case "read":
       return (
         <CheckCheckIcon
+          key={status}
           {...common}
-          className="size-3.5 text-sky-600 dark:text-sky-400"
+          className={cn("size-3.5 text-sky-600 dark:text-sky-400", pop)}
         />
       )
   }

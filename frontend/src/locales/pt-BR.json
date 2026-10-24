@@ -570,6 +570,8 @@
     "preview": "Pré-escuta do áudio",
     "locked": "Gravação travada",
     "slideToLock": "Arraste para cima para travar",
+    "slideToCancel": "Deslize para cancelar",
+    "discarded": "Gravação descartada",
     "microphoneDenied": "Não foi possível usar o microfone. Verifique a permissão do navegador.",
     "play": "Tocar áudio",
     "pause": "Pausar áudio",

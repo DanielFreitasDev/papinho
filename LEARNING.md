@@ -17,6 +17,7 @@ Leia as entradas relacionadas à tarefa. Os detalhes ficam em `docs/learning/`.
 - [Hover grudado no toque revelava o modo privado](docs/learning/bug-hover-grudado-no-toque.md) — revelar com :hover só em @media (hover: hover); toque longo de verdade pelo CDP.
 - [Abas das configurações sumiam na Privacidade](docs/learning/bug-abas-das-configuracoes-espremidas.md) — item com overflow num flex-col é espremido; shrink-0.
 - [Sync perdia mensagens com o lastSeq lido depois](docs/learning/bug-sync-lastseq-lido-depois-da-busca.md) — leia o seq antes e limite a busca; corrida provada com spy.
+- [Prévia de link pedida ao mesmo tempo dava 500](docs/learning/bug-previa-de-link-simultanea.md) — save() com id atribuído faz SELECT+INSERT; trate a chave duplicada.
 - [Travas do ShedLock deslocadas fora de UTC](docs/learning/bug-shedlock-com-fuso-fora-de-utc.md) — sessão JDBC sempre em UTC (connection-init-sql); options=-c TimeZone não vence o fuso da JVM.
 
 ## Pegadinhas de ambiente, dependências e bibliotecas

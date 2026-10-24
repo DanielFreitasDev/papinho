@@ -36,6 +36,10 @@ class LinkPreviewIT {
 
     private static final HttpServer SITE;
     private static final AtomicInteger PAGE_HITS = new AtomicInteger();
+    /** Quantas pessoas pedem o mesmo link ao mesmo tempo no teste da corrida (o máximo por site no SafeFetcher). */
+    private static final int AT_ONCE = 4;
+    private static final java.util.concurrent.CountDownLatch ARRIVALS = new java.util.concurrent.CountDownLatch(
+            AT_ONCE);
 
     static {
         try {
@@ -77,6 +81,21 @@ class LinkPreviewIT {
                 "{\"title\":\"Asa Branca\",\"html\":\"<iframe style=\\\"border-radius: 12px\\\" "
                         + "src=\\\"https://open.spotify.com/embed/track/4uLU6hMCjMI75M1A2tKUQC?utm_source=oembed\\\">"
                         + "</iframe>\"}"));
+        // Responde só quando todas as buscas do mesmo link chegaram: ninguém achou a prévia no cache.
+        SITE.createContext("/juntos", exchange -> {
+            ARRIVALS.countDown();
+            try {
+                ARRIVALS.await(2, java.util.concurrent.TimeUnit.SECONDS);
+            } catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
+            }
+            byte[] body = "<html><head><title>Ata da assembleia</title></head></html>"
+                    .getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().add("Content-Type", "text/html; charset=utf-8");
+            exchange.sendResponseHeaders(200, body.length);
+            exchange.getResponseBody().write(body);
+            exchange.close();
+        });
         // Site que goteja: 1 byte a cada 500 ms por 40 s, como quem quer prender a busca (MD-04).
         SITE.createContext("/goteja", exchange -> {
             exchange.getResponseHeaders().add("Content-Type", "text/html");
@@ -152,6 +171,24 @@ class LinkPreviewIT {
         Accounts.register(bruno, "bruno", Accounts.invite(ana));
         assertThat(bruno.json(bruno.get(previewPath(url))).get("title").asString()).isEqualTo("Receita de cuscuz");
         assertThat(PAGE_HITS.get()).as("segunda pessoa usa o cache").isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("o mesmo link pedido por várias pessoas ao mesmo tempo, fora do cache, não dá erro")
+    void shouldServeTheSameLinkFetchedAtOnce() throws Exception {
+        // Quem envia e quem recebe abrem a prévia juntos: todos buscam e gravam a mesma linha do cache.
+        String url = "http://127.0.0.1:" + SITE.getAddress().getPort() + "/juntos";
+        try (var executor = java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor()) {
+            var results = new java.util.ArrayList<java.util.concurrent.Future<Integer>>();
+            for (int i = 0; i < AT_ONCE; i++) {
+                results.add(executor.submit(() -> ana.get(previewPath(url)).getResponse().getStatus()));
+            }
+            for (var result : results) {
+                assertThat(result.get(30, java.util.concurrent.TimeUnit.SECONDS)).isEqualTo(200);
+            }
+        }
+        assertThat(ARRIVALS.getCount()).as("buscas simultâneas que não acharam o cache").isZero();
+        assertThat(ana.json(ana.get(previewPath(url))).get("title").asString()).isEqualTo("Ata da assembleia");
     }
 
     @Test

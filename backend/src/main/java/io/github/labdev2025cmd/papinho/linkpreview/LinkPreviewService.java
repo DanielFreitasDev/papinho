@@ -22,6 +22,7 @@ import org.jspecify.annotations.Nullable;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -90,7 +91,8 @@ public class LinkPreviewService {
     /**
      * Prévia do link, do cache ou buscada agora; {@code available} falso quando não há o que mostrar. Sem
      * transação em volta: a busca externa leva segundos e não pode segurar uma conexão do banco (o cache é lido e
-     * gravado cada um na sua transação curta do repositório).
+     * gravado cada um na sua transação curta do repositório). Quem envia e quem recebe costumam pedir o mesmo link
+     * novo ao mesmo tempo: se outra busca gravou a linha do cache primeiro, a prévia desta vale do mesmo jeito.
      */
     public PreviewView preview(java.util.UUID user, String rawUrl) {
         URI uri = normalize(rawUrl);
@@ -106,7 +108,11 @@ public class LinkPreviewService {
         rateLimiter.consume(RateLimiter.Policy.LINK_PREVIEW_BY_USER, user.toString());
         LinkPreview preview = cached.orElseGet(() -> new LinkPreview(hash, uri.toString(), now));
         fetch(uri, preview, now);
-        return previews.save(preview).toView();
+        try {
+            return previews.save(preview).toView();
+        } catch (DataIntegrityViolationException savedMeanwhile) {
+            return preview.toView();
+        }
     }
 
     /**

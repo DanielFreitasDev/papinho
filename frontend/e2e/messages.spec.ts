@@ -10,6 +10,8 @@ function row(page: Page, text: string) {
 }
 
 async function openActions(page: Page, text: string) {
+  // O menu anterior ainda sai com animação: com dois abertos, os itens aparecem duas vezes.
+  await expect(page.getByRole("menu")).toHaveCount(0)
   const target = row(page, text)
   await target.hover()
   await target.getByRole("button", { name: "Ações da mensagem" }).click()
@@ -149,6 +151,7 @@ test("editar, apagar, temporárias, rascunho, silenciosa e agendada", async ({
     row(hana.page, "psiu").getByRole("img", { name: "Enviada sem notificação" })
   ).toBeVisible()
   await field.fill("Mensagem para depois")
+  await expect(gil.page.getByRole("menu")).toHaveCount(0)
   await gil.page.getByRole("button", { name: "Mais opções de envio" }).click()
   await gil.page.getByRole("menuitem", { name: "Agendar envio" }).click()
   const schedule = gil.page.getByRole("dialog", { name: "Agendar mensagem" })

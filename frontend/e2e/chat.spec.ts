@@ -17,6 +17,8 @@ function row(page: Page, text: string) {
 }
 
 async function openActions(page: Page, text: string) {
+  // O menu anterior ainda sai com animação: com dois abertos, "Selecionar" e "Fixar" aparecem duas vezes.
+  await expect(page.getByRole("menu")).toHaveCount(0)
   const target = row(page, text)
   await target.hover()
   await target.getByRole("button", { name: "Ações da mensagem" }).click()

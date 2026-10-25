@@ -80,6 +80,20 @@ test("alvos de toque de 44 px no celular", async ({ browser, pageErrors }) => {
     await expect(page.getByRole("status", { name: /^Carregando/ })).toHaveCount(
       0
     )
+    // Diálogos entram com escala: medido no meio da animação, o botão de 44 px dá 43. As infinitas (spinner, brilho
+    // do esqueleto) e as presas à rolagem (o esmaecido das faixas que rolam) ficam de fora, senão a espera não acaba.
+    await page.evaluate(() =>
+      Promise.all(
+        document
+          .getAnimations()
+          .filter(
+            (animation) =>
+              animation.timeline === document.timeline &&
+              animation.effect?.getComputedTiming().endTime !== Infinity
+          )
+          .map((animation) => animation.finished.catch(() => undefined))
+      )
+    )
     screens[label] = await smallTargets(page)
   }
 

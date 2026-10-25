@@ -107,6 +107,9 @@ export default defineConfig({
     {
       name: "desktop-webkit",
       testMatch: NATIVE_CONTROLS,
+      // O WebKit do runner do CI (Ubuntu 26.04, sem GPU) é bem mais lento que numa máquina comum: do clique em
+      // "Entrar" até a lista levou 2,3 s, e 5,5 s no primeiro teste da rodada (aqui, 0,4 s). O spec é de aparência.
+      expect: { timeout: 15_000 },
       use: {
         ...devices["Desktop Safari"],
         ...(httpsURL ? { baseURL: httpsURL, ignoreHTTPSErrors: true } : {}),

@@ -18,6 +18,23 @@ const EXPECTED_NO_PUSH = /does not support the Push API in incognito mode/
 // avisa no console como erro.
 const EXPECTED_VIEWPORT_KEY =
   /Viewport argument key "interactive-widget" not recognized/
+// O WebKit relata como erro de página cada fetch cancelado por um reload ou por uma navegação ("Fetch API cannot load
+// <url> due to access control checks"). Na mesma origem não há CORS: é só o cancelamento. Outra origem continua
+// reprovando.
+const CANCELLED_FETCH =
+  /Fetch API cannot load (\S+) due to access control checks/
+
+function cancelledSameOriginFetch(page: Page, text: string) {
+  const url = CANCELLED_FETCH.exec(text)?.[1]
+  if (!url) {
+    return false
+  }
+  try {
+    return new URL(url).origin === new URL(page.url()).origin
+  } catch {
+    return false
+  }
+}
 
 /** Coleta erros de console e violações de CSP de uma página (também das abertas em outros contextos). */
 export async function watchErrors(page: Page, errors: string[]) {
@@ -27,15 +44,19 @@ export async function watchErrors(page: Page, errors: string[]) {
       !EXPECTED_CLIENT_ERROR.test(message.text()) &&
       !EXPECTED_OFFLINE.test(message.text()) &&
       !EXPECTED_NO_PUSH.test(message.text()) &&
-      !EXPECTED_VIEWPORT_KEY.test(message.text())
+      !EXPECTED_VIEWPORT_KEY.test(message.text()) &&
+      !cancelledSameOriginFetch(page, message.text())
     ) {
       errors.push(`console: ${message.text()}`)
     }
   })
   // A pilha acompanha a mensagem: sem ela, uma promessa rejeitada (ex.: AbortError) não diz de onde veio.
-  page.on("pageerror", (error) =>
-    errors.push(`pageerror: ${error.message}\n${error.stack ?? ""}`)
-  )
+  page.on("pageerror", (error) => {
+    const text = `${error.message}\n${error.stack ?? ""}`
+    if (!cancelledSameOriginFetch(page, text)) {
+      errors.push(`pageerror: ${text}`)
+    }
+  })
   await page.addInitScript(() => {
     document.addEventListener("securitypolicyviolation", (event) => {
       // Origem (arquivo:linha) e o começo do trecho bloqueado ajudam a achar quem injetou o conteúdo.

@@ -164,3 +164,26 @@ test("gravação animada, troca microfone/enviar e entrada das mensagens", async
   await text.fill("Sem movimento")
   await expect(send).toHaveCSS("animation-duration", "0.001s")
 })
+
+/**
+ * Uma view transition interrompida por outra (navegação rápida) rejeita o `ready`. Sem o tratamento do lib/motion.ts,
+ * o Chromium e o WebKit contam isso como erro não tratado, que aparecia no console de quem navegava rápido.
+ */
+test("view transition interrompida não vira erro no console", async ({
+  page,
+  pageErrors,
+}) => {
+  await page.goto("/login")
+  await expect(
+    page.getByRole("button", { name: "Entrar", exact: true })
+  ).toBeVisible()
+  await page.evaluate(async () => {
+    const wait = (ms: number) =>
+      new Promise<void>((resolve) => setTimeout(resolve, ms))
+    document.startViewTransition(() => wait(80))
+    await wait(20)
+    document.startViewTransition(() => undefined)
+    await wait(300)
+  })
+  expect(pageErrors).toEqual([])
+})

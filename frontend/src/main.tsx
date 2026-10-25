@@ -7,9 +7,11 @@ import "@/lib/i18n"
 import { Providers } from "@/app/providers"
 import { router } from "@/app/router"
 import { applyDisplayPrefs } from "@/lib/display-prefs"
+import { handleSkippedViewTransitions } from "@/lib/motion"
 import { registerServiceWorker } from "@/lib/pwa"
 
 applyDisplayPrefs()
+handleSkippedViewTransitions()
 registerServiceWorker((path) => router.history.push(path))
 
 createRoot(document.getElementById("root")!).render(

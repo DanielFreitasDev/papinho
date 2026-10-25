@@ -73,3 +73,28 @@ export function motionEase(token: MotionEase): string {
   }
   return EASINGS[token]
 }
+
+let skippedTransitionsHandled = false
+
+/**
+ * Uma view transition interrompida por outra (navegação rápida, tema trocado no meio de uma) rejeita o `ready` com
+ * AbortError, e o Chromium 156 e o WebKit 27 contam a rejeição como erro não tratado mesmo sem ninguém ter pedido o
+ * `ready` (o roteador só espera o `updateCallbackDone`). Transição pulada não é erro: daqui em diante toda transição
+ * sai com o `ready` tratado. Chamada uma vez no main.tsx, antes da primeira navegação.
+ */
+export function handleSkippedViewTransitions() {
+  if (
+    skippedTransitionsHandled ||
+    typeof document === "undefined" ||
+    typeof document.startViewTransition !== "function"
+  ) {
+    return
+  }
+  skippedTransitionsHandled = true
+  const start = document.startViewTransition.bind(document)
+  document.startViewTransition = (...args: Parameters<typeof start>) => {
+    const transition = start(...args)
+    transition.ready.catch(() => undefined)
+    return transition
+  }
+}

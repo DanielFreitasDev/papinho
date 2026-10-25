@@ -10,6 +10,9 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    ignore:
+      # Fica na versão que o @huggingface/transformers pede (ADR 0008, onnxruntime-web.test.ts): sobe junto com ele.
+      - dependency-name: onnxruntime-web
   - package-ecosystem: github-actions
     directory: /
     schedule:

@@ -87,6 +87,15 @@ export async function openMenuItem(page: Page, name: string) {
   await page.getByRole("menuitem", { name }).click()
 }
 
+/**
+ * Sai pelo menu e espera o próprio app chegar ao login. Navegar antes cancela o POST do logout no navegador, mas o
+ * servidor ainda o processa: a página nova vê a sessão viva e, logo depois, só recebe 401.
+ */
+export async function logoutThroughUi(page: Page) {
+  await openMenuItem(page, "Sair")
+  await expect(page).toHaveURL(/\/login/)
+}
+
 /** Entra com a conta admin, criada pelo projeto "primeiro-admin" (first-admin.setup.ts). */
 export async function ensureAdmin(browser: Browser, errors?: string[]) {
   const context = await browser.newContext()

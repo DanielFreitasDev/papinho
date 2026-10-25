@@ -10,8 +10,8 @@ import {
   createInvite,
   ensureAdmin,
   loginThroughUi,
+  logoutThroughUi,
   openContactsTab,
-  openMenuItem,
   PASSWORD,
   registerThroughUi,
   RUN,
@@ -120,7 +120,7 @@ test.describe.serial("contas e contatos", () => {
     await dialog.getByRole("button", { name: "Confirmar" }).click()
     await expect(page.getByText("Ligada")).toBeVisible()
 
-    await openMenuItem(page, "Sair")
+    await logoutThroughUi(page)
     await loginThroughUi(page, bruno)
     await expect(page.getByLabel("Código de verificação")).toBeVisible()
     await page
@@ -167,7 +167,7 @@ test.describe.serial("contas e contatos", () => {
     await page.getByRole("button", { name: "Adicionar passkey" }).click()
     await expect(page.getByText("Notebook de teste")).toBeVisible()
 
-    await openMenuItem(page, "Sair")
+    await logoutThroughUi(page)
     await page.goto("/login")
     await page.getByRole("button", { name: "Entrar com passkey" }).click()
     await expect(

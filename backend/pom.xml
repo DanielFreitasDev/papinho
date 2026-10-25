@@ -16,7 +16,7 @@
 		<zxing.version>3.5.4</zxing.version>
 		<archunit.version>1.5.1</archunit.version>
 		<bucket4j.version>8.21.0</bucket4j.version>
-		<tika.version>3.3.3</tika.version>
+		<tika.version>4.1.0</tika.version>
 		<jsoup.version>1.23.2</jsoup.version>
 		<shedlock.version>7.10.1</shedlock.version>
 		<greenmail.version>2.1.14</greenmail.version>

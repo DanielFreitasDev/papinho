@@ -11,6 +11,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.aop.support.AopUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -74,7 +75,9 @@ class S3StorageIT {
     @Test
     @DisplayName("upload, download com Range e apagar para todos passam pelo bucket")
     void shouldStoreFilesInBucket() {
-        assertThat(storage.getClass().getSimpleName()).isEqualTo("S3FileStorage");
+        // Desde o Spring Modulith 2.1.2, a implementação interna de um tipo da API do módulo vem num proxy de
+        // observabilidade (spring-modulith#1874): a classe que importa é a de trás dele.
+        assertThat(AopUtils.getTargetClass(storage).getSimpleName()).isEqualTo("S3FileStorage");
         ApiClient ana = clients.create();
         Accounts.register(ana, "ana", null);
         ApiClient bruno = clients.create();

@@ -30,4 +30,5 @@ a partir do runner do GitHub, ou a VPS buscando a release).
 padrão dos workflows já era só leitura.
 
 **Evidência:** runs 40139099020 e 40141965238 recusados (2026-10-24); `gh repo edit --visibility public`, a política
-lida de volta (`all_external_contributors`) e a tentativa 2 do run 40141965238 rodando sem bloqueio (2026-10-25).
+lida de volta (`all_external_contributors`) e a tentativa 2 do run 40141965238 rodando sem bloqueio (2026-10-25); run
+40198872362 verde nos seis jobs, com deploy, imagem pública e release v1.1.0.

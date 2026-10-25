@@ -30,8 +30,10 @@ sem isso, `docker build .` compila do código-fonte num JDK 25 na plataforma de 
 **CI:** o job da release, depois do deploy, decide o que publicar: versão nova no `pom.xml` gera a imagem
 multiarquitetura (versão, `latest` e `sha-<commit>`) e depois a tag e a release com `papinho.jar`, `.sha256` e o
 `docker pull` na descrição; versão já publicada não faz nada. A rodada manual (`workflow_dispatch`) num branch roda os
-testes e publica só a imagem `sha-<commit>`, sem deploy nem release. O pacote nasce privado (o repositório é privado):
-torná-lo público é manual, nas configurações do pacote.
+testes e publica só a imagem `sha-<commit>`, sem deploy nem release. Com o repositório público, o pacote publicado
+pelo `GITHUB_TOKEN` saiu público, sem passo manual nas configurações dele.
 
 **Evidência:** `docker buildx build --build-context jar=…` e o `compose.yaml` do README com a imagem local: saudável,
-`smoke`, `chat`, `media`, `audio` e `animations` verdes contra o contêiner (2026-10-24).
+`smoke`, `chat`, `media`, `audio` e `animations` verdes contra o contêiner (2026-10-24). Publicação real no run
+40198872362 (2026-10-25): manifestos de `1.1.0`, `latest` e `sha-ab10ee6` lidos sem login (HTTP 200), linux/amd64 e
+linux/arm64, e o `compose.yaml` do README com a `latest` saudável e com o `smoke.spec.ts` verde.

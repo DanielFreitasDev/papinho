@@ -32,7 +32,7 @@ Leia as entradas relacionadas à tarefa. Os detalhes ficam em `docs/learning/`.
 - [E2E: Chromium preinstalado, toasts e contraste](docs/learning/gotcha-e2e-chromium-preinstalado-e-a11y.md) — nome de download, headless shell sem notificações, toast é dialog, muted 0.5, axe em animação, tag por spec, Spinner/Item do shadcn, erros forçados só 4xx.
 - [PWA, Web Push, busca e e2e offline](docs/learning/gotcha-pwa-push-e-busca.md) — stemmer pt (plurais -ões/-ns), ponto EC sem checagem no JDK, MIME do manifesto, tsc -b com e2e, testar a troca de service worker.
 - [E-mail de recuperação: executor, ArchUnit e SMTP nos testes](docs/learning/gotcha-email-recuperacao-executor-e-testes.md) — sem applicationTaskExecutor com WebSocket, nada de token no outbox, GreenMail/Mailpit.
-- [E2E em Firefox e WebKit](docs/learning/gotcha-e2e-firefox-e-webkit.md) — cookie Secure em localhost, colorScheme, CSP das capturas, proxy do desktop, pendências do WebKit.
+- [E2E em Firefox e WebKit](docs/learning/gotcha-e2e-firefox-e-webkit.md) — cookie Secure em localhost, colorScheme, CSP das capturas, proxy do desktop, pendências do WebKit, fetch cancelado vira pageerror, WebKit lento no runner Ubuntu 26.04.
 - [IP do cliente atrás de proxy](docs/learning/gotcha-ip-do-cliente-atras-de-proxy.md) — framework confia no X-Forwarded-For do cliente; use native (RemoteIpValve).
 - [Busca externa: prazo total e fora da transação](docs/learning/gotcha-busca-externa-prazo-total-e-transacao.md) — timeout é por leitura; cancel() com prazo; @Transactional esgota o Hikari; multipart em streaming.
 - [Detail do PostgreSQL e erros fora do MVC](docs/learning/gotcha-detalhe-do-postgres-e-erros-fora-do-mvc.md) — logServerErrorDetail=false; /error próprio; válvula do Tomcat; socket cru no teste.
@@ -43,7 +43,7 @@ Leia as entradas relacionadas à tarefa. Os detalhes ficam em `docs/learning/`.
 - [Janela de mensagens sobre o MessageScroller](docs/learning/gotcha-janela-de-mensagens-e-message-scroller.md) — âncora que volta ao DOM salta, root e observador recriado após o commit, lado do corte pela borda, compensação pela linha visível.
 - [Duração de áudio: WebM do MediaRecorder, pre-skip e Tika](docs/learning/gotcha-duracao-de-audio-mediarecorder.md) — fim do último bloco − início − CodecDelay; Firefox grava Duration 0,0; .aac e .flac viravam documento.
 - [JSON dos idiomas e CSS fora do format:check](docs/learning/gotcha-json-dos-idiomas-reordena-chaves.md) — reescrever o JSON reordena chaves numéricas; prettier no CSS reformata regras alheias.
-- [Animações nos testes e no roteador](docs/learning/gotcha-animacoes-e-testes.md) — CDP desacelera o rAF e não os timers, resolvedLocation na view transition, toque longo sem clique, caixa durante a escala.
+- [Animações nos testes e no roteador](docs/learning/gotcha-animacoes-e-testes.md) — CDP desacelera o rAF e não os timers, resolvedLocation na view transition, toque longo sem clique, caixa durante a escala, ready da transição interrompida vira erro.
 - [Produção na VPS atrás do Cloudflare Tunnel](docs/learning/gotcha-producao-vps-cloudflare-tunnel.md) — admin pelo loopback antes do hostname, cookie Secure no curl, beacon barrado pela CSP, e2e lento e cota de artifacts no repositório privado.
 
 ## Decisões de arquitetura
@@ -56,6 +56,7 @@ Leia as entradas relacionadas à tarefa. Os detalhes ficam em `docs/learning/`.
 - [Escala de espaçamento e auditoria das bordas](docs/learning/decisao-escala-de-espacamento.md) — tokens na forma de variável (cn), menu com largura própria, fieldset min-w-0, addons presos embaixo, data-scroll-x.
 - [Animações sem biblioteca, com tokens e só ao vivo](docs/learning/decisao-animacoes.md) — nada de Motion nem ViewTransition do React na lista, entrada decidida antes de pintar, chave remetente+clientMessageId.
 - [Licença AGPL-3.0 e imagem Docker no GHCR](docs/learning/decisao-licenca-e-imagem-docker.md) — permissão da seção 7 para o AspectJ, Alpine com o JAR testado via build-context, release idempotente.
+- [Repositório público e o runner self-hosted](docs/learning/decisao-repositorio-publico.md) — cota de minutos da conta esgotada no privado, gitleaks antes de abrir, aprovação de todo PR de fora (o runner tem root na VPS).
 - [Limpeza dos arquivos nunca usados](docs/learning/decisao-limpeza-de-arquivos-nao-usados.md) — porta MediaReferences, in_use preguiçoso, trava contra o anexo simultâneo.
 - [Correção da auditoria de 2026-10-17](docs/learning/decisao-auditoria-2026-10-17.md) — convite do admin no fechado, foto view-once, HEIC recusado, exportação sem trancadas, presença.
 - [Correção dos Baixos de 2026-10-17](docs/learning/decisao-auditoria-baixos-2026-10-17.md) — login por IP e conta, grant dos anexos trancados, reservas da conta apagada, antivírus fora.

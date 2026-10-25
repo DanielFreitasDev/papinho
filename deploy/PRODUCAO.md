@@ -21,7 +21,7 @@ Navegador ──HTTPS──▶ Cloudflare (TLS) ──Tunnel──▶ cloudflare
 | Banco | PostgreSQL 18 local, database e role `papinho` (dono), sem acesso público |
 | Deploy | `/opt/papinho/deploy.sh` (root, 0755), cópia de [`deploy.sh`](deploy.sh) |
 | Runner do GitHub | `~ubuntu/actions-runner-papinho`, serviço `actions.runner.DanielFreitasDev-papinho.papinho-vps`, label `papinho` |
-| Sudo do runner | `/etc/sudoers.d/papinho-deploy`: `ubuntu ALL=(root) NOPASSWD: /opt/papinho/deploy.sh` |
+| Sudo do runner | `/etc/sudoers.d/papinho-deploy`: `ubuntu ALL=(root) NOPASSWD: /opt/papinho/deploy.sh`; o `ubuntu` da imagem de nuvem também tem sudo sem senha para tudo, então o runner tem root (veja [Repositório público e o runner](#repositório-público-e-o-runner)) |
 
 - O serviço escuta **só em loopback** (`SERVER_ADDRESS=127.0.0.1`, porta 54326); nenhuma porta nova foi aberta.
 - Atrás do túnel: `PAPINHO_FORWARD_HEADERS=native` (o `cloudflared` conecta por loopback, que o Tomcat trata como
@@ -46,15 +46,27 @@ passarem:
    `sudo /opt/papinho/deploy.sh <jar> <versão>`: guarda o JAR atual, instala o novo, reinicia, espera o
    `/actuator/health` responder UP (até 3 min) e confere a versão no `/actuator/info`. Se falhar, volta o JAR
    anterior e o job fica vermelho;
-2. o job **release** cria a tag anotada `vX.Y.Z` (versão do `pom.xml`) e a GitHub Release com o JAR anexado e notas
-   geradas pelos commits. Se a versão já foi publicada, não cria nada: para uma release nova, suba a versão
-   (`./mvnw -B versions:set -DnewVersion=1.1.0 -DgenerateBackupPoms=false` e o `version` do `frontend/package.json`).
+2. o job **release** publica a imagem `ghcr.io/danielfreitasdev/papinho` (linux/amd64 e linux/arm64; tags da versão,
+   `latest` e `sha-<commit>`) com esse mesmo JAR, cria a tag anotada `vX.Y.Z` (versão do `pom.xml`) e a GitHub Release
+   com `papinho.jar`, `papinho.jar.sha256`, o `docker pull` e notas geradas pelos commits. Se a versão já foi publicada,
+   não cria nada: para uma release nova, suba a versão
+   (`./mvnw -B versions:set -DnewVersion=1.2.0 -DgenerateBackupPoms=false` e o `version` do `frontend/package.json`).
 
 Atualizar o `deploy.sh` na VPS depois de mudá-lo no repositório (o runner não pode reescrevê-lo):
 
 ```bash
 scp deploy/deploy.sh ubuntu@<vps>:/tmp/ && ssh ubuntu@<vps> 'sudo install -o root -g root -m 0755 /tmp/deploy.sh /opt/papinho/deploy.sh'
 ```
+
+## Repositório público e o runner
+
+Desde 2026-10-25 o repositório é público (Actions grátis e sem cota). Um PR de fork pode mudar o workflow e mandar um
+job para o runner da VPS, que roda como `ubuntu`, com sudo para tudo. Por isso, workflows de PRs de quem não tem
+escrita só rodam com aprovação (Settings → Actions → General → "Require approval for all external contributors"; pela
+API, `fork-pr-contributor-approval` com `all_external_contributors`). **Nunca aprove** um desses workflows sem ler tudo
+o que o PR muda em `.github/` e nos scripts que o CI executa: aprovar um PR malicioso dá root na VPS, que hospeda
+outros serviços. Os PRs do Dependabot vêm de branches do próprio repositório e rodam sem aprovação, só nos runners
+do GitHub (o job de deploy é só de push na `main`).
 
 ## Operação
 
@@ -66,7 +78,13 @@ sudo systemctl restart papinho
 ```
 
 Backup: `scripts/backup.sh` com `PGHOST=127.0.0.1 PGUSER=papinho PGPASSWORD=... PAPINHO_DATA_DIR=/var/lib/papinho`
-(veja a seção Backup do README).
+(veja a seção Backup do README). Antes de um deploy com migração nova do Flyway (o `deploy.sh` só volta o JAR), um
+dump do banco, legível só pelo root:
+
+```bash
+sudo install -d -o root -g root -m 0700 /var/backups/papinho
+sudo sh -c 'umask 077 && sudo -u postgres pg_dump --format=custom papinho > /var/backups/papinho/papinho-$(date -u +%Y%m%dT%H%M%SZ).dump'
+```
 
 ## Primeiro administrador
 

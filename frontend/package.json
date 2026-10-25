@@ -41,7 +41,7 @@
     "react-day-picker": "^10.0.2",
     "react-dom": "^19.3.0",
     "react-hook-form": "^7.90.0",
-    "react-i18next": "^17.0.16",
+    "react-i18next": "^17.1.2",
     "shadcn": "^4.21.5",
     "tailwindcss": "^4",
     "thumbhash": "^0.1.1",

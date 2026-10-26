@@ -38,3 +38,9 @@ recomeça do zero a cada queda.
 - O id do upload vira o id da mídia; o último `PATCH` responde com `Papinho-Media-Id`.
 - Escolhidas as linhas mais estabelecidas: **Uppy 5** (`@uppy/core` 5.2, `@uppy/tus` 5.1; a 6 saiu há
   poucas semanas) e **Apache Tika 3.3** (`tika-core`; a 4.x é recente). Pedaços de 50 MB no cliente.
+
+## Atualização (2026-10-25)
+
+- O `tika-core` subiu para a 4.1.0 (PR #5 do Dependabot). As quebras da linha 4 ficam no tika-server, no tika-app,
+  nas pipes e na configuração. O upload só usa a detecção do `tika-core` (`Tika`, `TikaInputStream`), coberta pelos
+  testes do backend, que passaram no CI do PR.

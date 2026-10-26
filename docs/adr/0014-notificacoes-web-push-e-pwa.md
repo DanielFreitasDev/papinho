@@ -57,3 +57,9 @@ autenticadas no Cache Storage (NT-05). As regras de privacidade precisam valer n
 - Decidir a notificação no cliente: duplicaria as regras de privacidade e não serviria ao push com o app fechado.
 - Mandar push só quando não houver WebSocket conectado: exigiria presença precisa por aba e ainda perderia avisos
   com a aba em segundo plano; a `tag` resolve a duplicação no próprio navegador.
+
+## Atualização (2026-10-25)
+
+- O `vite-plugin-pwa` subiu para a 2.0.0 (PR #8 do Dependabot). A única quebra da 2.0 é aceitar o
+  `@vite-pwa/assets-generator` ^2.0.0 como dependência par, e o projeto não usa esse pacote. O `pwa.spec.ts` (troca
+  de versão com "Atualizar", app aberto sem rede) passou no CI do PR. A decisão pelo `injectManifest` continua igual.

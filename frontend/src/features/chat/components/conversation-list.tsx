@@ -41,6 +41,7 @@ import { describeNotice } from "../system-notice"
 import type { Conversation } from "../types"
 import { ActivityText } from "./activity-text"
 import { ConversationAvatar, useConversationLabel } from "./conversation-avatar"
+import { useContextMenu } from "@/hooks/use-context-menu"
 import { ConversationMenu } from "./conversation-menu"
 import { GlobalSearchResults } from "./global-search"
 
@@ -302,6 +303,8 @@ function ConversationItem({
   const label = labelOf(conversation)
   const active = params.conversationId === conversation.id
   const unread = conversation.unreadCount > 0 || conversation.markedUnread
+  // Botão direito na linha abre o menu da conversa no ponto do clique, como no WhatsApp Web.
+  const menu = useContextMenu()
   const last = conversation.lastMessage
   const sender =
     last && last.senderId === meId
@@ -335,6 +338,9 @@ function ConversationItem({
     <Item
       size="sm"
       data-flip-key={conversation.id}
+      onContextMenu={
+        conversation.state === "ACTIVE" ? menu.onContextMenu : undefined
+      }
       className={cn(
         "relative gap-0 p-0 has-[a:hover]:bg-muted/50",
         active && "bg-muted/50"
@@ -426,7 +432,11 @@ function ConversationItem({
       </Link>
       {conversation.state === "ACTIVE" ? (
         <ItemActions className="pr-1">
-          <ConversationMenu conversation={conversation} label={label} />
+          <ConversationMenu
+            conversation={conversation}
+            label={label}
+            menu={menu}
+          />
         </ItemActions>
       ) : null}
     </Item>

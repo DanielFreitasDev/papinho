@@ -419,6 +419,7 @@ export function Composer({
                   event.preventDefault()
                   cancelEdit()
                 } else if (event.key === "Escape" && replyTo) {
+                  event.preventDefault()
                   onCancelReply()
                 }
                 if (

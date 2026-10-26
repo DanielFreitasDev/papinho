@@ -13,6 +13,9 @@ import { useTranslation } from "react-i18next"
 import { cn } from "cn"
 import {
   ArrowLeftIcon,
+  CircleXIcon,
+  InfoIcon,
+  ListChecksIcon,
   CalendarClockIcon,
   ForwardIcon,
   MessageCircleIcon,
@@ -97,6 +100,9 @@ import { ImageViewer } from "./image-viewer"
 import { BroadcastDetails } from "./broadcast-details"
 import { ContactDetails } from "./contact-details"
 import { ConversationAvatar, useConversationLabel } from "./conversation-avatar"
+import { ConversationMenu } from "./conversation-menu"
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
+import { useContextMenu } from "@/hooks/use-context-menu"
 import { GroupDetails } from "./group-details"
 import { ForwardDialog } from "./forward-dialog"
 import { MessageInfoDialog } from "./message-info-dialog"
@@ -349,23 +355,6 @@ function LoadedConversation({
   const [viewerImages, setViewerImages] = useState<Attachment[] | null>(null)
   // Painel de detalhes como terceira coluna só em telas largas; nas outras, gaveta (UI-01).
   const wide = useMediaQuery("(min-width: 80rem)")
-  // Esc fecha o painel de detalhes da coluna lateral (MS-13); diálogos e a gaveta tratam o próprio Esc.
-  useEffect(() => {
-    if (!wide || !detailsOpen) {
-      return
-    }
-    const onKey = (event: KeyboardEvent) => {
-      if (
-        event.key === "Escape" &&
-        !event.defaultPrevented &&
-        !document.querySelector('[role="dialog"],[role="alertdialog"]')
-      ) {
-        setDetailsOpen(false)
-      }
-    }
-    window.addEventListener("keydown", onKey)
-    return () => window.removeEventListener("keydown", onKey)
-  }, [wide, detailsOpen])
   // Não lidas no momento em que a conversa abriu: o marcador fica até sair da conversa (MS-14).
   const [unread] = useState(() =>
     conversation.firstUnreadSeq !== null && conversation.unreadCount > 0
@@ -638,6 +627,37 @@ function LoadedConversation({
     () => (searchOpen ? searchTerms(searchQuery) : null),
     [searchOpen, searchQuery]
   )
+  // Esc, como no WhatsApp: fecha o que estiver aberto por cima (painel lateral, seleção, busca) e, sem nada aberto,
+  // sai da conversa. Diálogos, menus e o composer (edição, resposta) tratam o próprio Esc antes.
+  const backTo = conversation.state === "REQUEST" ? "/requests" : "/"
+  // Botão direito no fundo da conversa: o menu dela, como no WhatsApp Web (as mensagens têm o próprio).
+  const backgroundMenu = useContextMenu()
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (
+        event.key !== "Escape" ||
+        event.defaultPrevented ||
+        document.querySelector(
+          '[role="dialog"],[role="alertdialog"],[role="menu"],[role="listbox"]'
+        )
+      ) {
+        return
+      }
+      if (wide && detailsOpen) {
+        setDetailsOpen(false)
+      } else if (selection !== null) {
+        setSelection(null)
+      } else if (searchOpen) {
+        setSearchOpen(false)
+        setSearchQuery("")
+        setSearchSeed(null)
+      } else {
+        void navigate({ to: backTo })
+      }
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [wide, detailsOpen, selection, searchOpen, navigate, backTo])
   // Outro resultado da busca global com a conversa já aberta: a busca recomeça com o termo e a mensagem novos.
   const [seededFor, setSeededFor] = useState(focusMessageId)
   if (focusQuery !== undefined && focusMessageId !== seededFor) {
@@ -1011,7 +1031,7 @@ function LoadedConversation({
       <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col">
         <header className="z-10 flex min-h-14 items-center gap-2 border-b bg-background px-(--spacing-gutter) pt-[env(safe-area-inset-top)]">
           <Link
-            to={conversation.state === "REQUEST" ? "/requests" : "/"}
+            to={backTo}
             className={buttonVariants({
               variant: "ghost",
               size: "icon",
@@ -1179,7 +1199,14 @@ function LoadedConversation({
             </AlertDescription>
           </Alert>
         ) : null}
-        <MessageScroller className="chat-wallpaper min-h-0 flex-1">
+        <MessageScroller
+          className="chat-wallpaper min-h-0 flex-1"
+          onContextMenu={
+            conversation.state === "ACTIVE" && selection === null
+              ? backgroundMenu.onContextMenu
+              : undefined
+          }
+        >
           <MessageScrollerViewport
             ref={viewportRef}
             aria-label={t("chat.messages")}
@@ -1349,6 +1376,36 @@ function LoadedConversation({
             </Button>
           ) : null}
           {/* No canto direito, com a margem da tela, como no WhatsApp: no centro cobria o meio dos balões. */}
+          {conversation.state === "ACTIVE" ? (
+            <ConversationMenu
+              conversation={conversation}
+              label={peerName}
+              menu={backgroundMenu}
+              trigger={false}
+              leading={
+                <>
+                  <DropdownMenuItem onClick={() => setDetailsOpen(true)}>
+                    <InfoIcon />
+                    {detailsTitle}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setSearchOpen(true)}>
+                    <SearchIcon />
+                    {t("search.inConversation")}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setSelection([])}>
+                    <ListChecksIcon />
+                    {t("chat.selectMessages")}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => void navigate({ to: backTo })}
+                  >
+                    <CircleXIcon />
+                    {t("chat.closeConversation")}
+                  </DropdownMenuItem>
+                </>
+              }
+            />
+          ) : null}
           <MessageScrollerButton
             direction="end"
             className="inset-s-auto inset-e-(--spacing-gutter) size-10 translate-x-0 rounded-full shadow-md"

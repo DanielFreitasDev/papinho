@@ -18,6 +18,8 @@ import {
   PencilIcon,
   PinIcon,
   PinOffIcon,
+  PlusIcon,
+  SmileIcon,
   SmilePlusIcon,
   RotateCwIcon,
   StarIcon,
@@ -27,6 +29,7 @@ import {
 } from "lucide-react"
 import { cn } from "cn"
 
+import { useContextMenu } from "@/hooks/use-context-menu"
 import { Bubble, BubbleContent, BubbleReactions } from "@/components/ui/bubble"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -187,6 +190,8 @@ function MessageRowView({
   const [initialReactions] = useState(
     () => new Set(message.reactions.map((reaction) => reaction.emoji))
   )
+  // Botão direito abre o menu da mensagem onde o mouse está (no toque, o menu ⋮).
+  const menu = useContextMenu()
   const onAction = (action: MessageAction) => onMessageAction(message, action)
   const confirmed = message.id !== null
   if (message.deleted) {
@@ -214,6 +219,11 @@ function MessageRowView({
         selected && "bg-primary/10"
       )}
       onClick={selecting && confirmed ? () => onAction("select") : undefined}
+      onContextMenu={
+        confirmed && !selecting && message.status !== "failed"
+          ? menu.onContextMenu
+          : undefined
+      }
     >
       {selecting && confirmed ? (
         <Checkbox
@@ -224,11 +234,12 @@ function MessageRowView({
           onClick={(event) => event.stopPropagation()}
         />
       ) : null}
-      <MessageContent className="min-w-0">
+      {/* Largura do conteúdo (até 80%): os atalhos ficam colados na bolha, não na borda da conversa. */}
+      <MessageContent className="w-auto max-w-[min(80%,36rem)] min-w-0">
         <Bubble
           variant={mine ? "tinted" : "muted"}
           align={mine ? "end" : "start"}
-          className={cn("max-w-[min(80%,36rem)]", grouped.length > 0 && "mb-3")}
+          className={cn("max-w-full", grouped.length > 0 && "mb-3")}
           data-flash={flash ? "" : undefined}
         >
           <BubbleContent
@@ -392,115 +403,180 @@ function MessageRowView({
           <RotateCwIcon />
         </Button>
       ) : confirmed && !selecting ? (
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            render={
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                aria-label={t("chat.messageActions")}
-                className="shrink-0 opacity-0 group-hover/row:opacity-100 focus-visible:opacity-100 data-popup-open:opacity-100 pointer-coarse:opacity-100"
+        <>
+          {/* Atalhos ao lado da bolha, como no WhatsApp Web: só com mouse; no toque ficam no menu ⋮. */}
+          {message.kind === "USER" && !message.viewOnce ? (
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={t("chat.forward")}
+              className={HOVER_ACTION}
+              onClick={() => onAction("forward")}
+            >
+              <ForwardIcon />
+            </Button>
+          ) : null}
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={t("chat.reactTo")}
+                  className={HOVER_ACTION}
+                />
+              }
+            >
+              <SmileIcon />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align={mine ? "end" : "start"}>
+              <QuickReactions
+                compact
+                myEmoji={myReaction?.emoji}
+                onAction={onAction}
               />
-            }
-          >
-            <EllipsisVerticalIcon />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align={mine ? "end" : "start"}>
-            <DropdownMenuGroup className="flex gap-0.5 p-1">
-              {QUICK_REACTIONS.map((emoji) => (
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <DropdownMenu open={menu.open} onOpenChange={menu.onOpenChange}>
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={t("chat.messageActions")}
+                  className="shrink-0 opacity-0 group-hover/row:opacity-100 focus-visible:opacity-100 data-popup-open:opacity-100 pointer-coarse:opacity-100"
+                />
+              }
+            >
+              <EllipsisVerticalIcon />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align={menu.anchor ? "start" : mine ? "end" : "start"}
+              anchor={menu.anchor}
+            >
+              <QuickReactions myEmoji={myReaction?.emoji} onAction={onAction} />
+              <DropdownMenuSeparator />
+              <DropdownMenuGroup>
+                <DropdownMenuItem onClick={() => onAction("reply")}>
+                  <CornerUpLeftIcon />
+                  {t("chat.reply")}
+                </DropdownMenuItem>
+                {canReplyPrivately ? (
+                  <DropdownMenuItem onClick={() => onAction("replyPrivately")}>
+                    <MessageCircleReplyIcon />
+                    {t("groups.replyPrivately")}
+                  </DropdownMenuItem>
+                ) : null}
+                {message.kind === "USER" && !message.viewOnce ? (
+                  <DropdownMenuItem onClick={() => onAction("forward")}>
+                    <ForwardIcon />
+                    {t("chat.forward")}
+                  </DropdownMenuItem>
+                ) : null}
                 <DropdownMenuItem
-                  key={emoji}
-                  aria-label={t("chat.react", { emoji })}
-                  className={cn(
-                    "justify-center px-1.5 text-lg",
-                    myReaction?.emoji === emoji && "bg-accent"
-                  )}
-                  onClick={() =>
-                    onAction(
-                      myReaction?.emoji === emoji ? "unreact" : { react: emoji }
-                    )
-                  }
+                  onClick={() => onAction(message.pinned ? "unpin" : "pin")}
                 >
-                  {emoji}
+                  {message.pinned ? <PinOffIcon /> : <PinIcon />}
+                  {message.pinned ? t("chat.unpin") : t("chat.pin")}
                 </DropdownMenuItem>
-              ))}
-            </DropdownMenuGroup>
-            <DropdownMenuGroup>
-              <DropdownMenuItem onClick={() => onAction("moreReactions")}>
-                <SmilePlusIcon />
-                {t("emoji.moreReactions")}
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <DropdownMenuItem onClick={() => onAction("reply")}>
-                <CornerUpLeftIcon />
-                {t("chat.reply")}
-              </DropdownMenuItem>
-              {canReplyPrivately ? (
-                <DropdownMenuItem onClick={() => onAction("replyPrivately")}>
-                  <MessageCircleReplyIcon />
-                  {t("groups.replyPrivately")}
-                </DropdownMenuItem>
-              ) : null}
-              {message.kind === "USER" && !message.viewOnce ? (
-                <DropdownMenuItem onClick={() => onAction("forward")}>
-                  <ForwardIcon />
-                  {t("chat.forward")}
-                </DropdownMenuItem>
-              ) : null}
-              <DropdownMenuItem
-                onClick={() => onAction(message.pinned ? "unpin" : "pin")}
-              >
-                {message.pinned ? <PinOffIcon /> : <PinIcon />}
-                {message.pinned ? t("chat.unpin") : t("chat.pin")}
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => onAction(message.starred ? "unstar" : "star")}
-              >
-                {message.starred ? <StarOffIcon /> : <StarIcon />}
-                {message.starred ? t("chat.unstar") : t("chat.star")}
-              </DropdownMenuItem>
-              {message.body ? (
                 <DropdownMenuItem
-                  onClick={() => {
-                    void navigator.clipboard
-                      ?.writeText(message.body)
-                      .then(() => toast.add({ title: t("common.copied") }))
-                  }}
+                  onClick={() => onAction(message.starred ? "unstar" : "star")}
                 >
-                  <CopyIcon />
-                  {t("chat.copyText")}
+                  {message.starred ? <StarOffIcon /> : <StarIcon />}
+                  {message.starred ? t("chat.unstar") : t("chat.star")}
                 </DropdownMenuItem>
-              ) : null}
-              <DropdownMenuItem onClick={() => onAction("select")}>
-                <ListChecksIcon />
-                {t("chat.select")}
-              </DropdownMenuItem>
-              {mine && canEdit ? (
-                <DropdownMenuItem onClick={() => onAction("edit")}>
-                  <PencilIcon />
-                  {t("chat.edit")}
+                {message.body ? (
+                  <DropdownMenuItem
+                    onClick={() => {
+                      void navigator.clipboard
+                        ?.writeText(message.body)
+                        .then(() => toast.add({ title: t("common.copied") }))
+                    }}
+                  >
+                    <CopyIcon />
+                    {t("chat.copyText")}
+                  </DropdownMenuItem>
+                ) : null}
+                <DropdownMenuItem onClick={() => onAction("select")}>
+                  <ListChecksIcon />
+                  {t("chat.select")}
                 </DropdownMenuItem>
-              ) : null}
-              {mine ? (
-                <DropdownMenuItem onClick={() => onAction("info")}>
-                  <InfoIcon />
-                  {t("chat.info")}
+                {mine && canEdit ? (
+                  <DropdownMenuItem onClick={() => onAction("edit")}>
+                    <PencilIcon />
+                    {t("chat.edit")}
+                  </DropdownMenuItem>
+                ) : null}
+                {mine ? (
+                  <DropdownMenuItem onClick={() => onAction("info")}>
+                    <InfoIcon />
+                    {t("chat.info")}
+                  </DropdownMenuItem>
+                ) : null}
+                <DropdownMenuItem
+                  variant="destructive"
+                  onClick={() => onAction("delete")}
+                >
+                  <Trash2Icon />
+                  {t("chat.delete")}
                 </DropdownMenuItem>
-              ) : null}
-              <DropdownMenuItem
-                variant="destructive"
-                onClick={() => onAction("delete")}
-              >
-                <Trash2Icon />
-                {t("chat.delete")}
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-          </DropdownMenuContent>
-        </DropdownMenu>
+              </DropdownMenuGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </>
       ) : null}
     </Message>
+  )
+}
+
+/** Atalho que só aparece com o ponteiro sobre a linha (no toque, as ações ficam no menu ⋮). */
+const HOVER_ACTION =
+  "hidden shrink-0 group-hover/row:inline-flex data-popup-open:inline-flex"
+
+/** Reações rápidas e "Mais reações", no atalho ao lado da bolha e no menu ⋮. */
+function QuickReactions({
+  myEmoji,
+  onAction,
+  compact = false,
+}: {
+  myEmoji: string | undefined
+  onAction: (action: MessageAction) => void
+  /** Uma fileira só, com "+" no fim (atalho ao lado da bolha, como no WhatsApp Web). */
+  compact?: boolean
+}) {
+  const { t } = useTranslation()
+  const more = (
+    <DropdownMenuItem
+      aria-label={compact ? t("emoji.moreReactions") : undefined}
+      className={compact ? "justify-center px-1.5" : undefined}
+      onClick={() => onAction("moreReactions")}
+    >
+      {compact ? <PlusIcon /> : <SmilePlusIcon />}
+      {compact ? null : t("emoji.moreReactions")}
+    </DropdownMenuItem>
+  )
+  return (
+    <>
+      <DropdownMenuGroup className="flex gap-0.5 p-1">
+        {QUICK_REACTIONS.map((emoji) => (
+          <DropdownMenuItem
+            key={emoji}
+            aria-label={t("chat.react", { emoji })}
+            className={cn(
+              "justify-center px-1.5 text-lg",
+              myEmoji === emoji && "bg-accent"
+            )}
+            onClick={() =>
+              onAction(myEmoji === emoji ? "unreact" : { react: emoji })
+            }
+          >
+            {emoji}
+          </DropdownMenuItem>
+        ))}
+        {compact ? more : null}
+      </DropdownMenuGroup>
+      {compact ? null : <DropdownMenuGroup>{more}</DropdownMenuGroup>}
+    </>
   )
 }
 

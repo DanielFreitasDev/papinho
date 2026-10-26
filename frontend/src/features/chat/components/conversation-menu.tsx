@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, type ReactNode } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
 import {
@@ -54,6 +54,7 @@ import {
 } from "../organization"
 import type { Conversation, MuteDuration } from "../types"
 import { useErrorToast } from "@/hooks/use-error-toast"
+import type { ContextMenu } from "@/hooks/use-context-menu"
 
 const DURATIONS: MuteDuration[] = ["EIGHT_HOURS", "ONE_WEEK", "ALWAYS"]
 
@@ -64,9 +65,18 @@ const DURATIONS: MuteDuration[] = ["EIGHT_HOURS", "ONE_WEEK", "ALWAYS"]
 export function ConversationMenu({
   conversation,
   label,
+  menu,
+  leading,
+  trigger = true,
 }: {
   conversation: Conversation
   label: string
+  /** Botão direito na linha da lista ou no fundo da conversa abre este mesmo menu no ponto do clique. */
+  menu?: ContextMenu
+  /** Itens antes dos da lista (no fundo da conversa: dados, pesquisar, selecionar, fechar). */
+  leading?: ReactNode
+  /** Sem o botão ⋮: só o menu do botão direito. */
+  trigger?: boolean
 }) {
   const { t } = useTranslation()
   const action = useListAction()
@@ -100,19 +110,30 @@ export function ConversationMenu({
 
   return (
     <>
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label={t("chat.conversationActions", { name: label })}
-            />
-          }
+      <DropdownMenu open={menu?.open} onOpenChange={menu?.onOpenChange}>
+        {trigger ? (
+          <DropdownMenuTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={t("chat.conversationActions", { name: label })}
+              />
+            }
+          >
+            <EllipsisVerticalIcon />
+          </DropdownMenuTrigger>
+        ) : null}
+        <DropdownMenuContent
+          align={menu?.anchor ? "start" : "end"}
+          anchor={menu?.anchor}
         >
-          <EllipsisVerticalIcon />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
+          {leading ? (
+            <>
+              {leading}
+              <DropdownMenuSeparator />
+            </>
+          ) : null}
           <DropdownMenuItem
             onClick={() =>
               run(

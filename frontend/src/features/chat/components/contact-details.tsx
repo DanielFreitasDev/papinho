@@ -11,6 +11,7 @@ import {
 } from "lucide-react"
 
 import { ConfirmDialog } from "@/components/confirm-dialog"
+import { PhotoViewer } from "@/components/photo-viewer"
 import { UserAvatar } from "@/components/user-avatar"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
@@ -102,14 +103,23 @@ export function ContactDetails({
       </div>
       <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
         <div className="flex flex-col items-center gap-2 text-center">
-          <UserAvatar
-            privateItem
-            userId={peer.userId}
+          <PhotoViewer
             name={peer.label}
-            hasPhoto={peer.hasPhoto}
-            version={peer.photoVersion}
-            className="size-28 text-2xl"
-          />
+            src={
+              peer.hasPhoto
+                ? `/api/v1/users/${peer.userId}/photo?v=${encodeURIComponent(peer.photoVersion)}`
+                : null
+            }
+          >
+            <UserAvatar
+              privateItem
+              userId={peer.userId}
+              name={peer.label}
+              hasPhoto={peer.hasPhoto}
+              version={peer.photoVersion}
+              className="size-28 text-2xl"
+            />
+          </PhotoViewer>
           <p className="text-lg font-semibold break-words">{peer.label}</p>
           <p className="text-sm text-muted-foreground">@{peer.username}</p>
           {peer.label !== peer.displayName ? (

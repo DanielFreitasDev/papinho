@@ -178,6 +178,7 @@
     "about": "About",
     "aboutHint": "A short phrase your contacts can see.",
     "photo": "Profile photo",
+    "viewPhoto": "View {{name}}'s photo",
     "changePhoto": "Change photo",
     "removePhoto": "Remove photo",
     "cropTitle": "Adjust photo",

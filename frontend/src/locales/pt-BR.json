@@ -178,6 +178,7 @@
     "about": "Recado",
     "aboutHint": "Uma frase curta que seus contatos podem ver.",
     "photo": "Foto de perfil",
+    "viewPhoto": "Ver foto de {{name}}",
     "changePhoto": "Trocar foto",
     "removePhoto": "Remover foto",
     "cropTitle": "Ajustar foto",

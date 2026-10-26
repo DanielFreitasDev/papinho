@@ -16,6 +16,7 @@ import {
 
 import { QueryState } from "@/components/query-state"
 import { ConfirmDialog } from "@/components/confirm-dialog"
+import { PhotoViewer } from "@/components/photo-viewer"
 import { UserAvatar } from "@/components/user-avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -121,10 +122,19 @@ export function GroupDetails({
       </div>
       <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
         <div className="flex flex-col items-center gap-2 text-center">
-          <ConversationAvatar
-            conversation={conversation}
-            className="size-28 text-2xl"
-          />
+          <PhotoViewer
+            name={group.name}
+            src={
+              group.photoId
+                ? `/api/v1/media/${group.photoId}/content?v=${encodeURIComponent(group.photoVersion)}`
+                : null
+            }
+          >
+            <ConversationAvatar
+              conversation={conversation}
+              className="size-28 text-2xl"
+            />
+          </PhotoViewer>
           {group.canEditInfo ? (
             <div className="flex flex-wrap justify-center gap-2">
               <input

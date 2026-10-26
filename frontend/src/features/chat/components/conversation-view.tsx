@@ -633,14 +633,18 @@ function LoadedConversation({
   // Botão direito no fundo da conversa: o menu dela, como no WhatsApp Web (as mensagens têm o próprio).
   const backgroundMenu = useContextMenu()
   useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (
-        event.key !== "Escape" ||
-        event.defaultPrevented ||
+    // O que estava aberto é visto na captura, antes de o próprio menu tratar a tecla e se fechar. Menu e lista só
+    // contam abertos: o Select pode manter a lista montada depois de fechar.
+    let overlayOpen = false
+    const onCapture = (event: KeyboardEvent) => {
+      overlayOpen =
+        event.key === "Escape" &&
         document.querySelector(
-          '[role="dialog"],[role="alertdialog"],[role="menu"],[role="listbox"]'
-        )
-      ) {
+          '[role="dialog"],[role="alertdialog"],[role="menu"][data-open],[role="listbox"][data-open]'
+        ) !== null
+    }
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || event.defaultPrevented || overlayOpen) {
         return
       }
       if (wide && detailsOpen) {
@@ -655,8 +659,12 @@ function LoadedConversation({
         void navigate({ to: backTo })
       }
     }
+    window.addEventListener("keydown", onCapture, true)
     window.addEventListener("keydown", onKey)
-    return () => window.removeEventListener("keydown", onKey)
+    return () => {
+      window.removeEventListener("keydown", onCapture, true)
+      window.removeEventListener("keydown", onKey)
+    }
   }, [wide, detailsOpen, selection, searchOpen, navigate, backTo])
   // Outro resultado da busca global com a conversa já aberta: a busca recomeça com o termo e a mensagem novos.
   const [seededFor, setSeededFor] = useState(focusMessageId)

@@ -55,7 +55,7 @@ import {
 } from "@/features/chat"
 import { AddContactDialog, ContactList, MyLinkDialog } from "@/features/contact"
 import { InviteDialog } from "@/features/invite"
-import { useNotifications } from "@/features/notification"
+import { NotificationPrompt, useNotifications } from "@/features/notification"
 import {
   lockScreenNow,
   privacyQueries,
@@ -291,6 +291,7 @@ function SignedInShell({ me }: { me: Me }) {
               </DropdownMenuContent>
             </DropdownMenu>
           </header>
+          <NotificationPrompt />
           <Tabs
             value={tab}
             onValueChange={(value) => setTab(String(value))}

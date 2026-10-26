@@ -1,10 +1,10 @@
 ---
 name: PWA, Web Push, busca em português e e2e offline
-description: pegadinhas encontradas na Fase 6 (stemmer, ponto EC, MIME do manifesto, build com e2e, Playwright)
+description: pegadinhas encontradas na Fase 6 (stemmer, ponto EC, MIME do manifesto, build com e2e, Playwright) e a permissão de notificação que ninguém dava
 type: project
 category: gotcha
 date: 2026-10-16
-updated: 2026-10-16
+updated: 2026-10-26
 ---
 - O stemmer `portuguese` do PostgreSQL não junta "mensagens" e "mensagem" (`mensagens` fica inteiro); "conversas"
   e "conversa" viram `convers`. Teste radicais com exemplos conferidos por `to_tsvector`.
@@ -31,6 +31,12 @@ updated: 2026-10-16
   por outro endereço (`/sw.js?versao=nova`): é um worker novo na mesma registration, instalado e esperando. O
   workbox-window trata como "externa" a atualização que chega mais de 60 s depois do registro (o caso normal de um
   deploy com a aba aberta), mas dispara o `waiting` do mesmo jeito.
+- **Permissão escondida = nenhum push (2026-10-26):** com o pedido só em Configurações > Notificações, a produção não
+  tinha nenhuma linha em `push_subscriptions` nem o atributo `papinho.push-key` em sessão alguma, e "não chega
+  notificação" parecia bug do push. O envio estava certo: no Chrome local a assinatura do FCM foi gravada e
+  marcada como usada. A faixa no topo da lista (como no WhatsApp Web) pede a permissão. Para investigar de novo,
+  conte as assinaturas antes de mexer no código. No e2e a faixa aparece (permissão `default`): o botão diz
+  "Permitir" porque `name: "Ativar"` casa por substring com outro botão do accounts.spec.
 
 **Evidência:** falhas e correções em `SearchIT`, `WebPushCryptoTest`, `pwa.spec.ts`, 2026-10-16; o teste "versão
 nova do app espera o Atualizar" não via a versão nova com `context.route` e passa com o segundo endereço.

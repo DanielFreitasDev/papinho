@@ -1024,6 +1024,8 @@
     "browserTitle": "Notificações neste navegador",
     "browserDescription": "O navegador pede permissão uma vez. Com o app fechado, o aviso chega por push.",
     "enable": "Ativar notificações",
+    "enableShort": "Permitir",
+    "promptTitle": "Receba avisos de mensagens novas",
     "allowed": "Notificações permitidas neste navegador.",
     "denied": "Notificações bloqueadas. Libere nas configurações do site, no navegador.",
     "unsupported": "Este navegador não mostra notificações.",

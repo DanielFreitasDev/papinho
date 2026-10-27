@@ -239,7 +239,13 @@ das correções), `a11y`, `touch` e `native-controls` (14 verdes, 5 pulados por 
 `data`, `privacy`, `reply-jump`, `search`, `profile`, `links`, `smoke`, `accounts` e `pwa` (50 verdes, 1 pulado),
 todos com o JAR final; `animations`, `audio`, `spacing`, `messages`, `chat`, `media`, `view-once` e `groups` (25
 verdes) rodaram antes das duas correções de CSS. Não rodados nesta passada: Firefox e WebKit, `email.spec` (Mailpit),
-`setup.spec` (perfil lan), `perf` e Whisper; backend sem mudança de Java.
+`setup.spec` (perfil lan), `perf` e Whisper; backend sem mudança de Java. O CI do fim da passada (run 40513358343,
+`32ec4b3`) passou nos seis jobs, inclusive o e2e com Firefox e WebKit e o deploy na VPS. Depois, no teste do dono, a
+mensagem enviada pousava ~50 px acima e se ajustava no fim: a linha nova nascia com a altura provisória do
+`content-visibility` e encolhia um quadro depois. Corrigido em `be37060` (a linha que entra nasce visível e o voo mira a
+bolha a cada quadro; o `chat-look.spec.ts` confere a bolha parada e o pouso a menos de 1 px), com o rabinho escondido no
+modo privado (`4cbca54`) e o README com capturas novas (`89267ba`); `chat-look`, `animations`, `privacy`, `messages` e
+`chat` verdes no Chromium (desktop e celular) contra o JAR final.
 
 ## Fase 0 — Fundação
 

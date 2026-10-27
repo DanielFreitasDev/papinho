@@ -236,10 +236,12 @@ function MessageRowView({
       ) : null}
       {/* Largura do conteúdo (até 80%): os atalhos ficam colados na bolha, não na borda da conversa. */}
       <MessageContent className="w-auto max-w-[min(80%,36rem)] min-w-0">
+        {/* Com reações, a bolha reserva embaixo a metade da pílula mais o anel: cada linha da lista tem
+            content-visibility (contenção de pintura), e o que passa da caixa dela não aparece. */}
         <Bubble
           variant={mine ? "tinted" : "muted"}
           align={mine ? "end" : "start"}
-          className={cn("max-w-full", grouped.length > 0 && "mb-3")}
+          className={cn("max-w-full", grouped.length > 0 && "mb-4")}
           data-flash={flash ? "" : undefined}
         >
           <BubbleContent
@@ -376,10 +378,12 @@ function MessageRowView({
               ) : null}
             </span>
           </BubbleContent>
+          {/* Reações sempre do lado esquerdo: embaixo, à direita, ficam a hora e os tiques. */}
           {grouped.length > 0 ? (
             <BubbleReactions
-              align={mine ? "end" : "start"}
+              align="start"
               aria-label={t("chat.reactions")}
+              className="translate-y-1/2"
             >
               {grouped.map(([emoji, count]) => (
                 <ReactionChip

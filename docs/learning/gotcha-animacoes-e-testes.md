@@ -1,9 +1,10 @@
 ---
 name: Animações nos testes e no roteador
-description: CDP desacelera o relógio do requestAnimationFrame mas não os timers; location muda antes da view transition; toque longo com deslize não gera clique; caixa medida durante a escala; ready da view transition interrompida vira erro não tratado
+description: CDP desacelera o relógio do requestAnimationFrame mas não os timers; location muda antes da view transition; toque longo com deslize não gera clique; caixa medida durante a escala; ready da view transition interrompida vira erro não tratado; toque durante a view transition
 type: project
 category: gotcha
 date: 2026-10-24
+updated: 2026-10-27
 ---
 Pegadinhas achadas ao animar a interface (Fase 4):
 
@@ -29,6 +30,11 @@ Pegadinhas achadas ao animar a interface (Fase 4):
   WebKit 27), e os dois contam isso como erro não tratado mesmo sem ninguém ter pedido o `ready`. O TanStack Router
   só espera o `updateCallbackDone`, então o erro aparecia no console de quem navegava rápido (e reprovava e2e ao
   acaso). O `lib/motion.ts` embrulha o `document.startViewTransition` e trata o `ready` de toda transição.
+- **Toque logo depois de voltar para a lista no celular** cai na view transition da troca de tela, não no elemento:
+  durante a transição quem recebe o ponteiro é a camada `::view-transition`. Antes de tocar, espere as animações cujo
+  `effect.pseudoElement` começa com `::view-transition` (as infinitas da lista nunca acabam, então não espere todas).
+  A onda de toque e o voo da mensagem duram menos de meio segundo: o e2e os confere com o CDP a 10% (o voo é da Web
+  Animations API para isso funcionar), senão o atributo some antes da checagem numa máquina ocupada (2026-10-27).
 
 **Evidência:** quadros de revisão em câmera lenta (specs temporários contra o servidor do Vite) com a onda vazia, a
 lixeira cortada a 20% e as duas capturas iguais na volta do celular antes das correções, e completos depois;

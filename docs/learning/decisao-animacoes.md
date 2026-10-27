@@ -4,6 +4,7 @@ description: tokens de duração e curva no index.css, nenhuma dependência nova
 type: project
 category: decision
 date: 2026-10-24
+updated: 2026-10-27
 ---
 Como a interface ficou "viva" sem pesar no bundle nem na lista de mensagens:
 
@@ -34,6 +35,12 @@ Como a interface ficou "viva" sem pesar no bundle nem na lista de mensagens:
   fim vem do `animationend`, e o tempo de reserva só força a volta se `getAnimations()` disser que nada está
   rodando. A onda é um canvas na resolução da tela com o nível em dB (piso -50, teto -10) do
   `getByteTimeDomainData`.
+- **Toque e voo (2026-10-27):** a bola dos ícones redondos (variante `ball` do Button, `::before` que cresce no
+  hover e no toque), a onda de toque (`data-ripple` em botões, itens de menu e de lista: um ouvinte só no documento,
+  `::after` com `overflow: clip`, que prende a onda à forma sem virar área de rolagem nem mudar a linha de base) e o
+  voo da mensagem enviada (cópia da bolha presa à janela, da caixa de texto até o lugar dela, pela Web Animations
+  API). O `[data-ripple]` fica na camada de componentes: `absolute` de um utilitário continua valendo; não ponha em
+  quem já usa `::after` (aba de linha do shadcn, link esticado da lista de contatos).
 
 **Evidência:** `e2e/animations.spec.ts` (desktop e celular), `recording-wave.test.ts`, quadros em câmera lenta da
 lixeira, do "pop", das entradas, da lista (FLIP medido por `getAnimations()`), da troca de tela e do tema

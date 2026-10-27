@@ -19,6 +19,8 @@ Leia as entradas relacionadas à tarefa. Os detalhes ficam em `docs/learning/`.
 - [Sync perdia mensagens com o lastSeq lido depois](docs/learning/bug-sync-lastseq-lido-depois-da-busca.md) — leia o seq antes e limite a busca; corrida provada com spy.
 - [Prévia de link pedida ao mesmo tempo dava 500](docs/learning/bug-previa-de-link-simultanea.md) — save() com id atribuído faz SELECT+INSERT; trate a chave duplicada.
 - [Travas do ShedLock deslocadas fora de UTC](docs/learning/bug-shedlock-com-fuso-fora-de-utc.md) — sessão JDBC sempre em UTC (connection-init-sql); options=-c TimeZone não vence o fuso da JVM.
+- [Linha da conversa recorta o que passa dela](docs/learning/bug-conteudo-cortado-pela-linha-da-conversa.md) — content-visibility liga contenção de pintura: reação e rabinho cabem na linha; o voo usa cópia fixa.
+- [Banco IndexedDB "papinho-*" apagado ao abrir](docs/learning/bug-banco-indexeddb-apagado-pelo-offline.md) — o isolamento do offline apaga bancos de outra conta; dado do aparelho usa papinho.device.
 
 ## Pegadinhas de ambiente, dependências e bibliotecas
 - [PKIX do JDK/BC ignora Name Constraints da âncora](docs/learning/gotcha-pkix-ignora-name-constraints-da-ancora.md) — prove a CA da LAN com openssl verify ou certutil.
@@ -45,7 +47,7 @@ Leia as entradas relacionadas à tarefa. Os detalhes ficam em `docs/learning/`.
 - [Spring Modulith 2.1.2: proxy nas implementações internas da API](docs/learning/gotcha-modulith-proxy-de-observabilidade.md) — getClass() vira CGLIB; use AopUtils.getTargetClass e nada de método final.
 - [Duração de áudio: WebM do MediaRecorder, pre-skip e Tika](docs/learning/gotcha-duracao-de-audio-mediarecorder.md) — fim do último bloco − início − CodecDelay; Firefox grava Duration 0,0; .aac e .flac viravam documento.
 - [JSON dos idiomas e CSS fora do format:check](docs/learning/gotcha-json-dos-idiomas-reordena-chaves.md) — reescrever o JSON reordena chaves numéricas; prettier no CSS reformata regras alheias.
-- [Animações nos testes e no roteador](docs/learning/gotcha-animacoes-e-testes.md) — CDP desacelera o rAF e não os timers, resolvedLocation na view transition, toque longo sem clique, caixa durante a escala, ready da transição interrompida vira erro.
+- [Animações nos testes e no roteador](docs/learning/gotcha-animacoes-e-testes.md) — CDP desacelera o rAF e não os timers, resolvedLocation na view transition, toque longo sem clique, caixa durante a escala, ready da transição interrompida vira erro, toque durante a view transition.
 - [Produção na VPS atrás do Cloudflare Tunnel](docs/learning/gotcha-producao-vps-cloudflare-tunnel.md) — admin pelo loopback antes do hostname, cookie Secure no curl, beacon barrado pela CSP, e2e lento e cota de artifacts no repositório privado.
 
 ## Decisões de arquitetura
@@ -56,7 +58,8 @@ Leia as entradas relacionadas à tarefa. Os detalhes ficam em `docs/learning/`.
 - [UI-05: aparência própria](docs/learning/decisao-ui05-aparencia-propria.md) — data/hora, senha, busca, mídia, noValidate, regra de lint e a prova no e2e.
 - [Destaque da busca pela mesma regra do servidor](docs/learning/decisao-destaque-da-busca.md) — Snowball português igual ao portuguese_stem, fixture conferida nos dois lados, termo pelo estado do histórico.
 - [Escala de espaçamento e auditoria das bordas](docs/learning/decisao-escala-de-espacamento.md) — tokens na forma de variável (cn), menu com largura própria, fieldset min-w-0, addons presos embaixo, data-scroll-x.
-- [Animações sem biblioteca, com tokens e só ao vivo](docs/learning/decisao-animacoes.md) — nada de Motion nem ViewTransition do React na lista, entrada decidida antes de pintar, chave remetente+clientMessageId.
+- [Animações sem biblioteca, com tokens e só ao vivo](docs/learning/decisao-animacoes.md) — nada de Motion nem ViewTransition do React na lista, entrada decidida antes de pintar, chave remetente+clientMessageId, bola, onda e voo.
+- [Paletas de cor e papéis de parede](docs/learning/decisao-paletas-e-papel-de-parede.md) — OKLCH por fórmula com contraste conferido, hover por color-mix, doodles do Lucide como máscara, imagem só no aparelho.
 - [Licença AGPL-3.0 e imagem Docker no GHCR](docs/learning/decisao-licenca-e-imagem-docker.md) — permissão da seção 7 para o AspectJ, Alpine com o JAR testado via build-context, release idempotente.
 - [Repositório público e o runner self-hosted](docs/learning/decisao-repositorio-publico.md) — cota de minutos da conta esgotada no privado, gitleaks antes de abrir, aprovação de todo PR de fora (o runner tem root na VPS).
 - [Limpeza dos arquivos nunca usados](docs/learning/decisao-limpeza-de-arquivos-nao-usados.md) — porta MediaReferences, in_use preguiçoso, trava contra o anexo simultâneo.

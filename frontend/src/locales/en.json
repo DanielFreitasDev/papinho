@@ -264,6 +264,10 @@
     "empty": "Nobody blocked",
     "since": "Blocked on {{date}}"
   },
+  "details": {
+    "search": "Search",
+    "mute": "Mute notifications"
+  },
   "chatPrefs": {
     "title": "Typing and sending",
     "description": "Like on WhatsApp; applies to this device.",

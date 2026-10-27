@@ -321,7 +321,7 @@ export function ConversationMenu({
 }
 
 /** Silenciar por 8 horas, 1 semana ou sempre, com a opção de ainda notificar menções. */
-function MuteDialog({
+export function MuteDialog({
   name,
   onOpenChange,
   onConfirm,

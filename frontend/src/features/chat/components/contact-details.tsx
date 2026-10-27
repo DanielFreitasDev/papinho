@@ -1,14 +1,7 @@
 import { useState } from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
-import {
-  BanIcon,
-  ChevronRightIcon,
-  FlagIcon,
-  ImagesIcon,
-  UserPlusIcon,
-  XIcon,
-} from "lucide-react"
+import { BanIcon, FlagIcon, UserPlusIcon, XIcon } from "lucide-react"
 
 import { ConfirmDialog } from "@/components/confirm-dialog"
 import { PhotoViewer } from "@/components/photo-viewer"
@@ -25,6 +18,7 @@ import { chatKeys } from "../api"
 import type { Attachment, Conversation, Peer } from "../types"
 import { ConversationGallery } from "./conversation-gallery"
 import { ConversationPrivacy } from "./conversation-privacy"
+import { DetailsSearchButton, MediaStrip, MuteSwitch } from "./details-extras"
 import { DisappearingSetting } from "./disappearing-select"
 import { useErrorToast } from "@/hooks/use-error-toast"
 
@@ -37,11 +31,14 @@ export function ContactDetails({
   peer,
   onClose,
   onOpenImage,
+  onSearch,
 }: {
   conversation: Conversation
   peer: Peer
   onClose: () => void
   onOpenImage: (images: Attachment[], id: string) => void
+  /** Abre a busca na conversa (botão "Pesquisar" embaixo da foto, como no WhatsApp). */
+  onSearch?: () => void
 }) {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
@@ -128,6 +125,7 @@ export function ContactDetails({
             </p>
           ) : null}
         </div>
+        {onSearch ? <DetailsSearchButton onSearch={onSearch} /> : null}
         {person.isPending && peer.active && !self ? (
           <Skeleton className="h-10 w-full" />
         ) : person.data?.about ? (
@@ -141,15 +139,14 @@ export function ContactDetails({
           </section>
         ) : null}
         <Separator />
-        <Button
-          variant="ghost"
-          className="justify-start"
-          onClick={() => setGallery(true)}
-        >
-          <ImagesIcon data-icon="inline-start" />
-          <span className="flex-1 text-left">{t("gallery.title")}</span>
-          <ChevronRightIcon data-icon="inline-end" />
-        </Button>
+        <MediaStrip
+          conversationId={conversation.id}
+          onOpenGallery={() => setGallery(true)}
+          onOpenImage={onOpenImage}
+        />
+        {self ? null : (
+          <MuteSwitch conversation={conversation} name={peer.label} />
+        )}
         {self ? null : (
           <>
             <Separator />

@@ -264,6 +264,10 @@
     "empty": "Ninguém bloqueado",
     "since": "Bloqueado em {{date}}"
   },
+  "details": {
+    "search": "Pesquisar",
+    "mute": "Silenciar notificações"
+  },
   "chatPrefs": {
     "title": "Digitação e envio",
     "description": "Como no WhatsApp; vale para este aparelho.",

@@ -1064,6 +1064,13 @@ function LoadedConversation({
       </DropdownMenuItem>
     </>
   )
+  // "Pesquisar" dos dados: abre a busca na conversa; na gaveta (telas estreitas), fecha os dados para ela aparecer.
+  const searchFromDetails = () => {
+    setSearchOpen(true)
+    if (!wide) {
+      setDetailsOpen(false)
+    }
+  }
   const openImage = (list: Attachment[], id: string) => {
     setViewerImages(list)
     setViewerId(id)
@@ -1074,6 +1081,7 @@ function LoadedConversation({
       group={group}
       onClose={() => setDetailsOpen(false)}
       onOpenImage={openImage}
+      onSearch={searchFromDetails}
     />
   ) : conversation.broadcast ? (
     <BroadcastDetails
@@ -1087,6 +1095,7 @@ function LoadedConversation({
       peer={conversation.peer}
       onClose={() => setDetailsOpen(false)}
       onOpenImage={openImage}
+      onSearch={searchFromDetails}
     />
   ) : null
 

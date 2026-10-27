@@ -4,9 +4,7 @@ import { useQuery } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
 import {
   CameraIcon,
-  ChevronRightIcon,
   EllipsisVerticalIcon,
-  ImagesIcon,
   LinkIcon,
   LogOutIcon,
   PencilIcon,
@@ -52,6 +50,7 @@ import { ConversationAvatar } from "./conversation-avatar"
 import { ConversationGallery } from "./conversation-gallery"
 import { ConversationPrivacy } from "./conversation-privacy"
 import { DisappearingSetting } from "./disappearing-select"
+import { DetailsSearchButton, MediaStrip, MuteSwitch } from "./details-extras"
 import { useErrorToast } from "@/hooks/use-error-toast"
 
 /**
@@ -63,11 +62,14 @@ export function GroupDetails({
   group,
   onClose,
   onOpenImage,
+  onSearch,
 }: {
   conversation: Conversation
   group: GroupInfo
   onClose: () => void
   onOpenImage: (images: Attachment[], id: string) => void
+  /** Abre a busca na conversa (botão "Pesquisar" embaixo da foto, como no WhatsApp). */
+  onSearch?: () => void
 }) {
   const { t } = useTranslation()
   const navigate = useNavigate()
@@ -204,16 +206,14 @@ export function GroupDetails({
             </Button>
           ) : null}
         </div>
+        {onSearch ? <DetailsSearchButton onSearch={onSearch} /> : null}
         <Separator />
-        <Button
-          variant="ghost"
-          className="justify-start"
-          onClick={() => setGallery(true)}
-        >
-          <ImagesIcon data-icon="inline-start" />
-          <span className="flex-1 text-left">{t("gallery.title")}</span>
-          <ChevronRightIcon data-icon="inline-end" />
-        </Button>
+        <MediaStrip
+          conversationId={conversation.id}
+          onOpenGallery={() => setGallery(true)}
+          onOpenImage={onOpenImage}
+        />
+        <MuteSwitch conversation={conversation} name={group.name} />
         <Separator />
         <DisappearingSetting
           conversation={conversation}

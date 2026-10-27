@@ -19,7 +19,7 @@ Leia as entradas relacionadas à tarefa. Os detalhes ficam em `docs/learning/`.
 - [Sync perdia mensagens com o lastSeq lido depois](docs/learning/bug-sync-lastseq-lido-depois-da-busca.md) — leia o seq antes e limite a busca; corrida provada com spy.
 - [Prévia de link pedida ao mesmo tempo dava 500](docs/learning/bug-previa-de-link-simultanea.md) — save() com id atribuído faz SELECT+INSERT; trate a chave duplicada.
 - [Travas do ShedLock deslocadas fora de UTC](docs/learning/bug-shedlock-com-fuso-fora-de-utc.md) — sessão JDBC sempre em UTC (connection-init-sql); options=-c TimeZone não vence o fuso da JVM.
-- [Linha da conversa recorta o que passa dela](docs/learning/bug-conteudo-cortado-pela-linha-da-conversa.md) — content-visibility liga contenção de pintura: reação e rabinho cabem na linha; o voo usa cópia fixa.
+- [Linha da conversa recorta o que passa dela](docs/learning/bug-conteudo-cortado-pela-linha-da-conversa.md) — content-visibility recorta a pintura e dá altura provisória à linha nova: reação e rabinho cabem na linha, a que entra nasce visível, o voo usa cópia fixa.
 - [Banco IndexedDB "papinho-*" apagado ao abrir](docs/learning/bug-banco-indexeddb-apagado-pelo-offline.md) — o isolamento do offline apaga bancos de outra conta; dado do aparelho usa papinho.device.
 
 ## Pegadinhas de ambiente, dependências e bibliotecas

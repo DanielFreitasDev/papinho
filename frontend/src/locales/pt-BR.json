@@ -262,7 +262,12 @@
   },
   "blocked": {
     "empty": "Ninguém bloqueado",
-    "since": "Bloqueado em {{date}}"
+    "since": "Bloqueado em {{date}}",
+    "add": "Adicionar contato bloqueado",
+    "addDescription": "Quem você bloqueia não manda mensagens, não vê sua foto nem quando você está online e não te adiciona a grupos.",
+    "search": "Buscar contato",
+    "noContacts": "Nenhum contato para bloquear",
+    "done": "{{name}} foi bloqueado(a)"
   },
   "details": {
     "search": "Pesquisar",

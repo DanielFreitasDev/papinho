@@ -262,7 +262,12 @@
   },
   "blocked": {
     "empty": "Nobody blocked",
-    "since": "Blocked on {{date}}"
+    "since": "Blocked on {{date}}",
+    "add": "Add blocked contact",
+    "addDescription": "People you block can't message you, see your photo or when you're online, or add you to groups.",
+    "search": "Search contact",
+    "noContacts": "No contacts to block",
+    "done": "{{name}} was blocked"
   },
   "details": {
     "search": "Search",

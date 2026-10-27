@@ -9,7 +9,11 @@ import { onLogout } from "@/lib/logout-cleanup"
  * no máximo 2560 px. A tela usa uma URL blob: (a CSP aceita blob: em img-src) numa propriedade do CSSOM. Sair da conta
  * apaga a imagem, como os outros dados da pessoa neste navegador (NT-05).
  */
-const DATABASE = "papinho-device"
+/**
+ * Fora do prefixo "papinho-": o modo offline apaga, ao abrir o app, todo banco "papinho-*" que não é o da conta atual
+ * (lib/offline-db.ts, isolamento por conta), e a imagem sumia na segunda abertura.
+ */
+const DATABASE = "papinho.device"
 const STORE = "files"
 const KEY = "wallpaper"
 const MAX_SIDE = 2560

@@ -1017,6 +1017,85 @@ html[data-doodles="on"]:not([data-wallpaper="image"]) .chat-wallpaper::before {
 }
 
 /*
+ * Bolhas como as do WhatsApp: a primeira de cada sequência tem o "rabinho" no canto de cima, do lado de quem mandou
+ * (data-tail no Bubble). A cor dele é a da bolha, nos dois temas. Fora das camadas: vence o rounded-xl do conteúdo.
+ */
+[data-slot="bubble"][data-variant="incoming"] {
+  --bubble-bg: var(--card);
+}
+[data-slot="bubble"][data-variant="tinted"] {
+  --bubble-bg: oklch(from var(--primary) 0.93 calc(c * 0.4) h);
+}
+.dark [data-slot="bubble"][data-variant="tinted"] {
+  --bubble-bg: oklch(from var(--primary) 0.3 calc(c * 0.4) h);
+}
+[data-slot="bubble"][data-tail]::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  width: 0.5rem;
+  height: 0.8125rem;
+  background-color: var(--bubble-bg);
+}
+[data-slot="bubble"][data-tail="start"]::before {
+  left: -0.5rem;
+  clip-path: polygon(0 0, 100% 0, 100% 100%);
+}
+[data-slot="bubble"][data-tail="end"]::before {
+  right: -0.5rem;
+  clip-path: polygon(0 0, 100% 0, 0 100%);
+}
+[data-slot="bubble"][data-tail="start"] > [data-slot="bubble-content"] {
+  border-top-left-radius: 0;
+}
+[data-slot="bubble"][data-tail="end"] > [data-slot="bubble-content"] {
+  border-top-right-radius: 0;
+}
+/* Nome de quem escreveu no grupo: uma de 12 cores por pessoa (features/chat/member-color.ts), 5:1 ou mais no cartão. */
+[data-member-color] {
+  color: oklch(0.5 0.11 var(--member-hue));
+}
+.dark [data-member-color] {
+  color: oklch(0.8 0.1 var(--member-hue));
+}
+[data-member-color="0"] {
+  --member-hue: 25;
+}
+[data-member-color="1"] {
+  --member-hue: 50;
+}
+[data-member-color="2"] {
+  --member-hue: 75;
+}
+[data-member-color="3"] {
+  --member-hue: 100;
+}
+[data-member-color="4"] {
+  --member-hue: 140;
+}
+[data-member-color="5"] {
+  --member-hue: 165;
+}
+[data-member-color="6"] {
+  --member-hue: 190;
+}
+[data-member-color="7"] {
+  --member-hue: 215;
+}
+[data-member-color="8"] {
+  --member-hue: 245;
+}
+[data-member-color="9"] {
+  --member-hue: 275;
+}
+[data-member-color="10"] {
+  --member-hue: 305;
+}
+[data-member-color="11"] {
+  --member-hue: 335;
+}
+
+/*
  * Áudio na conversa: a trilha do Slider (bg-muted) tem a mesma cor do balão das mensagens recebidas e sumia. Dentro
  * dos balões ela usa um tom do texto, visível nos dois temas e nos dois tipos de balão.
  */

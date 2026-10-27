@@ -29,6 +29,7 @@ import {
 } from "lucide-react"
 import { cn } from "cn"
 
+import { UserAvatar } from "@/components/user-avatar"
 import { useContextMenu } from "@/hooks/use-context-menu"
 import { Bubble, BubbleContent, BubbleReactions } from "@/components/ui/bubble"
 import { Button } from "@/components/ui/button"
@@ -50,6 +51,7 @@ import { MessageText } from "../format/message-text"
 import type { SearchTerms } from "../format/search-match"
 import { PollView } from "./poll-view"
 import { firstLink, plainText } from "../format/parse"
+import { memberColor } from "../member-color"
 import type {
   Attachment,
   AttachmentKind,
@@ -159,6 +161,8 @@ function MessageRowView({
   canReplyPrivately = false,
   highlight = null,
   flash = false,
+  firstInRun = true,
+  groupSender,
 }: {
   message: DisplayMessage
   mine: boolean
@@ -184,6 +188,13 @@ function MessageRowView({
   highlight?: SearchTerms | null
   /** Destino de um salto (resultado da busca, citação): a bolha pisca uma vez. */
   flash?: boolean
+  /** Primeira da sequência de quem mandou (outro remetente, outro dia ou aviso antes): rabinho, nome e foto. */
+  firstInRun?: boolean
+  /**
+   * Num grupo, mensagem de outra pessoa: a foto dela vai ao lado da primeira bolha da sequência, como no WhatsApp
+   * (null quando a pessoa já saiu do grupo; undefined fora de grupos e nas minhas).
+   */
+  groupSender?: GroupSender | null
 }) {
   const { t } = useTranslation()
   // Reações que já estavam quando a linha montou entram paradas; as que chegam depois, com o "pop".
@@ -203,6 +214,8 @@ function MessageRowView({
         selecting={selecting}
         selected={selected}
         onAction={onAction}
+        firstInRun={firstInRun}
+        groupSender={groupSender}
       />
     )
   }
@@ -214,7 +227,9 @@ function MessageRowView({
       align={mine ? "end" : "start"}
       data-private-scope=""
       className={cn(
-        "group/row items-center rounded-lg px-1",
+        // px-2.5: o rabinho da bolha (8 px) cabe na caixa da linha, que recorta o que passa (content-visibility).
+        "group/row items-center rounded-lg px-2.5",
+        firstInRun && "mt-1.5",
         selecting && "cursor-pointer",
         selected && "bg-primary/10"
       )}
@@ -234,22 +249,34 @@ function MessageRowView({
           onClick={(event) => event.stopPropagation()}
         />
       ) : null}
+      {groupSender !== undefined ? (
+        <SenderAvatar
+          sender={groupSender}
+          name={senderName}
+          visible={firstInRun}
+        />
+      ) : null}
       {/* Largura do conteúdo (até 80%): os atalhos ficam colados na bolha, não na borda da conversa. */}
       <MessageContent className="w-auto max-w-[min(80%,36rem)] min-w-0">
-        {/* Com reações, a bolha reserva embaixo a metade da pílula mais o anel: cada linha da lista tem
-            content-visibility (contenção de pintura), e o que passa da caixa dela não aparece. */}
+        {/* Com reações, a pílula entra só 6 px na bolha (no respiro de baixo, sem cobrir a hora) e a bolha reserva o
+            resto embaixo: cada linha da lista tem content-visibility (contenção de pintura), e o que passa da caixa
+            dela não aparece. */}
         <Bubble
           variant={mine ? "tinted" : "incoming"}
           align={mine ? "end" : "start"}
-          className={cn("max-w-full", grouped.length > 0 && "mb-4")}
+          className={cn("max-w-full", grouped.length > 0 && "mb-6")}
           data-flash={flash ? "" : undefined}
+          data-tail={firstInRun ? (mine ? "end" : "start") : undefined}
         >
           <BubbleContent
             className="flex flex-col gap-1"
             data-private="messages"
           >
-            {showSender && !mine ? (
-              <span className="text-xs font-semibold text-primary">
+            {showSender && !mine && firstInRun ? (
+              <span
+                className="text-xs font-semibold"
+                data-member-color={memberColor(message.senderId ?? "")}
+              >
                 {senderName}
               </span>
             ) : (
@@ -383,7 +410,7 @@ function MessageRowView({
             <BubbleReactions
               align="start"
               aria-label={t("chat.reactions")}
-              className="translate-y-1/2 bg-card shadow-xs ring-chat"
+              className="translate-y-[calc(100%-0.375rem)] bg-card shadow-xs ring-chat"
             >
               {grouped.map(([emoji, count]) => (
                 <ReactionChip
@@ -533,6 +560,42 @@ function MessageRowView({
   )
 }
 
+/** O que a linha precisa de quem mandou num grupo (um membro da lista do grupo). */
+export type GroupSender = {
+  userId: string
+  hasPhoto: boolean
+  photoVersion: string
+}
+
+/**
+ * Foto de quem mandou, ao lado da primeira bolha da sequência (as outras guardam o lugar, para as bolhas alinharem).
+ * O servidor aplica a privacidade e o bloqueio na foto; sem foto, as iniciais. Enfeite: o nome já está na bolha.
+ */
+function SenderAvatar({
+  sender,
+  name,
+  visible,
+}: {
+  sender: GroupSender | null
+  name: string
+  visible: boolean
+}) {
+  return (
+    <div aria-hidden="true" className="w-8 shrink-0 self-start">
+      {visible ? (
+        <UserAvatar
+          userId={sender?.userId ?? ""}
+          name={name}
+          hasPhoto={sender?.hasPhoto ?? false}
+          version={sender?.photoVersion}
+          className="size-8"
+          privateItem
+        />
+      ) : null}
+    </div>
+  )
+}
+
 /** Atalho que só aparece com o ponteiro sobre a linha (no toque, as ações ficam no menu ⋮). */
 const HOVER_ACTION =
   "hidden shrink-0 group-hover/row:inline-flex data-popup-open:inline-flex"
@@ -592,6 +655,8 @@ function DeletedRow({
   selecting,
   selected,
   onAction,
+  firstInRun,
+  groupSender,
 }: {
   message: DisplayMessage
   mine: boolean
@@ -599,6 +664,8 @@ function DeletedRow({
   selecting: boolean
   selected: boolean
   onAction: (action: MessageAction) => void
+  firstInRun: boolean
+  groupSender: GroupSender | null | undefined
 }) {
   const { t } = useTranslation()
   return (
@@ -606,7 +673,8 @@ function DeletedRow({
       align={mine ? "end" : "start"}
       data-private-scope=""
       className={cn(
-        "group/row items-center rounded-lg px-1",
+        "group/row items-center rounded-lg px-2.5",
+        firstInRun && "mt-1.5",
         selecting && "cursor-pointer",
         selected && "bg-primary/10"
       )}
@@ -619,6 +687,13 @@ function DeletedRow({
           aria-label={t("chat.selectMessage")}
           onCheckedChange={() => onAction("select")}
           onClick={(event) => event.stopPropagation()}
+        />
+      ) : null}
+      {groupSender !== undefined ? (
+        <SenderAvatar
+          sender={groupSender}
+          name={senderName}
+          visible={firstInRun}
         />
       ) : null}
       <MessageContent className="min-w-0">

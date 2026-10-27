@@ -374,6 +374,12 @@ function LoadedConversation({
       ),
     [members.data]
   )
+  // Foto de quem mandou ao lado das bolhas do grupo (GR-01): os objetos da lista de membros, estáveis entre desenhos.
+  const membersById = useMemo(
+    () =>
+      new Map((members.data ?? []).map((member) => [member.userId, member])),
+    [members.data]
+  )
   const nameOf = (userId: string | null) =>
     userId === meId
       ? t("chat.you")
@@ -1271,6 +1277,12 @@ function LoadedConversation({
                   !previous ||
                   dayKey(previous.createdAt) !== dayKey(message.createdAt)
                 const unreadHere = unread !== null && message.seq === unread.seq
+                // Sequência de quem mandou, como no WhatsApp: só a primeira tem rabinho, nome e foto.
+                const firstInRun =
+                  newDay ||
+                  unreadHere ||
+                  previous.kind === "SYSTEM" ||
+                  previous.senderId !== message.senderId
                 if (message.kind === "SYSTEM") {
                   return (
                     <Fragment key={rowKey}>
@@ -1352,6 +1364,12 @@ function LoadedConversation({
                         }
                         highlight={highlight}
                         flash={message.id !== null && message.id === flashId}
+                        firstInRun={firstInRun}
+                        groupSender={
+                          group !== null && message.senderId !== meId
+                            ? (membersById.get(message.senderId ?? "") ?? null)
+                            : undefined
+                        }
                       />
                     </EnteringItem>
                   </Fragment>

@@ -45,7 +45,9 @@ import {
 import { plainText } from "../format/parse"
 import { useActivity } from "../activity"
 import { describeNotice } from "../system-notice"
-import type { Conversation, Folder } from "../types"
+import type { Conversation, Folder, MessageStatus } from "../types"
+import { KindIcon } from "./attachment-view"
+import { StatusIcon } from "./message-row"
 import { ActivityText } from "./activity-text"
 import { ConversationAvatar, useConversationLabel } from "./conversation-avatar"
 import { useContextMenu } from "@/hooks/use-context-menu"
@@ -410,12 +412,23 @@ function ConversationItem({
   // Botão direito na linha abre o menu da conversa no ponto do clique, como no WhatsApp Web.
   const menu = useContextMenu()
   const last = conversation.lastMessage
+  // Minha última mensagem leva os tiques (como no WhatsApp) no lugar de "Você:"; a de outra pessoa no grupo, o nome.
+  const showingMessage =
+    !activity && !(conversation.draft && !active) && last?.kind !== "SYSTEM"
+  const mineLast = showingMessage && last !== null && last.senderId === meId
   const sender =
     last && last.senderId === meId
-      ? `${t("chat.you")}: `
+      ? ""
       : last?.senderLabel
         ? `${last.senderLabel}: `
         : ""
+  const kindIcon =
+    showingMessage && last?.attachmentKind && !last.deleted ? (
+      <KindIcon
+        kind={last.attachmentKind}
+        className="mr-1 inline size-3.5 align-[-0.15em]"
+      />
+    ) : null
   const preview = activity
     ? t(activity.activity === "recording" ? "chat.recording" : "chat.typing")
     : conversation.draft && !active
@@ -498,7 +511,19 @@ function ConversationItem({
                     : "text-muted-foreground"
               )}
             >
-              {activity ? <ActivityText text={preview} /> : preview}
+              {activity ? (
+                <ActivityText text={preview} />
+              ) : (
+                <>
+                  {mineLast && last && !last.deleted ? (
+                    <span className="mr-1 inline-flex align-[-0.2em]">
+                      <StatusIcon status={lastStatus(conversation, last)} />
+                    </span>
+                  ) : null}
+                  {kindIcon}
+                  {preview}
+                </>
+              )}
             </span>
             {isMuted(conversation) ? (
               <BellOffIcon
@@ -546,6 +571,20 @@ function ConversationItem({
       ) : null}
     </Item>
   )
+}
+
+/** Enviada, entregue ou lida, pelos ponteiros da conversa (os mesmos da bolha, MS-02). */
+function lastStatus(
+  conversation: Conversation,
+  last: NonNullable<Conversation["lastMessage"]>
+): MessageStatus {
+  if (
+    conversation.peerReadSeq !== null &&
+    last.seq <= conversation.peerReadSeq
+  ) {
+    return "read"
+  }
+  return last.seq <= conversation.peerDeliveredSeq ? "delivered" : "sent"
 }
 
 /** Campo da busca global (GR-06): conversas, contatos e mensagens. */

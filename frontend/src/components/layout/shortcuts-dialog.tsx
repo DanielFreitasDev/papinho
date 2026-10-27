@@ -72,7 +72,13 @@ export function ShortcutsDialog({
           <DialogTitle>{t("shortcuts.title")}</DialogTitle>
           <DialogDescription>{t("shortcuts.dragHint")}</DialogDescription>
         </DialogHeader>
-        <div className="-mx-1 grid max-h-[65dvh] gap-x-8 gap-y-5 overflow-y-auto px-1 md:grid-cols-2">
+        {/* Área que rola: recebe o foco para rolar pelo teclado (axe: scrollable-region-focusable). */}
+        <div
+          role="region"
+          aria-label={t("shortcuts.title")}
+          tabIndex={0}
+          className="-mx-1 grid max-h-[65dvh] gap-x-8 gap-y-5 overflow-y-auto rounded-md px-1 outline-none focus-visible:ring-3 focus-visible:ring-ring/50 md:grid-cols-2"
+        >
           {groups.map((group) => (
             <section key={group.title} className="flex flex-col gap-2">
               <h3 className="text-xs font-medium text-muted-foreground">

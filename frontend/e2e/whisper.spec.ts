@@ -1,7 +1,7 @@
 import { fileURLToPath } from "node:url"
 
 import { expect, test } from "./fixtures"
-import { RUN, twoFriends } from "./support"
+import { chooseAttachment, RUN, twoFriends } from "./support"
 
 /**
  * Whisper no navegador de verdade (AU-04): baixa o modelo do Hugging Face com progresso, transcreve no Web
@@ -39,7 +39,7 @@ test("transcreve no navegador com o modelo baixado do Hugging Face", async ({
   )
 
   const chooser = gil.page.waitForEvent("filechooser")
-  await gil.page.getByRole("button", { name: "Anexar arquivo" }).click()
+  await chooseAttachment(gil.page, "Áudio")
   await (
     await chooser
   ).setFiles(fileURLToPath(new URL("./assets/fala.ogg", import.meta.url)))

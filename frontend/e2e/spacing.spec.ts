@@ -68,7 +68,7 @@ test("nada encosta nas bordas, com nomes longos", async ({
 
   // Campo de mensagem: ícones de dentro e o microfone alinhados; o microfone longe da borda.
   const mic = await iconCenter(gil.page, "Gravar mensagem de voz")
-  for (const name of ["Anexar arquivo", "Emojis", "Nova enquete"]) {
+  for (const name of ["Anexar", "Emojis"]) {
     expect(
       Math.abs((await iconCenter(gil.page, name)) - mic),
       name

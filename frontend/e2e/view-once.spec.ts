@@ -1,5 +1,5 @@
 import { expect, expectNoSeriousA11yViolations, test } from "./fixtures"
-import { RUN, twoFriends } from "./support"
+import { chooseAttachment, RUN, twoFriends } from "./support"
 
 /** Fase 4: foto de visualização única entre dois navegadores (MS-08). */
 test("visualização única abre uma vez, com marca d'água e sem cache", async ({
@@ -20,7 +20,7 @@ test("visualização única abre uma vez, com marca d'água e sem cache", async 
     return canvas.toDataURL("image/png")
   })
   const chooser = gil.page.waitForEvent("filechooser")
-  await gil.page.getByRole("button", { name: "Anexar arquivo" }).click()
+  await chooseAttachment(gil.page, "Fotos e vídeos")
   await (
     await chooser
   ).setFiles({

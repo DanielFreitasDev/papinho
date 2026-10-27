@@ -567,7 +567,15 @@
     "statusDISMISSED": "Arquivada"
   },
   "media": {
-    "attach": "Anexar arquivo",
+    "attachMenu": "Anexar",
+    "attachKind": {
+      "document": "Documento",
+      "media": "Fotos e vídeos",
+      "camera": "Câmera",
+      "audio": "Áudio",
+      "poll": "Enquete",
+      "sticker": "Figurinhas"
+    },
     "sendFiles_one": "Enviar {{count}} arquivo",
     "sendFiles_other": "Enviar {{count}} arquivos",
     "sendDescription": "Fotos, vídeos e documentos de até 1 GB. O envio continua de onde parou se a conexão cair.",

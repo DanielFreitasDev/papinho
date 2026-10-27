@@ -191,14 +191,20 @@ export async function pngFile(page: Page, color: string, name: string) {
   }
 }
 
-/** Anexa os arquivos pelo botão do composer e envia, com legenda opcional. */
+/** Abre o menu de anexos do campo de mensagem e escolhe um item ("Documento", "Fotos e vídeos", "Enquete"...). */
+export async function chooseAttachment(page: Page, item: string) {
+  await page.getByRole("button", { name: "Anexar", exact: true }).click()
+  await page.getByRole("menuitem", { name: item }).click()
+}
+
+/** Anexa os arquivos pelo menu de anexos do composer e envia, com legenda opcional. */
 export async function attach(
   page: Page,
   files: Awaited<ReturnType<typeof pngFile>>[],
   caption?: string
 ) {
   const chooser = page.waitForEvent("filechooser")
-  await page.getByRole("button", { name: "Anexar arquivo" }).click()
+  await chooseAttachment(page, "Fotos e vídeos")
   await (await chooser).setFiles(files)
   const dialog = page.getByRole("dialog", { name: /Enviar \d arquivo/ })
   await expect(dialog).toBeVisible()

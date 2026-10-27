@@ -5,10 +5,15 @@ import { cn } from "cn"
 import {
   BellOffIcon,
   CalendarClockIcon,
+  CameraIcon,
   ChartBarIcon,
   ChevronUpIcon,
   CheckIcon,
+  FileTextIcon,
+  HeadphonesIcon,
+  ImagesIcon,
   PaperclipIcon,
+  StickerIcon,
   PencilIcon,
   SendHorizontalIcon,
   SmileIcon,
@@ -59,6 +64,52 @@ const MAX_LENGTH = 65_536
 const COMPOSER_ADDON = "h-[calc(3rem-2px)] self-end gap-1 py-0"
 /** Ícone redondo dentro da pílula: 40 px no mouse, 44 px no toque (AR-02, pelo próprio Button). */
 const COMPOSER_ICON = "size-10"
+
+/** Itens do menu de anexos, na ordem do WhatsApp; a cor do círculo de cada um vem do index.css (data-attach-tone). */
+const ATTACH_KINDS = [
+  {
+    key: "document",
+    icon: FileTextIcon,
+    tone: "violet",
+    accept: undefined,
+    capture: false,
+  },
+  {
+    key: "media",
+    icon: ImagesIcon,
+    tone: "blue",
+    accept: "image/*,video/*",
+    capture: false,
+  },
+  {
+    key: "camera",
+    icon: CameraIcon,
+    tone: "pink",
+    accept: "image/*,video/*",
+    capture: true,
+  },
+  {
+    key: "audio",
+    icon: HeadphonesIcon,
+    tone: "orange",
+    accept: "audio/*",
+    capture: false,
+  },
+  {
+    key: "poll",
+    icon: ChartBarIcon,
+    tone: "amber",
+    accept: undefined,
+    capture: false,
+  },
+  {
+    key: "sticker",
+    icon: StickerIcon,
+    tone: "teal",
+    accept: undefined,
+    capture: false,
+  },
+] as const
 
 /**
  * Campo de mensagem fora da área rolável (UI.md §8.12), numa pílula como a do WhatsApp: anexar e emojis à esquerda, o
@@ -213,6 +264,21 @@ export function Composer({
     })
   }
 
+  /** Abre o seletor de arquivos com o filtro do tipo escolhido no menu de anexos. */
+  function pickFiles(accept: string | undefined, capture: boolean) {
+    const input = fileInput.current
+    if (!input) {
+      return
+    }
+    input.accept = accept ?? ""
+    if (capture) {
+      input.setAttribute("capture", "environment")
+    } else {
+      input.removeAttribute("capture")
+    }
+    input.click()
+  }
+
   function cancelEdit() {
     setValue("")
     onCancelEdit?.()
@@ -322,17 +388,57 @@ export function Composer({
                 "animate-in duration-(--duration-base) ease-(--ease-enter) fade-in slide-in-from-left-4"
             )}
           >
-            <Button
-              type="button"
-              variant="ball"
-              size="icon"
-              className={COMPOSER_ICON}
-              aria-label={t("media.attach")}
-              disabled={disabled}
-              onClick={() => fileInput.current?.click()}
-            >
-              <PaperclipIcon />
-            </Button>
+            {/* Menu de anexos como o do WhatsApp: cada tipo com o próprio ícone colorido e o filtro certo no seletor
+                de arquivos (a câmera abre direto no celular). */}
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button
+                    type="button"
+                    variant="ball"
+                    size="icon"
+                    className={COMPOSER_ICON}
+                    aria-label={t("media.attachMenu")}
+                    disabled={disabled}
+                  />
+                }
+              >
+                <PaperclipIcon className="transition-transform duration-(--duration-base) ease-(--ease-spring) group-data-popup-open/button:-rotate-45" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                side="top"
+                align="start"
+                className="min-w-56"
+              >
+                {ATTACH_KINDS.map(
+                  ({ key, icon: Icon, tone, accept, capture }) =>
+                    key === "poll" && !onPoll ? null : (
+                      <DropdownMenuItem
+                        key={key}
+                        className="gap-3 py-2"
+                        onClick={() => {
+                          if (key === "poll") {
+                            onPoll?.()
+                          } else if (key === "sticker") {
+                            setManagingStickers(true)
+                          } else {
+                            pickFiles(accept, capture)
+                          }
+                        }}
+                      >
+                        <span
+                          aria-hidden="true"
+                          data-attach-tone={tone}
+                          className="flex size-8 items-center justify-center rounded-full text-white"
+                        >
+                          <Icon className="size-4" />
+                        </span>
+                        {t(`media.attachKind.${key}`)}
+                      </DropdownMenuItem>
+                    )
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Popover open={emojiOpen} onOpenChange={setEmojiOpen}>
               <PopoverTrigger
                 render={
@@ -391,19 +497,6 @@ export function Composer({
                 </Tabs>
               </PopoverContent>
             </Popover>
-            {onPoll ? (
-              <Button
-                type="button"
-                variant="ball"
-                size="icon"
-                className={COMPOSER_ICON}
-                aria-label={t("poll.new")}
-                disabled={disabled}
-                onClick={onPoll}
-              >
-                <ChartBarIcon />
-              </Button>
-            ) : null}
           </InputGroupAddon>
         )}
         {recording ? null : (

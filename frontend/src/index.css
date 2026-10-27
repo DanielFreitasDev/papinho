@@ -709,6 +709,26 @@ html.dark[data-palette]:not([data-palette="grafite"]) {
   }
 }
 
+/* Círculos coloridos do menu de anexos (como os do WhatsApp): branco sobre a cor, 4,5:1 ou mais nos dois temas. */
+[data-attach-tone="violet"] {
+  background-color: oklch(0.52 0.2 295);
+}
+[data-attach-tone="blue"] {
+  background-color: oklch(0.52 0.16 250);
+}
+[data-attach-tone="pink"] {
+  background-color: oklch(0.55 0.2 0);
+}
+[data-attach-tone="orange"] {
+  background-color: oklch(0.56 0.16 45);
+}
+[data-attach-tone="amber"] {
+  background-color: oklch(0.55 0.12 75);
+}
+[data-attach-tone="teal"] {
+  background-color: oklch(0.52 0.1 185);
+}
+
 /* Troca de tema sem animar cores (ver components/theme-provider.tsx). */
 .theme-switching *,
 .theme-switching *::before,

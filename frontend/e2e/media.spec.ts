@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises"
 import type { Locator, Page } from "@playwright/test"
 
 import { expect, expectNoSeriousA11yViolations, test } from "./fixtures"
-import { attach, pngFile, RUN, twoFriends } from "./support"
+import { attach, chooseAttachment, pngFile, RUN, twoFriends } from "./support"
 
 /** Cola (ClipboardEvent) ou solta (DragEvent) uma imagem PNG gerada no navegador sobre o elemento. */
 async function dispatchFile(
@@ -142,7 +142,7 @@ test("fotos, documento e cancelamento de envio entre dois navegadores", async ({
 
   // Documento: cartão com nome e tamanho; o download preserva o nome.
   const chooser = gil.page.waitForEvent("filechooser")
-  await gil.page.getByRole("button", { name: "Anexar arquivo" }).click()
+  await chooseAttachment(gil.page, "Documento")
   await (
     await chooser
   ).setFiles({

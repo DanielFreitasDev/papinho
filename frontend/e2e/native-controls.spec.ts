@@ -7,7 +7,14 @@ import {
   test,
   watchErrors,
 } from "./fixtures"
-import { ensureAdmin, openMenuItem, PASSWORD, RUN, twoFriends } from "./support"
+import {
+  chooseAttachment,
+  ensureAdmin,
+  openMenuItem,
+  PASSWORD,
+  RUN,
+  twoFriends,
+} from "./support"
 
 type Theme = "light" | "dark"
 
@@ -301,7 +308,7 @@ test("nenhum controle com a aparência do navegador, nos temas claro e escuro", 
     },
   ]
   const chooser = gil.page.waitForEvent("filechooser")
-  await gil.page.getByRole("button", { name: "Anexar arquivo" }).click()
+  await chooseAttachment(gil.page, "Documento")
   await (await chooser).setFiles(files)
   const send = gil.page.getByRole("dialog", {
     name: `Enviar ${files.length} arquivos`,
@@ -389,7 +396,7 @@ test("nenhum controle com a aparência do navegador, nos temas claro e escuro", 
     await field.fill("")
 
     // Enquete com prazo opcional.
-    await gil.page.getByRole("button", { name: "Nova enquete" }).click()
+    await chooseAttachment(gil.page, "Enquete")
     const poll = gil.page.getByRole("dialog", { name: "Nova enquete" })
     await expect(poll).toBeVisible()
     await check(gil.page, theme, "enquete")

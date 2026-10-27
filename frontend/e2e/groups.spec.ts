@@ -6,7 +6,7 @@ import {
   expectNoSeriousA11yViolations,
   test,
 } from "./fixtures"
-import { openMenuItem, RUN, twoFriends } from "./support"
+import { chooseAttachment, openMenuItem, RUN, twoFriends } from "./support"
 
 function row(page: Page, text: string) {
   return page
@@ -70,7 +70,7 @@ test("grupo, enquete, figurinha, convite, transmissão e responder em privado", 
   await expect(row(gil.page, "Obrigada!")).toBeVisible()
 
   // Enquete (MS-09): o voto da Hana aparece para o Gil em tempo real, com o nome de quem votou.
-  await gil.page.getByRole("button", { name: "Nova enquete" }).click()
+  await chooseAttachment(gil.page, "Enquete")
   const pollDialog = gil.page.getByRole("dialog", { name: "Nova enquete" })
   await pollDialog.getByLabel("Pergunta").fill("Onde vamos?")
   await pollDialog.getByLabel("Opção 1").fill("Praia")

@@ -269,7 +269,10 @@ test("aparência: papel de parede, fonte e densidade", async ({
     await page.getByRole("combobox", { name: label }).click()
     await page.getByRole("option", { name: option, exact: true }).click()
   }
-  await choose("Papel de parede da conversa", "Pontos")
+  const wallpapers = page.getByRole("radiogroup", {
+    name: "Papel de parede da conversa",
+  })
+  await wallpapers.getByRole("radio", { name: "Pontos" }).click()
   await choose("Tamanho da fonte", "Grande")
   await choose("Densidade", "Compacta")
   const html = page.locator("html")
@@ -307,7 +310,10 @@ test("aparência: papel de parede, fonte e densidade", async ({
   await expectNoSeriousA11yViolations(page)
 
   await page.goto("/settings/appearance")
-  await choose("Papel de parede da conversa", "Nenhum")
+  await page
+    .getByRole("radiogroup", { name: "Papel de parede da conversa" })
+    .getByRole("radio", { name: "Padrão" })
+    .click()
   await choose("Tamanho da fonte", "Normal")
   await choose("Densidade", "Confortável")
   await context.close()

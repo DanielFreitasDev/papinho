@@ -13,22 +13,26 @@ function press(target: Element, x = 10, y = 5) {
   )
 }
 
-function host(markup: string) {
-  document.body.innerHTML = markup
-  const element = document.querySelector<HTMLElement>("[data-ripple]")!
+/** Botão com data-ripple (e um filho, para tocar nele) de 40 × 20 px. */
+function host({ disabled = false } = {}) {
+  const element = document.createElement("button")
+  element.dataset.ripple = ""
+  element.disabled = disabled
+  element.append(document.createElement("span"))
   element.getBoundingClientRect = () => new DOMRect(0, 0, 40, 20)
+  document.body.replaceChildren(element)
   return element
 }
 
 describe("onda de toque", () => {
   afterEach(() => {
     vi.unstubAllGlobals()
-    document.body.innerHTML = ""
+    document.body.replaceChildren()
   })
 
   it("cresce a partir do ponto tocado, também tocando num filho", () => {
     installRipple()
-    const button = host("<button data-ripple><span>Ok</span></button>")
+    const button = host()
     press(button.querySelector("span")!, 10, 5)
     expect(button).toHaveAttribute("data-rippling")
     expect(button.style.getPropertyValue("--ripple-x")).toBe("10px")
@@ -41,14 +45,14 @@ describe("onda de toque", () => {
 
   it("não acontece em elemento desabilitado nem com movimento reduzido", () => {
     installRipple()
-    const disabled = host("<button data-ripple disabled>Ok</button>")
+    const disabled = host({ disabled: true })
     press(disabled)
     expect(disabled).not.toHaveAttribute("data-rippling")
 
     vi.stubGlobal("matchMedia", (query: string) => ({
       matches: query.includes("reduce"),
     }))
-    const button = host("<button data-ripple>Ok</button>")
+    const button = host()
     press(button)
     expect(button).not.toHaveAttribute("data-rippling")
   })

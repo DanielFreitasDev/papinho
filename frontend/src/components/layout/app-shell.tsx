@@ -64,6 +64,7 @@ import {
   ScreenLockGate,
   usePrivateMode,
 } from "@/features/privacy"
+import { emitShortcut, matchShortcut, useShortcut } from "@/lib/shortcuts"
 import { CommandPalette } from "./command-palette"
 import { ShortcutsDialog } from "./shortcuts-dialog"
 import { ConnectionBanner } from "./connection-banner"
@@ -121,12 +122,19 @@ function SignedInShell({ me }: { me: Me }) {
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
 
-  // Atalhos globais (MS-13): Ctrl/Cmd+K abre a paleta; "?" fora de um campo de texto mostra a lista.
+  // Atalhos globais (MS-13): Ctrl/Cmd+K abre a paleta; "?" fora de um campo de texto mostra a lista; os do WhatsApp
+  // (lib/shortcuts.ts) vão para quem sabe fazer a ação.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
         event.preventDefault()
         setPaletteOpen((open) => !open)
+        return
+      }
+      const shortcut = matchShortcut(event)
+      if (shortcut) {
+        event.preventDefault()
+        emitShortcut(shortcut)
         return
       }
       const target = event.target as HTMLElement | null
@@ -142,6 +150,58 @@ function SignedInShell({ me }: { me: Me }) {
     return () => window.removeEventListener("keydown", onKey)
   }, [])
 
+  const [tab, setTab] = useState("conversations")
+
+  // Atalhos do WhatsApp que são do app inteiro (os da conversa aberta ficam na conversa).
+  const conversationId = /^\/c\/([^/]+)/.exec(pathname)?.[1] ?? null
+  const showSidebar = () => {
+    if (!window.matchMedia("(min-width: 48rem)").matches && !isHome) {
+      void navigate({ to: "/" })
+    }
+  }
+  useShortcut("newChat", () => {
+    showSidebar()
+    setTab("contacts")
+  })
+  useShortcut("newGroup", () => setGroupOpen(true))
+  useShortcut("profile", () => void navigate({ to: "/settings/profile" }))
+  useShortcut("settings", () => void navigate({ to: "/settings/account" }))
+  useShortcut("search", () => {
+    showSidebar()
+    setTab("conversations")
+    // A lista pode estar entrando na tela (celular): o foco vai no quadro seguinte.
+    window.requestAnimationFrame(() =>
+      document
+        .querySelector<HTMLInputElement>('aside [role="search"] input')
+        ?.focus()
+    )
+  })
+  const goToSibling = (step: 1 | -1) => {
+    const order = (conversations.data ?? []).filter(
+      (conversation) => !conversation.organization.archived
+    )
+    if (order.length === 0) {
+      return
+    }
+    const index = order.findIndex(
+      (conversation) => conversation.id === conversationId
+    )
+    const next =
+      order[
+        index === -1
+          ? step === 1
+            ? 0
+            : order.length - 1
+          : (index + step + order.length) % order.length
+      ]
+    void navigate({
+      to: "/c/$conversationId",
+      params: { conversationId: next.id },
+    })
+  }
+  useShortcut("nextChat", () => goToSibling(1))
+  useShortcut("previousChat", () => goToSibling(-1))
+
   async function openSavedMessages() {
     try {
       const saved = await openSaved.mutateAsync()
@@ -156,7 +216,6 @@ function SignedInShell({ me }: { me: Me }) {
       })
     }
   }
-  const [tab, setTab] = useState("conversations")
   const { account, profile } = me
 
   return (

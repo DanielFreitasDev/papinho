@@ -768,7 +768,24 @@
     "newLine": "Quebrar linha",
     "pasteImage": "Colar imagem ou arquivo no campo",
     "dragHint": "Também dá para arrastar e soltar arquivos na conversa.",
-    "privateMode": "Ligar ou desligar o modo privado (desfoque)"
+    "privateMode": "Ligar ou desligar o modo privado (desfoque)",
+    "groupMessage": "Mensagem",
+    "groupConversation": "Conversa aberta",
+    "groupApp": "App",
+    "action": {
+      "markUnread": "Marcar como não lida",
+      "archive": "Arquivar ou desarquivar",
+      "pin": "Fixar ou desafixar",
+      "search": "Buscar conversas e mensagens",
+      "searchChat": "Buscar nesta conversa",
+      "newChat": "Nova conversa (contatos)",
+      "nextChat": "Próxima conversa",
+      "previousChat": "Conversa anterior",
+      "newGroup": "Novo grupo",
+      "profile": "Perfil e recado",
+      "settings": "Configurações",
+      "emoji": "Painel de emojis"
+    }
   },
   "poll": {
     "new": "Nova enquete",

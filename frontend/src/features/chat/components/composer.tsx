@@ -48,6 +48,7 @@ import {
 } from "@/features/sticker"
 import { enterSends, replaceEmoticon, useChatPrefs } from "@/lib/chat-prefs"
 import { realtime } from "@/lib/realtime"
+import { useShortcut } from "@/lib/shortcuts"
 import { playSendSound } from "@/lib/sounds"
 import { saveDraft } from "../api"
 import { markSendOrigin } from "../send-flight"
@@ -200,6 +201,12 @@ export function Composer({
     }
   }
   const [emojiOpen, setEmojiOpen] = useState(false)
+  // Ctrl+Alt+E abre o painel de emojis, como no WhatsApp.
+  useShortcut("emoji", () => {
+    if (!disabled && !recording) {
+      setEmojiOpen(true)
+    }
+  })
   const [managingStickers, setManagingStickers] = useState(false)
   const gifStatus = useQuery({
     ...stickerQueries.gifStatus(),

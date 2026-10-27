@@ -96,6 +96,8 @@ import { cancelFile, retryFile, sendFile } from "../attachments"
 import { AttachDialog } from "./attach-dialog"
 import { Composer } from "./composer"
 import { flyBubble, takeSendOrigin } from "../send-flight"
+import { useListAction } from "../organization"
+import { useShortcut } from "@/lib/shortcuts"
 import { DeleteMessagesDialog } from "./delete-messages-dialog"
 import { ImageViewer } from "./image-viewer"
 import { BroadcastDetails } from "./broadcast-details"
@@ -1006,6 +1008,41 @@ function LoadedConversation({
     : conversation.broadcast
       ? t("broadcast.info")
       : t("chat.contactInfo")
+  // Atalhos do WhatsApp para a conversa aberta (lib/shortcuts.ts).
+  const listAction = useListAction()
+  useShortcut("searchChat", () => setSearchOpen(true))
+  useShortcut("markUnread", () =>
+    conversationAction.mutate(
+      { conversationId: conversation.id, action: "unread" },
+      {
+        onSuccess: () => toast.add({ title: t("chat.markedUnread") }),
+        onError: showError,
+      }
+    )
+  )
+  useShortcut("archive", () => {
+    const archived = conversation.organization.archived
+    listAction.mutate(
+      { conversationId: conversation.id, action: "archive", on: !archived },
+      {
+        onSuccess: () =>
+          toast.add({
+            title: t(archived ? "organize.unarchived" : "organize.archived"),
+          }),
+        onError: showError,
+      }
+    )
+  })
+  useShortcut("pin", () =>
+    listAction.mutate(
+      {
+        conversationId: conversation.id,
+        action: "pin",
+        on: conversation.organization.pinnedAt === null,
+      },
+      { onError: showError }
+    )
+  )
   // Primeiros itens do menu da conversa (⋮ do cabeçalho e botão direito no fundo), antes dos da lista.
   const conversationLeading = (
     <>

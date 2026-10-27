@@ -768,7 +768,24 @@
     "newLine": "New line",
     "pasteImage": "Paste an image or file in the field",
     "dragHint": "You can also drag and drop files into the chat.",
-    "privateMode": "Turn private mode (blur) on or off"
+    "privateMode": "Turn private mode (blur) on or off",
+    "groupMessage": "Message",
+    "groupConversation": "Open chat",
+    "groupApp": "App",
+    "action": {
+      "markUnread": "Mark as unread",
+      "archive": "Archive or unarchive",
+      "pin": "Pin or unpin",
+      "search": "Search chats and messages",
+      "searchChat": "Search in this chat",
+      "newChat": "New chat (contacts)",
+      "nextChat": "Next chat",
+      "previousChat": "Previous chat",
+      "newGroup": "New group",
+      "profile": "Profile and about",
+      "settings": "Settings",
+      "emoji": "Emoji panel"
+    }
   },
   "poll": {
     "new": "New poll",

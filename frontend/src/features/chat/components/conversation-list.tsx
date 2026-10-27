@@ -290,6 +290,7 @@ export function ConversationList({
         <button
           type="button"
           onClick={() => setFilter({ kind: "archived" })}
+          data-ripple=""
           className="flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50"
         >
           <ArchiveIcon aria-hidden="true" className="size-5" />
@@ -314,6 +315,7 @@ export function ConversationList({
       {main && filter.kind === "all" && lockedTotal > 0 ? (
         <Link
           to="/locked"
+          data-ripple=""
           className="flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50"
         >
           <LockKeyholeIcon aria-hidden="true" className="size-5" />
@@ -323,6 +325,7 @@ export function ConversationList({
       {main && filter.kind === "all" && requestCount > 0 ? (
         <Link
           to="/requests"
+          data-ripple=""
           className="flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50"
         >
           <InboxIcon aria-hidden="true" className="size-5" />
@@ -452,6 +455,7 @@ function ConversationItem({
         params={{ conversationId: conversation.id }}
         aria-current={active ? "page" : undefined}
         data-private-scope=""
+        data-ripple=""
         className="flex min-h-14 min-w-0 flex-1 items-center gap-3 rounded-md px-3 py-2 outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
       >
         <ConversationAvatar conversation={conversation} className="size-10" />

@@ -123,6 +123,8 @@ function SelectItem({
   return (
     <SelectPrimitive.Item
       data-slot="select-item"
+      // custom: onda de toque do app (lib/ripple.ts).
+      data-ripple=""
       className={cn(
         "relative flex w-full cursor-default items-center gap-(--spacing-icon) rounded-md py-2 pr-9 pl-(--spacing-item) text-sm outline-hidden select-none focus:bg-accent focus:text-accent-foreground not-data-[variant=destructive]:focus:**:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
         className

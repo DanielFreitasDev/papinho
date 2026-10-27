@@ -70,6 +70,7 @@ export function AppearanceSettings() {
             {THEMES.map(({ value, icon: Icon }) => (
               <label
                 key={value}
+                data-ripple=""
                 className="group/theme flex cursor-pointer flex-col items-center gap-1.5 rounded-xl border bg-card px-2 py-3 text-sm transition-[border-color,background-color,transform] duration-(--duration-fast) active:scale-[0.97] has-focus-visible:ring-3 has-focus-visible:ring-ring/50 has-data-checked:border-primary has-data-checked:bg-primary/10 has-data-checked:font-medium pointer-coarse:min-h-11 [@media(hover:hover)]:hover:bg-muted"
               >
                 <Radio.Root value={value} className="sr-only" />

@@ -667,6 +667,48 @@ html.dark[data-palette]:not([data-palette="grafite"]) {
   }
 }
 
+/*
+ * Onda de toque (lib/ripple.ts): em botões, itens de menu e de lista, um círculo com a cor do texto cresce a partir do
+ * ponto tocado e some. overflow: clip prende a onda à forma do elemento sem virar área de rolagem (nem mudar a linha de
+ * base). Nas camadas: o position e o overflow de um utilitário (absolute, por exemplo) continuam valendo.
+ */
+@layer components {
+  [data-ripple] {
+    position: relative;
+    overflow: clip;
+  }
+  [data-ripple]::after {
+    content: "";
+    position: absolute;
+    left: var(--ripple-x, 50%);
+    top: var(--ripple-y, 50%);
+    width: var(--ripple-size, 0px);
+    height: var(--ripple-size, 0px);
+    margin: calc(var(--ripple-size, 0px) / -2) 0 0 calc(var(--ripple-size, 0px) / -2);
+    border-radius: 9999px;
+    background-color: currentColor;
+    opacity: 0;
+    transform: scale(0);
+    pointer-events: none;
+  }
+  [data-ripple][data-rippling]::after {
+    animation: ripple var(--duration-slow) var(--ease-standard);
+  }
+}
+@keyframes ripple {
+  from {
+    opacity: 0.18;
+    transform: scale(0.05);
+  }
+  60% {
+    opacity: 0.12;
+  }
+  to {
+    opacity: 0;
+    transform: scale(1);
+  }
+}
+
 /* Troca de tema sem animar cores (ver components/theme-provider.tsx). */
 .theme-switching *,
 .theme-switching *::before,

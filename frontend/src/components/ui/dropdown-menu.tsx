@@ -5,6 +5,8 @@ import { Menu as MenuPrimitive } from "@base-ui/react/menu"
 import { cn } from "cn"
 import { ChevronRightIcon, CheckIcon } from "lucide-react"
 
+// custom: itens com a onda de toque do app (data-ripple, lib/ripple.ts).
+
 /** Distância mínima entre o menu e a borda da tela (px). */
 const COLLISION_PADDING = 12
 
@@ -93,6 +95,7 @@ function DropdownMenuItem({
   return (
     <MenuPrimitive.Item
       data-slot="dropdown-menu-item"
+      data-ripple=""
       data-inset={inset}
       data-variant={variant}
       className={cn(
@@ -119,6 +122,7 @@ function DropdownMenuSubTrigger({
   return (
     <MenuPrimitive.SubmenuTrigger
       data-slot="dropdown-menu-sub-trigger"
+      data-ripple=""
       data-inset={inset}
       className={cn(
         "flex cursor-default items-center gap-(--spacing-icon) rounded-md px-(--spacing-item) py-2 text-sm outline-hidden select-none focus:bg-accent focus:text-accent-foreground not-data-[variant=destructive]:focus:**:text-accent-foreground data-inset:pl-10 data-popup-open:bg-accent data-popup-open:text-accent-foreground data-open:bg-accent data-open:text-accent-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
@@ -168,6 +172,7 @@ function DropdownMenuCheckboxItem({
   return (
     <MenuPrimitive.CheckboxItem
       data-slot="dropdown-menu-checkbox-item"
+      data-ripple=""
       data-inset={inset}
       className={cn(
         "relative flex cursor-default items-center gap-(--spacing-icon) rounded-md py-2 pr-9 pl-(--spacing-item) text-sm outline-hidden select-none focus:bg-accent focus:text-accent-foreground focus:**:text-accent-foreground data-inset:pl-10 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
@@ -209,6 +214,7 @@ function DropdownMenuRadioItem({
   return (
     <MenuPrimitive.RadioItem
       data-slot="dropdown-menu-radio-item"
+      data-ripple=""
       data-inset={inset}
       className={cn(
         "relative flex cursor-default items-center gap-(--spacing-icon) rounded-md py-2 pr-9 pl-(--spacing-item) text-sm outline-hidden select-none focus:bg-accent focus:text-accent-foreground focus:**:text-accent-foreground data-inset:pl-10 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",

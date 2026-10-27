@@ -53,6 +53,8 @@ function Button({
   return (
     <ButtonPrimitive
       data-slot="button"
+      // custom: onda de toque do app (lib/ripple.ts), menos no botão com cara de link.
+      data-ripple={variant === "link" ? undefined : ""}
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
     />

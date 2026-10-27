@@ -124,6 +124,7 @@ export function ContactList({
           <Item
             key={contact.userId}
             size="sm"
+            data-ripple={onOpen ? "" : undefined}
             className={onOpen ? "relative hover:bg-muted" : undefined}
           >
             <ItemMedia>

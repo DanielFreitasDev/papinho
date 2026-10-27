@@ -40,7 +40,9 @@
 | 🔒 **Privacidade aplicada no servidor** | Visto por último, online, foto, recado e confirmação de leitura com reciprocidade; ninguém burla pelo navegador. |
 | 🙈 **Modo privado e conversas trancadas** | Desfoque de mensagens, nomes e mídia (Alt+Shift+P), bloqueio de tela por PIN e conversas que só abrem com código. |
 | ⚡ **Tempo real e offline** | STOMP sobre WebSocket com sincronização por sequência; PWA instalável, conversas recentes offline e fila de envio. |
-| 👥 **Tudo de um mensageiro moderno** | Grupos com admins e convite por QR Code, transmissões, enquetes, figurinhas, temporárias, agendadas e visualização única. |
+| 💬 **Com a cara do WhatsApp** | Microfone dentro da caixa de texto, mensagem que voa até o lugar dela, reações, foto de quem fala no grupo, menu de anexos e os atalhos do WhatsApp Web. |
+| 🎨 **Do seu jeito** | Oito paletas de cor para o app inteiro, no claro e no escuro, e papel de parede com desenhos, cores, degradês ou uma foto sua (que não sai do aparelho). |
+| 👥 **Tudo de um mensageiro moderno** | Grupos com admins e convite por QR Code, transmissões, enquetes, figurinhas, temporárias, agendadas, visualização única e listas personalizadas. |
 | 🎙️ **Áudio com transcrição** | Whisper no próprio navegador (o áudio não sai do aparelho) ou um provedor compatível com a API da OpenAI. |
 | 🔑 **Login sem senha** | Passkeys (WebAuthn), verificação em duas etapas (TOTP) com códigos de recuperação e sessão por cookie. |
 | 🔔 **Notificações push** | Web Push cifrado até o navegador, com opção de mostrar só "Nova mensagem". |
@@ -54,8 +56,15 @@
     <td width="50%"><img src="docs/images/desktop-dark.png" alt="Conversa no tema escuro"><p align="center"><sub>Tema escuro</sub></p></td>
   </tr>
   <tr>
+    <td width="50%"><img src="docs/images/grupo.png" alt="Conversa em grupo com a foto e o nome colorido de quem mandou e reações"><p align="center"><sub>Grupos: foto e nome de quem fala, reações</sub></p></td>
     <td width="50%"><img src="docs/images/modo-privado.png" alt="Modo privado desfocando mensagens e prévias"><p align="center"><sub>Modo privado: desfoca mensagens e prévias</sub></p></td>
-    <td width="50%"><img src="docs/images/grupo.png" alt="Conversa em grupo"><p align="center"><sub>Grupos</sub></p></td>
+  </tr>
+  <tr>
+    <td colspan="2"><img src="docs/images/temas.png" alt="A mesma conversa em quatro paletas e papéis de parede: Oceano, Lavanda, Coral e Rosa"><p align="center"><sub>Paletas de cor e papéis de parede, no claro e no escuro</sub></p></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/images/aparencia.png" alt="Configurações de aparência com o tema, as cores do app e o papel de parede com prévia"><p align="center"><sub>Aparência: tema, cores do app e papel de parede</sub></p></td>
+    <td width="50%"><img src="docs/images/anexos.png" alt="Menu de anexos com documento, fotos e vídeos, câmera, áudio, enquete e figurinhas"><p align="center"><sub>Menu de anexos</sub></p></td>
   </tr>
 </table>
 
@@ -192,7 +201,8 @@ cada um). Em Configurações > Privacidade também ficam:
 
 Cada pessoa organiza a própria lista: arquivar (com "manter arquivadas ao receber nova mensagem"), fixar até 3,
 silenciar por 8 horas, 1 semana ou sempre (com a opção de ainda avisar menções), favoritar, listas personalizadas
-(em Configurações > Conversas), limpar e apagar conversa. A busca usa o PostgreSQL com `unaccent`, `pg_trgm` e a
+(pelo **+** da barra de filtros, por "Adicionar à lista" no menu da conversa ou em Configurações > Conversas), marcar
+todas como lidas, limpar e apagar conversa. Os filtros mostram quantas conversas têm mensagens não lidas. A busca usa o PostgreSQL com `unaccent`, `pg_trgm` e a
 configuração `portuguese` (as extensões são criadas pela migração; o usuário do banco precisa poder criá-las ou
 elas devem existir antes). Busca dentro da conversa por texto, remetente, dia e tipo.
 
@@ -207,6 +217,38 @@ desativar a conta cortam o push daquele aparelho.
 Segurança da conta: adicionar uma passkey ou ativar a verificação em duas etapas pede a senha digitada nos últimos
 5 minutos (o login por senha conta); assim, quem usar o aparelho destravado de alguém não deixa uma forma própria de
 entrar. Cada código do app autenticador vale uma vez só no login.
+
+### Aparência, digitação e atalhos
+
+Em Configurações > Aparência:
+
+- **Tema** claro, escuro ou do sistema.
+- **Cores do app**: oito paletas (Papinho, Oceano, Lavanda, Rosa, Coral, Âmbar, Água-marinha e Vinho) mudam a cor
+  de destaque, os fundos e a barra lateral; Grafite é o preto e branco. O contraste de texto e fundo fica em 4,5:1
+  ou mais em todas.
+- **Papel de parede**: desenhos como os do WhatsApp por cima da cor da conversa, 12 cores, 4 degradês, padrões ou
+  **uma foto sua**. A foto fica só neste navegador (redesenhada sem os dados de localização), nunca vai ao servidor
+  e é apagada ao sair da conta; dá para escurecê-la.
+- Tamanho da fonte e densidade.
+
+Em Configurações > Conversas, "Digitação e envio": enviar com Enter (no automático, só com teclado físico),
+verificação ortográfica, trocar `:)` por 🙂 ao digitar e som ao enviar mensagens. Essas escolhas valem para o
+aparelho.
+
+Os atalhos de teclado são os do WhatsApp Web (no Mac, ⌘ no lugar do Ctrl); `?` mostra a lista completa:
+
+| Atalho | Ação |
+|---|---|
+| Ctrl+K | Paleta de comandos |
+| Ctrl+Alt+/ | Buscar conversas e mensagens |
+| Ctrl+Shift+F | Buscar na conversa aberta |
+| Ctrl+Alt+N / Ctrl+Alt+Shift+N | Nova conversa / novo grupo |
+| Ctrl+Alt+Shift+] / [ | Próxima / conversa anterior |
+| Ctrl+Alt+Shift+U, E, P | Marcar como não lida, arquivar, fixar |
+| Ctrl+Alt+E | Painel de emojis |
+| Ctrl+Alt+P / Ctrl+Alt+, | Perfil / configurações |
+| Alt+Shift+P | Modo privado |
+| Esc | Fecha o que está aberto e, sem nada aberto, sai da conversa |
 
 ### App instalável e offline
 

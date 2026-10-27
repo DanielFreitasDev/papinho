@@ -518,14 +518,16 @@ export function VoiceRecorder({
   return (
     <>
       {status}
+      {/* Dentro da pílula do campo, como no WhatsApp: a bola acende com o mouse em cima e ao pressionar. */}
       <Button
         ref={micButton}
         type="button"
+        variant="ball"
         size="icon"
         aria-label={t("audio.record")}
         disabled={disabled}
         className={cn(
-          "size-11 touch-none rounded-full select-none",
+          "size-10 touch-none select-none",
           animateIn && "animate-pop"
         )}
         onContextMenu={(event) => event.preventDefault()}

@@ -19,6 +19,9 @@ const buttonVariants = cva(
         destructive:
           "bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
         link: "text-primary underline-offset-4 hover:underline",
+        // custom: ícone redondo como no WhatsApp: com o mouse em cima, ao pressionar e com o menu aberto, uma bola
+        // acende atrás dele (classe icon-ball do index.css; clara no tema escuro).
+        ball: "icon-ball rounded-full text-muted-foreground hover:text-foreground aria-expanded:text-foreground data-popup-open:text-foreground",
       },
       size: {
         default:

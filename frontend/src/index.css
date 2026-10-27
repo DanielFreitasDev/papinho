@@ -303,6 +303,9 @@
   /* Marca-texto da busca (GR-06): amarelo com texto quase preto, bem acima de 4,5:1 nos dois temas. */
   --highlight: oklch(0.905 0.182 98.111);
   --highlight-foreground: oklch(0.145 0 0);
+  /* Bola que acende atrás dos ícones redondos (variante ball do Button): escura no claro, branca no escuro. */
+  --ball: color-mix(in oklch, var(--foreground) 9%, transparent);
+  --ball-pressed: color-mix(in oklch, var(--foreground) 15%, transparent);
 }
 
 .dark {
@@ -341,6 +344,8 @@
   /* No escuro, um amarelo mais fechado: não ofusca sobre o fundo escuro e mantém o texto escuro legível. */
   --highlight: oklch(0.795 0.184 86.047);
   --highlight-foreground: oklch(0.145 0 0);
+  --ball: oklch(1 0 0 / 14%);
+  --ball-pressed: oklch(1 0 0 / 24%);
 }
 
 @layer base {
@@ -466,6 +471,50 @@
     display: none;
   }
 }
+/*
+ * Ícone redondo (variante ball do Button), como no WhatsApp: a bola cresce atrás do ícone com o mouse em cima e fica
+ * mais forte ao pressionar ou com o menu dele aberto. No toque não há hover (Tailwind e @media), só o pressionar.
+ */
+@layer components {
+  .icon-ball {
+    isolation: isolate;
+    position: relative;
+  }
+  .icon-ball::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    background-color: var(--ball);
+    opacity: 0;
+    transform: scale(0.55);
+    transition:
+      opacity var(--duration-fast) var(--ease-standard),
+      transform var(--duration-base) var(--ease-spring),
+      background-color var(--duration-fast) var(--ease-standard);
+  }
+  .icon-ball > svg {
+    transition: transform var(--duration-fast) var(--ease-spring);
+  }
+  @media (hover: hover) {
+    .icon-ball:hover::before {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  .icon-ball:active::before,
+  .icon-ball[data-popup-open]::before,
+  .icon-ball[aria-expanded="true"]::before {
+    opacity: 1;
+    transform: none;
+    background-color: var(--ball-pressed);
+  }
+  .icon-ball:active > svg {
+    transform: scale(0.88);
+  }
+}
+
 /* Troca de tema sem animar cores (ver components/theme-provider.tsx). */
 .theme-switching *,
 .theme-switching *::before,

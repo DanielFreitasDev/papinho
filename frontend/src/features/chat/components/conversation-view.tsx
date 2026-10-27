@@ -1036,7 +1036,8 @@ function LoadedConversation({
         }
       }}
     >
-      <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col">
+      {/* O papel de parede fica atrás da conversa inteira (mensagens e campo), como no WhatsApp. */}
+      <div className="chat-wallpaper flex h-full min-h-0 min-w-0 flex-1 flex-col">
         <header className="z-10 flex min-h-14 items-center gap-2 border-b bg-background px-(--spacing-gutter) pt-[env(safe-area-inset-top)]">
           <Link
             to={backTo}
@@ -1208,7 +1209,7 @@ function LoadedConversation({
           </Alert>
         ) : null}
         <MessageScroller
-          className="chat-wallpaper min-h-0 flex-1"
+          className="min-h-0 flex-1"
           onContextMenu={
             conversation.state === "ACTIVE" && selection === null
               ? backgroundMenu.onContextMenu

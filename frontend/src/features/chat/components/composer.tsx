@@ -46,7 +46,9 @@ import {
   stickerQueries,
   type GifResult,
 } from "@/features/sticker"
+import { enterSends, replaceEmoticon, useChatPrefs } from "@/lib/chat-prefs"
 import { realtime } from "@/lib/realtime"
+import { playSendSound } from "@/lib/sounds"
 import { saveDraft } from "../api"
 import { markSendOrigin } from "../send-flight"
 import { plainText } from "../format/parse"
@@ -113,7 +115,7 @@ const ATTACH_KINDS = [
 
 /**
  * Campo de mensagem fora da área rolável (UI.md §8.12), numa pílula como a do WhatsApp: anexar e emojis à esquerda, o
- * microfone (ou o enviar, quando há texto) dentro dela, à direita. Enter envia no computador, Shift+Enter quebra linha;
+ * microfone (ou o enviar, quando há texto) dentro dela, à direita. Enter envia no computador (Configurações > Conversas muda), Shift+Enter quebra linha;
  * no celular o Enter quebra linha e o botão envia. Avisa "digitando…" (MS-03).
  */
 
@@ -163,6 +165,7 @@ export function Composer({
   onGif?: (gif: GifResult) => void
 }) {
   const { t } = useTranslation()
+  const chatPrefs = useChatPrefs()
   const [value, setValue] = useState(draft ?? "")
   // Rascunho sincronizado (MS-11): salvo no servidor um instante depois de parar de digitar.
   const savedDraft = useRef(draft ?? "")
@@ -301,6 +304,9 @@ export function Composer({
       markSendOrigin(textarea.current)
     }
     onSend(body, options)
+    if (chatPrefs.sendSound) {
+      playSendSound()
+    }
     // O servidor apaga o rascunho ao enviar.
     savedDraft.current = ""
     setValue("")
@@ -509,13 +515,29 @@ export function Composer({
             rows={1}
             disabled={disabled}
             enterKeyHint="send"
+            spellCheck={chatPrefs.spellcheck}
             // Uma linha de 24 px com 11 px em cima e embaixo: o texto fica no meio dos 46 px, na altura dos ícones.
             className={cn(
               "field-sizing-content max-h-40 min-h-[calc(3rem-2px)] resize-none py-[11px] leading-6",
               returning &&
                 "animate-in duration-(--duration-base) ease-(--ease-enter) fade-in"
             )}
-            onChange={(event) => typing(event.target.value)}
+            onChange={(event) => {
+              const field = event.target
+              const caret = field.selectionStart ?? field.value.length
+              // ":) " vira "🙂 " ao digitar o espaço (Configurações > Conversas), como no WhatsApp.
+              const replaced =
+                chatPrefs.emojiReplace &&
+                (event.nativeEvent as InputEvent).inputType === "insertText"
+                  ? replaceEmoticon(field.value, caret)
+                  : null
+              typing(replaced?.text ?? field.value)
+              if (replaced) {
+                window.requestAnimationFrame(() =>
+                  field.setSelectionRange(replaced.caret, replaced.caret)
+                )
+              }
+            }}
             onPaste={(event) => {
               const pasted = [...event.clipboardData.files]
               if (pasted.length > 0) {
@@ -528,7 +550,7 @@ export function Composer({
               if (
                 event.key === "Enter" &&
                 !event.shiftKey &&
-                !coarse &&
+                enterSends(chatPrefs, coarse) &&
                 !event.nativeEvent.isComposing
               ) {
                 event.preventDefault()

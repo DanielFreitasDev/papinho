@@ -264,6 +264,18 @@
     "empty": "Nobody blocked",
     "since": "Blocked on {{date}}"
   },
+  "chatPrefs": {
+    "title": "Typing and sending",
+    "description": "Like on WhatsApp; applies to this device.",
+    "enter": "Enter is send",
+    "enterHint": "The Enter key sends the message; Shift+Enter adds a line.",
+    "spellcheck": "Spell check",
+    "spellcheckHint": "Underlines misspelled words as you type.",
+    "emoji": "Replace text with emoji",
+    "emojiHint": "Turns :) into 🙂, <3 into ❤️ and other faces as you type.",
+    "sound": "Sound when sending messages",
+    "soundHint": "A short chime for each message you send."
+  },
   "appearance": {
     "theme": "Theme",
     "light": "Light",

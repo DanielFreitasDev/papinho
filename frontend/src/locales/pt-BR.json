@@ -264,6 +264,18 @@
     "empty": "Ninguém bloqueado",
     "since": "Bloqueado em {{date}}"
   },
+  "chatPrefs": {
+    "title": "Digitação e envio",
+    "description": "Como no WhatsApp; vale para este aparelho.",
+    "enter": "Enviar com Enter",
+    "enterHint": "A tecla Enter envia a mensagem; Shift+Enter quebra a linha.",
+    "spellcheck": "Verificação ortográfica",
+    "spellcheckHint": "Sublinha as palavras com erro enquanto você digita.",
+    "emoji": "Trocar texto por emoji",
+    "emojiHint": "Troca :) por 🙂, <3 por ❤️ e outras carinhas ao digitar.",
+    "sound": "Som ao enviar mensagens",
+    "soundHint": "Um toque curto a cada mensagem enviada."
+  },
   "appearance": {
     "theme": "Tema",
     "light": "Claro",

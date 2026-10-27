@@ -270,6 +270,19 @@
     "dark": "Escuro",
     "system": "Do sistema",
     "language": "Idioma",
+    "palette": "Cores do app",
+    "paletteHint": "Muda a cor de destaque, os fundos e a barra lateral do app inteiro, nos temas claro e escuro.",
+    "palettes": {
+      "papinho": "Papinho",
+      "oceano": "Oceano",
+      "lavanda": "Lavanda",
+      "rosa": "Rosa",
+      "coral": "Coral",
+      "ambar": "Âmbar",
+      "agua": "Água-marinha",
+      "vinho": "Vinho",
+      "grafite": "Grafite"
+    },
     "wallpaper": "Papel de parede da conversa",
     "wallpapers": {
       "none": "Nenhum",

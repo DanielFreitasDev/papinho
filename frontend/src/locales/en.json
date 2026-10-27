@@ -270,6 +270,19 @@
     "dark": "Dark",
     "system": "System",
     "language": "Language",
+    "palette": "App colors",
+    "paletteHint": "Changes the accent color, the backgrounds and the sidebar across the whole app, in light and dark themes.",
+    "palettes": {
+      "papinho": "Papinho",
+      "oceano": "Ocean",
+      "lavanda": "Lavender",
+      "rosa": "Pink",
+      "coral": "Coral",
+      "ambar": "Amber",
+      "agua": "Aquamarine",
+      "vinho": "Wine",
+      "grafite": "Graphite"
+    },
     "wallpaper": "Chat wallpaper",
     "wallpapers": {
       "none": "None",

@@ -249,6 +249,7 @@
   --color-background: var(--background);
   --color-highlight: var(--highlight);
   --color-highlight-foreground: var(--highlight-foreground);
+  --color-chat: var(--chat);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -306,6 +307,8 @@
   /* Bola que acende atrás dos ícones redondos (variante ball do Button): escura no claro, branca no escuro. */
   --ball: color-mix(in oklch, var(--foreground) 9%, transparent);
   --ball-pressed: color-mix(in oklch, var(--foreground) 15%, transparent);
+  /* Fundo da conversa, atrás das bolhas (a recebida usa o cartão; a enviada, a cor da marca clareada). */
+  --chat: oklch(0.965 0 0);
 }
 
 .dark {
@@ -346,6 +349,155 @@
   --highlight-foreground: oklch(0.145 0 0);
   --ball: oklch(1 0 0 / 14%);
   --ball-pressed: oklch(1 0 0 / 24%);
+  --chat: oklch(0.12 0 0);
+}
+
+/*
+ * Paletas de cor (UI-02), escolhidas em Aparência e aplicadas por data-palette no <html> (lib/display-prefs.ts). Cada
+ * paleta só diz a matiz (--hue), a força da cor da marca (--brand-c/--brand-cd) e a luminosidade dela no claro e no
+ * escuro (--brand-l/--brand-ld); todos os tokens saem das fórmulas abaixo, com a matiz também nos fundos, nas bordas e
+ * na barra lateral (o app inteiro muda de cor). "grafite" é o preto e branco original, sem fórmula. Valores conferidos
+ * com contraste de 4,5:1 ou mais em todo par de texto e fundo (cor da marca sobre o fundo, a lateral, o cartão e o
+ * muted; texto apagado sobre os fundos) e dentro do sRGB.
+ */
+html[data-palette="papinho"],
+[data-swatch="palette-papinho"] {
+  --hue: 165;
+  --brand-c: 0.105;
+  --brand-cd: 0.12;
+  --brand-l: 0.5;
+  --brand-ld: 0.75;
+}
+html[data-palette="oceano"],
+[data-swatch="palette-oceano"] {
+  --hue: 250;
+  --brand-c: 0.13;
+  --brand-cd: 0.12;
+  --brand-l: 0.5;
+  --brand-ld: 0.74;
+}
+html[data-palette="lavanda"],
+[data-swatch="palette-lavanda"] {
+  --hue: 295;
+  --brand-c: 0.16;
+  --brand-cd: 0.13;
+  --brand-l: 0.5;
+  --brand-ld: 0.75;
+}
+html[data-palette="rosa"],
+[data-swatch="palette-rosa"] {
+  --hue: 355;
+  --brand-c: 0.16;
+  --brand-cd: 0.14;
+  --brand-l: 0.52;
+  --brand-ld: 0.75;
+}
+html[data-palette="coral"],
+[data-swatch="palette-coral"] {
+  --hue: 35;
+  --brand-c: 0.15;
+  --brand-cd: 0.14;
+  --brand-l: 0.52;
+  --brand-ld: 0.74;
+}
+html[data-palette="ambar"],
+[data-swatch="palette-ambar"] {
+  --hue: 70;
+  --brand-c: 0.1;
+  --brand-cd: 0.12;
+  --brand-l: 0.5;
+  --brand-ld: 0.8;
+}
+html[data-palette="agua"],
+[data-swatch="palette-agua"] {
+  --hue: 205;
+  --brand-c: 0.085;
+  --brand-cd: 0.1;
+  --brand-l: 0.5;
+  --brand-ld: 0.76;
+}
+html[data-palette="vinho"],
+[data-swatch="palette-vinho"] {
+  --hue: 15;
+  --brand-c: 0.14;
+  --brand-cd: 0.12;
+  --brand-l: 0.44;
+  --brand-ld: 0.72;
+}
+html[data-palette]:not([data-palette="grafite"]) {
+  --background: oklch(0.99 0.005 var(--hue));
+  --foreground: oklch(0.18 0.015 var(--hue));
+  --card: oklch(1 0 0);
+  --card-foreground: var(--foreground);
+  --popover: oklch(1 0 0);
+  --popover-foreground: var(--foreground);
+  --primary: oklch(var(--brand-l) var(--brand-c) var(--hue));
+  --primary-foreground: oklch(0.99 0.008 var(--hue));
+  --secondary: oklch(0.955 0.016 var(--hue));
+  --secondary-foreground: oklch(0.25 0.04 var(--hue));
+  --muted: oklch(0.955 0.016 var(--hue));
+  --muted-foreground: oklch(0.47 0.025 var(--hue));
+  --accent: oklch(0.94 0.035 var(--hue));
+  --accent-foreground: oklch(0.25 0.04 var(--hue));
+  --border: oklch(0.905 0.016 var(--hue));
+  --input: oklch(0.89 0.018 var(--hue));
+  --ring: oklch(calc(var(--brand-l) + 0.15) calc(var(--brand-c) * 0.8) var(--hue));
+  --sidebar: oklch(0.975 0.01 var(--hue));
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--accent);
+  --sidebar-accent-foreground: var(--accent-foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+  --chat: oklch(0.945 0.022 var(--hue));
+}
+html.dark[data-palette]:not([data-palette="grafite"]) {
+  --background: oklch(0.165 0.014 var(--hue));
+  --foreground: oklch(0.96 0.008 var(--hue));
+  --card: oklch(0.215 0.016 var(--hue));
+  --card-foreground: var(--foreground);
+  --popover: oklch(0.215 0.016 var(--hue));
+  --popover-foreground: var(--foreground);
+  --primary: oklch(var(--brand-ld) var(--brand-cd) var(--hue));
+  --primary-foreground: oklch(0.18 0.03 var(--hue));
+  --secondary: oklch(0.27 0.018 var(--hue));
+  --secondary-foreground: var(--foreground);
+  --muted: oklch(0.27 0.018 var(--hue));
+  --muted-foreground: oklch(0.72 0.02 var(--hue));
+  --accent: oklch(0.3 0.03 var(--hue));
+  --accent-foreground: oklch(0.96 0.01 var(--hue));
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(calc(var(--brand-ld) - 0.15) calc(var(--brand-cd) * 0.8) var(--hue));
+  --sidebar: oklch(0.2 0.016 var(--hue));
+  --chat: oklch(0.14 0.012 var(--hue));
+}
+
+/*
+ * Amostras do seletor de paleta (components/swatch-picker.tsx): cada uma mostra as cores da própria paleta no tema
+ * atual (cor da marca e fundo da conversa), não as da paleta escolhida.
+ */
+@layer components {
+  [data-swatch] {
+    background: linear-gradient(135deg, var(--swatch-a) 0 50%, var(--swatch-b) 50% 100%);
+  }
+  [data-swatch^="palette-"] {
+    --swatch-a: oklch(var(--brand-l) var(--brand-c) var(--hue));
+    --swatch-b: oklch(0.945 0.022 var(--hue));
+  }
+  .dark [data-swatch^="palette-"] {
+    --swatch-a: oklch(var(--brand-ld) var(--brand-cd) var(--hue));
+    --swatch-b: oklch(0.215 0.016 var(--hue));
+  }
+  [data-swatch="palette-grafite"] {
+    --swatch-a: oklch(0.205 0 0);
+    --swatch-b: oklch(0.965 0 0);
+  }
+  .dark [data-swatch="palette-grafite"] {
+    --swatch-a: oklch(0.922 0 0);
+    --swatch-b: oklch(0.205 0 0);
+  }
 }
 
 @layer base {
@@ -658,6 +810,9 @@ html[data-density="compact"] [data-slot="bubble-content"] {
   padding-block: 0.25rem;
 }
 /* Papel de parede da conversa: padrões leves com as cores do tema, legíveis nos dois temas. */
+.chat-wallpaper {
+  background-color: var(--chat);
+}
 html[data-wallpaper="dots"] .chat-wallpaper {
   background-image: radial-gradient(
     color-mix(in oklch, var(--foreground) 9%, transparent) 1px,

@@ -1,7 +1,17 @@
+import { flushSync } from "react-dom"
 import { useTranslation } from "react-i18next"
+import { MonitorSmartphoneIcon, MoonIcon, SunIcon } from "lucide-react"
+import { Radio } from "@base-ui/react/radio"
+import { RadioGroup } from "@base-ui/react/radio-group"
 
-import { useTheme } from "@/components/theme-provider"
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
+import { SwatchPicker } from "@/components/swatch-picker"
+import { revealAppearance, useTheme } from "@/components/theme-provider"
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field"
 import {
   Select,
   SelectContent,
@@ -13,6 +23,7 @@ import {
 import {
   DENSITIES,
   FONT_SIZES,
+  PALETTES,
   WALLPAPERS,
   setDisplayPrefs,
   useDisplayPrefs,
@@ -25,19 +36,20 @@ const LANGUAGE_NAMES: Record<Language, string> = {
   en: "English",
 }
 
+const THEMES = [
+  { value: "light", icon: SunIcon },
+  { value: "dark", icon: MoonIcon },
+  { value: "system", icon: MonitorSmartphoneIcon },
+] as const
+
 /**
- * Tema claro, escuro ou do sistema, idioma (IN-01), papel de parede, tamanho da fonte e densidade (UI-02); as três
- * últimas valem para este aparelho.
+ * Tema claro, escuro ou do sistema, paleta de cor, idioma (IN-01), papel de parede, tamanho da fonte e densidade
+ * (UI-02); paleta, papel de parede, fonte e densidade valem para este aparelho.
  */
 export function AppearanceSettings() {
   const { t } = useTranslation()
   const { theme, setTheme } = useTheme()
   const display = useDisplayPrefs()
-  const themes = [
-    { value: "system", label: t("appearance.system") },
-    { value: "light", label: t("appearance.light") },
-    { value: "dark", label: t("appearance.dark") },
-  ]
   const languages = SUPPORTED_LANGUAGES.map((value) => ({
     value,
     label: LANGUAGE_NAMES[value],
@@ -47,27 +59,49 @@ export function AppearanceSettings() {
     <SettingsSection title={t("settings.appearance")}>
       <FieldGroup>
         <Field>
-          <FieldLabel htmlFor="appearance-theme">
-            {t("appearance.theme")}
-          </FieldLabel>
-          <Select
-            items={themes}
+          <FieldLabel id="appearance-theme">{t("appearance.theme")}</FieldLabel>
+          {/* Três cartões com ícone (como a escolha de tema do WhatsApp), um grupo de rádios. */}
+          <RadioGroup
+            aria-labelledby="appearance-theme"
             value={theme}
             onValueChange={(value) => setTheme(value as typeof theme)}
+            className="grid grid-cols-3 gap-2 sm:max-w-md"
           >
-            <SelectTrigger id="appearance-theme" className="w-full sm:w-64">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                {themes.map((item) => (
-                  <SelectItem key={item.value} value={item.value}>
-                    {item.label}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
+            {THEMES.map(({ value, icon: Icon }) => (
+              <label
+                key={value}
+                className="group/theme flex cursor-pointer flex-col items-center gap-1.5 rounded-xl border bg-card px-2 py-3 text-sm transition-[border-color,background-color,transform] duration-(--duration-fast) active:scale-[0.97] has-focus-visible:ring-3 has-focus-visible:ring-ring/50 has-data-checked:border-primary has-data-checked:bg-primary/10 has-data-checked:font-medium pointer-coarse:min-h-11 [@media(hover:hover)]:hover:bg-muted"
+              >
+                <Radio.Root value={value} className="sr-only" />
+                <Icon
+                  aria-hidden="true"
+                  className="size-5 transition-transform duration-(--duration-base) ease-(--ease-spring) group-has-data-checked/theme:scale-110 group-has-data-checked/theme:text-primary"
+                />
+                {t(`appearance.${value}`)}
+              </label>
+            ))}
+          </RadioGroup>
+        </Field>
+        <Field>
+          <FieldLabel id="appearance-palette">
+            {t("appearance.palette")}
+          </FieldLabel>
+          <FieldDescription>{t("appearance.paletteHint")}</FieldDescription>
+          <SwatchPicker
+            label={t("appearance.palette")}
+            value={display.palette}
+            options={PALETTES.map((value) => ({
+              value,
+              label: t(`appearance.palettes.${value}`),
+              swatch: `palette-${value}`,
+            }))}
+            onChange={(palette) =>
+              // O app inteiro muda de cor num círculo que cresce a partir do toque, como na troca de tema.
+              revealAppearance(() =>
+                flushSync(() => setDisplayPrefs({ palette }))
+              )
+            }
+          />
         </Field>
         <Field>
           <FieldLabel htmlFor="appearance-language">

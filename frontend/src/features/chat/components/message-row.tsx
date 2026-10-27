@@ -239,7 +239,7 @@ function MessageRowView({
         {/* Com reações, a bolha reserva embaixo a metade da pílula mais o anel: cada linha da lista tem
             content-visibility (contenção de pintura), e o que passa da caixa dela não aparece. */}
         <Bubble
-          variant={mine ? "tinted" : "muted"}
+          variant={mine ? "tinted" : "incoming"}
           align={mine ? "end" : "start"}
           className={cn("max-w-full", grouped.length > 0 && "mb-4")}
           data-flash={flash ? "" : undefined}
@@ -383,7 +383,7 @@ function MessageRowView({
             <BubbleReactions
               align="start"
               aria-label={t("chat.reactions")}
-              className="translate-y-1/2"
+              className="translate-y-1/2 bg-card shadow-xs ring-chat"
             >
               {grouped.map(([emoji, count]) => (
                 <ReactionChip
@@ -623,7 +623,7 @@ function DeletedRow({
       ) : null}
       <MessageContent className="min-w-0">
         <Bubble
-          variant={mine ? "tinted" : "muted"}
+          variant={mine ? "tinted" : "incoming"}
           align={mine ? "end" : "start"}
           className="max-w-[min(80%,36rem)]"
         >

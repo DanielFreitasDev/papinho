@@ -84,6 +84,21 @@ function revealTheme(update: () => void) {
   })
 }
 
+/**
+ * Muda outra coisa da aparência (a paleta de cor) com o mesmo círculo da troca de tema. Sem suporte no navegador ou
+ * com movimento reduzido, muda direto. O update precisa deixar o DOM pronto (flushSync no estado do React).
+ */
+export function revealAppearance(update: () => void) {
+  if (
+    prefersReducedMotion() ||
+    typeof document.startViewTransition !== "function"
+  ) {
+    update()
+    return
+  }
+  revealTheme(update)
+}
+
 export function ThemeProvider({
   children,
   defaultTheme = "system",

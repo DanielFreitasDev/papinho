@@ -293,6 +293,37 @@ export function markRead(queryClient: QueryClient, id: string, seq: number) {
   }).then(() => refreshQueries(queryClient, chatKeys.conversations))
 }
 
+/**
+ * "Marcar todas como lidas" (menu principal, como no WhatsApp): lê até a última mensagem de cada conversa com não
+ * lidas, ou marcada como não lida, e recarrega a lista uma vez só no fim. Rejeita se alguma falhar.
+ */
+export async function markAllRead(
+  queryClient: QueryClient,
+  conversations: Conversation[]
+) {
+  const pending = conversations.filter(
+    (conversation) => conversation.unreadCount > 0 || conversation.markedUnread
+  )
+  const results = await Promise.allSettled(
+    pending.map((conversation) => {
+      deliveredSent.set(
+        conversation.id,
+        Math.max(deliveredSent.get(conversation.id) ?? 0, conversation.lastSeq)
+      )
+      return apiFetch<void>(`/api/v1/conversations/${conversation.id}/read`, {
+        method: "PUT",
+        json: { seq: Math.max(conversation.lastSeq, 1) },
+      })
+    })
+  )
+  await refreshQueries(queryClient, chatKeys.conversations)
+  const failed = results.find((result) => result.status === "rejected")
+  if (failed) {
+    throw failed.reason
+  }
+  return pending.length
+}
+
 function updateMessage(queryClient: QueryClient, message: Message) {
   queryClient.setQueryData<ConversationCache>(
     chatKeys.messages(message.conversationId),

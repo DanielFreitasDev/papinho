@@ -5,10 +5,11 @@ import {
   useNavigate,
   useRouterState,
 } from "@tanstack/react-router"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
 import {
   BookmarkIcon,
+  CheckCheckIcon,
   EllipsisVerticalIcon,
   LockIcon,
   LockKeyholeIcon,
@@ -47,6 +48,7 @@ import {
   BroadcastDialog,
   chatQueries,
   ConversationList,
+  markAllRead,
   NewGroupDialog,
   useOfflineChat,
   useOpenDirect,
@@ -90,6 +92,13 @@ function SignedInShell({ me }: { me: Me }) {
   useOfflineChat(me.account.id, me)
   usePrivateMode()
   const conversations = useQuery(chatQueries.list(false))
+  const queryClient = useQueryClient()
+  const totalUnread = (conversations.data ?? []).reduce(
+    (total, conversation) =>
+      total +
+      (conversation.unreadCount > 0 || conversation.markedUnread ? 1 : 0),
+    0
+  )
   useNotifications(
     (conversations.data ?? []).reduce(
       (total, conversation) => total + conversation.unreadCount,
@@ -248,6 +257,23 @@ function SignedInShell({ me }: { me: Me }) {
                   >
                     <StarIcon />
                     {t("chat.starredMessages")}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    disabled={totalUnread === 0}
+                    onClick={async () => {
+                      try {
+                        await markAllRead(queryClient, conversations.data ?? [])
+                        toast.add({ title: t("chat.allMarkedRead") })
+                      } catch (error) {
+                        toast.add({
+                          title: errorMessage(error, t("common.genericError")),
+                          type: "error",
+                        })
+                      }
+                    }}
+                  >
+                    <CheckCheckIcon />
+                    {t("chat.markAllRead")}
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => void navigate({ to: "/locked" })}

@@ -70,6 +70,7 @@ export function ConversationMenu({
   menu,
   leading,
   trigger = true,
+  triggerLabel,
 }: {
   conversation: Conversation
   label: string
@@ -79,6 +80,8 @@ export function ConversationMenu({
   leading?: ReactNode
   /** Sem o botão ⋮: só o menu do botão direito. */
   trigger?: boolean
+  /** Nome do ⋮ (no cabeçalho da conversa, "Mais opções"; na lista, com o nome da conversa). */
+  triggerLabel?: string
 }) {
   const { t } = useTranslation()
   const action = useListAction()
@@ -118,9 +121,11 @@ export function ConversationMenu({
           <DropdownMenuTrigger
             render={
               <Button
-                variant="ghost"
+                variant="ball"
                 size="icon"
-                aria-label={t("chat.conversationActions", { name: label })}
+                aria-label={
+                  triggerLabel ?? t("chat.conversationActions", { name: label })
+                }
               />
             }
           >

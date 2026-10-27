@@ -1006,6 +1006,27 @@ function LoadedConversation({
     : conversation.broadcast
       ? t("broadcast.info")
       : t("chat.contactInfo")
+  // Primeiros itens do menu da conversa (⋮ do cabeçalho e botão direito no fundo), antes dos da lista.
+  const conversationLeading = (
+    <>
+      <DropdownMenuItem onClick={() => setDetailsOpen(true)}>
+        <InfoIcon />
+        {detailsTitle}
+      </DropdownMenuItem>
+      <DropdownMenuItem onClick={() => setSearchOpen(true)}>
+        <SearchIcon />
+        {t("search.inConversation")}
+      </DropdownMenuItem>
+      <DropdownMenuItem onClick={() => setSelection([])}>
+        <ListChecksIcon />
+        {t("chat.selectMessages")}
+      </DropdownMenuItem>
+      <DropdownMenuItem onClick={() => void navigate({ to: backTo })}>
+        <CircleXIcon />
+        {t("chat.closeConversation")}
+      </DropdownMenuItem>
+    </>
+  )
   const openImage = (list: Attachment[], id: string) => {
     setViewerImages(list)
     setViewerId(id)
@@ -1101,7 +1122,7 @@ function LoadedConversation({
             </button>
           </h1>
           <Button
-            variant="ghost"
+            variant="ball"
             size="icon"
             aria-label={t("search.inConversation")}
             aria-expanded={searchOpen}
@@ -1109,6 +1130,15 @@ function LoadedConversation({
           >
             <SearchIcon />
           </Button>
+          {/* ⋮ como no WhatsApp: o mesmo menu do botão direito no fundo da conversa. */}
+          {conversation.state === "ACTIVE" ? (
+            <ConversationMenu
+              conversation={conversation}
+              label={peerName}
+              triggerLabel={t("chat.moreOptions")}
+              leading={conversationLeading}
+            />
+          ) : null}
         </header>
         {searchOpen ? (
           <ConversationSearch
@@ -1420,28 +1450,7 @@ function LoadedConversation({
               label={peerName}
               menu={backgroundMenu}
               trigger={false}
-              leading={
-                <>
-                  <DropdownMenuItem onClick={() => setDetailsOpen(true)}>
-                    <InfoIcon />
-                    {detailsTitle}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setSearchOpen(true)}>
-                    <SearchIcon />
-                    {t("search.inConversation")}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setSelection([])}>
-                    <ListChecksIcon />
-                    {t("chat.selectMessages")}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => void navigate({ to: backTo })}
-                  >
-                    <CircleXIcon />
-                    {t("chat.closeConversation")}
-                  </DropdownMenuItem>
-                </>
-              }
+              leading={conversationLeading}
             />
           ) : null}
           <MessageScrollerButton

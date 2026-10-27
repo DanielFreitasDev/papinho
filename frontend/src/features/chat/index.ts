@@ -1,4 +1,4 @@
-export { chatKeys, chatQueries, useOpenDirect } from "./api"
+export { chatKeys, chatQueries, markAllRead, useOpenDirect } from "./api"
 export type { Conversation, Message } from "./types"
 export { ConversationList } from "./components/conversation-list"
 export { ConversationView } from "./components/conversation-view"

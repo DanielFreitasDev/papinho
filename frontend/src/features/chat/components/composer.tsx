@@ -43,6 +43,7 @@ import {
 } from "@/features/sticker"
 import { realtime } from "@/lib/realtime"
 import { saveDraft } from "../api"
+import { markSendOrigin } from "../send-flight"
 import { plainText } from "../format/parse"
 import { VoiceRecorder } from "./voice-recorder"
 import type { ReplyPreview } from "../types"
@@ -228,6 +229,10 @@ export function Composer({
     }
     if (body === "" || disabled) {
       return
+    }
+    // A bolha nova voa de onde o texto está agora (send-flight.ts).
+    if (textarea.current) {
+      markSendOrigin(textarea.current)
     }
     onSend(body, options)
     // O servidor apaga o rascunho ao enviar.

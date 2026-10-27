@@ -1161,6 +1161,10 @@ html[data-doodles="on"]:not([data-wallpaper="image"]) .chat-wallpaper::before {
   [data-enter="sent"] {
     animation: var(--animate-bubble-sent);
   }
+  /* A bolha de texto enviada voa do campo por uma cópia (features/chat/send-flight.ts): a linha não anima. */
+  [data-enter][data-flight] {
+    animation: none;
+  }
 }
 /*
  * Troca de tela (view transition do roteador, com o tipo da navegação em app/router.tsx). No celular, a tela nova

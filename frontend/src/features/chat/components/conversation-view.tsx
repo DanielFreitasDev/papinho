@@ -95,6 +95,7 @@ import type {
 import { cancelFile, retryFile, sendFile } from "../attachments"
 import { AttachDialog } from "./attach-dialog"
 import { Composer } from "./composer"
+import { flyBubble, takeSendOrigin } from "../send-flight"
 import { DeleteMessagesDialog } from "./delete-messages-dialog"
 import { ImageViewer } from "./image-viewer"
 import { BroadcastDetails } from "./broadcast-details"
@@ -259,8 +260,21 @@ function EnteringItem({
   const item = useRef<HTMLDivElement>(null)
   useLayoutEffect(() => {
     const entrance = decide(message)
-    if (entrance && item.current) {
-      item.current.dataset.enter = entrance
+    const node = item.current
+    if (entrance && node) {
+      node.dataset.enter = entrance
+      // A própria mensagem de texto sai da caixa e voa até aqui (send-flight.ts). O voo começa no próximo quadro,
+      // antes de pintar e depois de a lista rolar até o fim; sem origem (anexo, voz), fica a entrada de baixo.
+      const origin = entrance === "sent" ? takeSendOrigin() : null
+      if (origin) {
+        node.dataset.flight = ""
+        window.requestAnimationFrame(() =>
+          flyBubble(node, origin, () => {
+            delete node.dataset.flight
+            delete node.dataset.enter
+          })
+        )
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])

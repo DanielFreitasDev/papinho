@@ -10,6 +10,7 @@ import {
   EllipsisVerticalIcon,
   EraserIcon,
   FolderIcon,
+  FolderPlusIcon,
   HeartIcon,
   HeartOffIcon,
   MailIcon,
@@ -53,6 +54,7 @@ import {
   type ListAction,
 } from "../organization"
 import type { Conversation, MuteDuration } from "../types"
+import { FolderDialog } from "./folder-settings"
 import { useErrorToast } from "@/hooks/use-error-toast"
 import type { ContextMenu } from "@/hooks/use-context-menu"
 
@@ -85,6 +87,7 @@ export function ConversationMenu({
   const onError = useErrorToast()
   const folders = useQuery(organizationQueries.folders())
   const [muteOpen, setMuteOpen] = useState(false)
+  const [newList, setNewList] = useState(false)
   const [clearOpen, setClearOpen] = useState(false)
   const [removeOpen, setRemoveOpen] = useState(false)
   const [keepStarred, setKeepStarred] = useState(true)
@@ -172,34 +175,38 @@ export function ConversationMenu({
             {favorite ? <HeartOffIcon /> : <HeartIcon />}
             {t(favorite ? "organize.unfavorite" : "organize.favorite")}
           </DropdownMenuItem>
-          {folders.data && folders.data.length > 0 ? (
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger>
-                <FolderIcon />
-                {t("organize.lists")}
-              </DropdownMenuSubTrigger>
-              <DropdownMenuSubContent>
-                {folders.data.map((folder) => (
-                  <DropdownMenuCheckboxItem
-                    key={folder.id}
-                    checked={folderIds.includes(folder.id)}
-                    onCheckedChange={(checked) =>
-                      toggleFolder.mutate(
-                        {
-                          folderId: folder.id,
-                          conversationId: conversation.id,
-                          on: checked,
-                        },
-                        { onError }
-                      )
-                    }
-                  >
-                    {folder.name}
-                  </DropdownMenuCheckboxItem>
-                ))}
-              </DropdownMenuSubContent>
-            </DropdownMenuSub>
-          ) : null}
+          {/* Sempre visível, como no WhatsApp: sem listas, só "Nova lista" (já com esta conversa marcada). */}
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+              <FolderIcon />
+              {t("organize.addToList")}
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent>
+              {(folders.data ?? []).map((folder) => (
+                <DropdownMenuCheckboxItem
+                  key={folder.id}
+                  checked={folderIds.includes(folder.id)}
+                  onCheckedChange={(checked) =>
+                    toggleFolder.mutate(
+                      {
+                        folderId: folder.id,
+                        conversationId: conversation.id,
+                        on: checked,
+                      },
+                      { onError }
+                    )
+                  }
+                >
+                  {folder.name}
+                </DropdownMenuCheckboxItem>
+              ))}
+              {folders.data?.length ? <DropdownMenuSeparator /> : null}
+              <DropdownMenuItem onClick={() => setNewList(true)}>
+                <FolderPlusIcon />
+                {t("organize.newFolder")}
+              </DropdownMenuItem>
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
           {conversation.state === "ACTIVE" ? (
             <DropdownMenuItem
               disabled={unread}
@@ -232,6 +239,13 @@ export function ConversationMenu({
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+      {newList ? (
+        <FolderDialog
+          folder={null}
+          initialConversationIds={[conversation.id]}
+          onClose={() => setNewList(false)}
+        />
+      ) : null}
       {muteOpen ? (
         <MuteDialog
           name={label}

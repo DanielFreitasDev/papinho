@@ -8,11 +8,17 @@ import {
   InboxIcon,
   LockKeyholeIcon,
   MessagesSquareIcon,
+  PencilIcon,
   PinIcon,
+  PlusIcon,
+  Trash2Icon,
 } from "lucide-react"
 import { cn } from "cn"
 
+import { ConfirmDialog } from "@/components/confirm-dialog"
 import { SearchInput } from "@/components/search-input"
+import { toast } from "@/components/ui/toast"
+import { useErrorToast } from "@/hooks/use-error-toast"
 import { QueryError } from "@/components/query-state"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -33,17 +39,19 @@ import {
   applyListFilter,
   isMuted,
   organizationQueries,
+  useDeleteFolder,
   type ListFilter,
 } from "../organization"
 import { plainText } from "../format/parse"
 import { useActivity } from "../activity"
 import { describeNotice } from "../system-notice"
-import type { Conversation } from "../types"
+import type { Conversation, Folder } from "../types"
 import { ActivityText } from "./activity-text"
 import { ConversationAvatar, useConversationLabel } from "./conversation-avatar"
 import { useContextMenu } from "@/hooks/use-context-menu"
 import { ConversationMenu } from "./conversation-menu"
 import { GlobalSearchResults } from "./global-search"
+import { FolderDialog } from "./folder-settings"
 
 /**
  * Lista de conversas (ou de solicitações, ou a pasta das trancadas) com prévia, horário e não lidas (MS-14).
@@ -70,6 +78,11 @@ export function ConversationList({
   })
   const folders = useQuery({ ...organizationQueries.folders(), enabled: main })
   const [filter, setFilter] = useState<ListFilter>({ kind: "all" })
+  // Lista nova (+ na barra) ou a aberta, para editar; e a que vai ser apagada.
+  const [folderDialog, setFolderDialog] = useState<Folder | "new" | null>(null)
+  const [deletingFolder, setDeletingFolder] = useState<Folder | null>(null)
+  const removeFolder = useDeleteFolder()
+  const onError = useErrorToast()
   const [query, setQuery] = useState("")
   // Conversa que sobe com mensagem nova, fixada, arquivada: as outras deslizam até o lugar novo.
   const group = useRef<HTMLDivElement>(null)
@@ -146,6 +159,18 @@ export function ConversationList({
     })),
   ]
   const filterKey = filter.kind === "folder" ? filter.folderId : filter.kind
+  // Quantas conversas com mensagem não lida cada filtro tem, como no WhatsApp ("Não lidas 4", "Grupos 2").
+  const unreadIn = (value: ListFilter) =>
+    value.kind === "all" || value.kind === "archived"
+      ? 0
+      : applyListFilter(conversations.data, value).filter(
+          (conversation) =>
+            conversation.unreadCount > 0 || conversation.markedUnread
+        ).length
+  const openFolder =
+    filter.kind === "folder"
+      ? folders.data?.find((folder) => folder.id === filter.folderId)
+      : undefined
   if (searching) {
     return (
       <div className="flex flex-col gap-2">
@@ -170,21 +195,97 @@ export function ConversationList({
             className="flex scroll-fade-x gap-1.5 overflow-x-auto px-2 pb-1"
             data-scroll-x=""
           >
-            {filters.map((item) => (
-              <Button
-                key={item.key}
-                size="sm"
-                variant={filterKey === item.key ? "default" : "outline"}
-                aria-pressed={filterKey === item.key}
-                className="shrink-0 rounded-full"
-                onClick={() => setFilter(item.value)}
-              >
-                {item.label}
-              </Button>
-            ))}
+            {filters.map((item) => {
+              const count = unreadIn(item.value)
+              return (
+                <Button
+                  key={item.key}
+                  size="sm"
+                  variant={filterKey === item.key ? "default" : "outline"}
+                  aria-pressed={filterKey === item.key}
+                  className="shrink-0 rounded-full"
+                  onClick={() => setFilter(item.value)}
+                >
+                  {item.label}
+                  {count > 0 ? (
+                    <span
+                      key={count}
+                      className="animate-pop text-xs tabular-nums opacity-80"
+                    >
+                      <span aria-hidden="true">{count}</span>
+                      <span className="sr-only">
+                        {t("organize.filter.unreadIn", { count })}
+                      </span>
+                    </span>
+                  ) : null}
+                </Button>
+              )
+            })}
+            {/* Nova lista direto da barra, como o "+" do WhatsApp. */}
+            <Button
+              size="icon-sm"
+              variant="outline"
+              className="shrink-0 rounded-full"
+              aria-label={t("organize.createList")}
+              onClick={() => setFolderDialog("new")}
+            >
+              <PlusIcon />
+            </Button>
           </div>
         </>
       ) : null}
+      {main && openFolder ? (
+        <div className="flex animate-in items-center gap-1 px-2 duration-(--duration-base) ease-(--ease-enter) fade-in slide-in-from-top-1">
+          <h2
+            className="min-w-0 flex-1 truncate text-sm font-semibold"
+            data-private="names"
+          >
+            {openFolder.name}
+          </h2>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setFolderDialog(openFolder)}
+          >
+            <PencilIcon data-icon="inline-start" />
+            {t("organize.editList")}
+          </Button>
+          <Button
+            size="icon-sm"
+            variant="ghost"
+            aria-label={t("organize.deleteFolder", { name: openFolder.name })}
+            onClick={() => setDeletingFolder(openFolder)}
+          >
+            <Trash2Icon />
+          </Button>
+        </div>
+      ) : null}
+      {folderDialog ? (
+        <FolderDialog
+          folder={folderDialog === "new" ? null : folderDialog}
+          onClose={() => setFolderDialog(null)}
+          onSaved={(saved) => setFilter({ kind: "folder", folderId: saved.id })}
+        />
+      ) : null}
+      <ConfirmDialog
+        open={deletingFolder !== null}
+        onOpenChange={(open) => (open ? undefined : setDeletingFolder(null))}
+        title={t("organize.deleteFolderTitle", {
+          name: deletingFolder?.name ?? "",
+        })}
+        description={t("organize.deleteFolderDescription")}
+        confirmLabel={t("common.delete")}
+        onConfirm={() =>
+          deletingFolder &&
+          removeFolder.mutate(deletingFolder.id, {
+            onSuccess: () => {
+              setFilter({ kind: "all" })
+              toast.add({ title: t("organize.folderDeleted") })
+            },
+            onError,
+          })
+        }
+      />
       {main && filter.kind === "all" && archivedCount > 0 ? (
         <button
           type="button"

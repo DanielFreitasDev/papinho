@@ -1014,7 +1014,23 @@
       "unread": "Não lidas",
       "favorites": "Favoritas",
       "groups": "Grupos",
-      "empty": "Nenhuma conversa neste filtro"
+      "empty": "Nenhuma conversa neste filtro",
+      "unreadIn_one": "{{count}} conversa com mensagens não lidas",
+      "unreadIn_other": "{{count}} conversas com mensagens não lidas"
+    },
+    "addToList": "Adicionar à lista",
+    "createList": "Criar lista",
+    "editList": "Editar",
+    "searchChats": "Buscar conversas",
+    "selectedCount_one": "{{count}} marcada",
+    "selectedCount_other": "{{count}} marcadas",
+    "suggestions": "Sugestões de nome",
+    "suggestion": {
+      "family": "Família",
+      "friends": "Amigos",
+      "work": "Trabalho",
+      "neighbors": "Vizinhos",
+      "school": "Escola"
     },
     "foldersTitle": "Listas personalizadas",
     "foldersDescription": "Agrupe conversas para filtrar a lista. Só você vê as suas listas.",

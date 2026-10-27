@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next"
 import { PencilIcon, PlusIcon, Trash2Icon } from "lucide-react"
 
 import { ConfirmDialog } from "@/components/confirm-dialog"
+import { SearchInput } from "@/components/search-input"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -22,12 +23,13 @@ import { SettingsSection } from "@/features/account"
 import { errorMessage } from "@/lib/api-client"
 import { chatQueries, useChangePreferences } from "../api"
 import {
+  normalize,
   organizationQueries,
   useDeleteFolder,
   useSaveFolder,
 } from "../organization"
 import type { Folder } from "../types"
-import { useConversationLabel } from "./conversation-avatar"
+import { ConversationAvatar, useConversationLabel } from "./conversation-avatar"
 import { useErrorToast } from "@/hooks/use-error-toast"
 
 /** Configurações > Conversas: listas personalizadas e "manter arquivadas" (GR-05). */
@@ -109,20 +111,44 @@ export function FolderSettings() {
   )
 }
 
-function FolderDialog({
+/** Nomes sugeridos ao criar uma lista, como no WhatsApp (um toque preenche o nome). */
+const SUGGESTIONS = [
+  "family",
+  "friends",
+  "work",
+  "neighbors",
+  "school",
+] as const
+
+/**
+ * Criar ou editar uma lista personalizada (GR-05): nome (com sugestões ao criar) e as conversas, com busca. Abre da
+ * barra de filtros (+), do menu da conversa ("Adicionar à lista" > "Nova lista", já com ela marcada) e das
+ * configurações.
+ */
+export function FolderDialog({
   folder,
   onClose,
+  initialConversationIds = [],
+  onSaved,
 }: {
   folder: Folder | null
   onClose: () => void
+  /** Conversas já marcadas numa lista nova. */
+  initialConversationIds?: string[]
+  /** Depois de salvar (a barra de filtros abre a lista criada). */
+  onSaved?: (folder: Folder) => void
 }) {
   const { t } = useTranslation()
   const conversations = useQuery(chatQueries.list(false))
   const labelOf = useConversationLabel()
   const save = useSaveFolder()
   const [name, setName] = useState(folder?.name ?? "")
+  const [query, setQuery] = useState("")
   const [selected, setSelected] = useState<string[]>(
-    folder?.conversationIds ?? []
+    folder?.conversationIds ?? initialConversationIds
+  )
+  const shown = (conversations.data ?? []).filter((conversation) =>
+    normalize(labelOf(conversation)).includes(normalize(query.trim()))
   )
   return (
     <Dialog open onOpenChange={(open) => (open ? undefined : onClose())}>
@@ -135,8 +161,9 @@ function FolderDialog({
             save.mutate(
               { id: folder?.id, name, conversationIds: selected },
               {
-                onSuccess: () => {
+                onSuccess: (saved) => {
                   toast.add({ title: t("organize.folderSaved") })
+                  onSaved?.(saved)
                   onClose()
                 },
                 onError: (error) =>
@@ -164,14 +191,53 @@ function FolderDialog({
               value={name}
               required
               maxLength={40}
+              autoFocus
               onChange={(event) => setName(event.target.value)}
             />
           </Field>
+          {folder ? null : (
+            <div
+              role="group"
+              aria-label={t("organize.suggestions")}
+              className="flex flex-wrap gap-1.5"
+            >
+              {SUGGESTIONS.map((key) => (
+                <Button
+                  key={key}
+                  type="button"
+                  size="sm"
+                  variant={
+                    name === t(`organize.suggestion.${key}`)
+                      ? "default"
+                      : "outline"
+                  }
+                  className="rounded-full"
+                  onClick={() => setName(t(`organize.suggestion.${key}`))}
+                >
+                  {t(`organize.suggestion.${key}`)}
+                </Button>
+              ))}
+            </div>
+          )}
+          <SearchInput
+            value={query}
+            aria-label={t("organize.searchChats")}
+            placeholder={t("organize.searchChats")}
+            onValueChange={setQuery}
+          />
           <fieldset className="flex max-h-64 min-w-0 flex-col gap-1 overflow-y-auto">
             <legend className="mb-1 text-sm font-medium">
               {t("organize.folderChats")}
+              {selected.length > 0
+                ? ` · ${t("organize.selectedCount", { count: selected.length })}`
+                : null}
             </legend>
-            {(conversations.data ?? []).map((conversation) => (
+            {shown.length === 0 ? (
+              <p className="px-2 py-3 text-sm text-muted-foreground">
+                {t("organize.filter.empty")}
+              </p>
+            ) : null}
+            {shown.map((conversation) => (
               <label
                 key={conversation.id}
                 className="flex min-h-11 cursor-pointer items-center gap-3 rounded-md px-2 py-1 hover:bg-muted"
@@ -185,6 +251,10 @@ function FolderDialog({
                         : current.filter((id) => id !== conversation.id)
                     )
                   }
+                />
+                <ConversationAvatar
+                  conversation={conversation}
+                  className="size-8"
                 />
                 <span data-private="names" className="truncate text-sm">
                   {labelOf(conversation)}

@@ -1014,7 +1014,23 @@
       "unread": "Unread",
       "favorites": "Favorites",
       "groups": "Groups",
-      "empty": "No chats in this filter"
+      "empty": "No chats in this filter",
+      "unreadIn_one": "{{count}} chat with unread messages",
+      "unreadIn_other": "{{count}} chats with unread messages"
+    },
+    "addToList": "Add to list",
+    "createList": "Create list",
+    "editList": "Edit",
+    "searchChats": "Search chats",
+    "selectedCount_one": "{{count}} selected",
+    "selectedCount_other": "{{count}} selected",
+    "suggestions": "Name suggestions",
+    "suggestion": {
+      "family": "Family",
+      "friends": "Friends",
+      "work": "Work",
+      "neighbors": "Neighbors",
+      "school": "School"
     },
     "foldersTitle": "Custom lists",
     "foldersDescription": "Group chats to filter the list. Only you see your lists.",

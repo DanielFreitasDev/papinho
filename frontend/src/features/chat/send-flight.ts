@@ -42,9 +42,18 @@ function textStart(content: HTMLElement) {
   }
 }
 
+/** Interpola a posição da cópia: da origem (deslocada do início do texto) até onde a bolha está agora. */
+function lerp(from: number, to: number, progress: number) {
+  return from + (to - from) * progress
+}
+
 /**
- * Voa a cópia da bolha do campo até a bolha, que fica invisível até lá. Chama `done` no fim, também quando não dá para
- * voar (bolha fora da tela, movimento reduzido). Devolve true se voou.
+ * Voa a cópia da bolha do campo até a bolha, que fica invisível até lá. A cada quadro a cópia mira onde a bolha está
+ * naquele instante (a lista pode rolar, a bolha confirmada pode mudar de largura): ela sempre pousa exatamente no
+ * lugar, sem ajuste no fim. O tempo vem de duas animações sem alvo na linha do tempo do documento (o e2e a
+ * desacelera pelo CDP), uma por eixo, com as curvas do tema: a subida desacelera antes do deslize para o lado, e o
+ * caminho faz uma curva leve até o canto. Chama `done` no fim, também quando não dá para voar (bolha fora da tela,
+ * movimento reduzido). Devolve true se voou.
  */
 export function flyBubble(
   item: HTMLElement,
@@ -69,6 +78,9 @@ export function flyBubble(
     return false
   }
   const start = textStart(content)
+  // Onde a cópia começa, em relação à bolha: o texto dela por cima do texto que estava no campo.
+  const offsetX = from.x - start.x
+  const offsetY = from.y - start.y
   const ghost = bubble.cloneNode(true) as HTMLElement
   ghost.setAttribute("aria-hidden", "true")
   ghost.inert = true
@@ -84,26 +96,75 @@ export function flyBubble(
     margin: "0",
     zIndex: "40",
     pointerEvents: "none",
+    transformOrigin: "0 0",
   })
   bubble.style.opacity = "0"
   document.body.append(ghost)
+
+  const duration = motionMs("slow") * 1.4
+  const clock = (easing: string) => {
+    const animation = new Animation(
+      new KeyframeEffect(null, null, { duration, easing, fill: "forwards" }),
+      document.timeline
+    )
+    animation.play()
+    return animation
+  }
+  const vertical = clock(motionEase("enter"))
+  const horizontal = clock(motionEase("standard"))
+  const progress = (animation: Animation) =>
+    animation.effect?.getComputedTiming().progress ?? 1
+
+  let finished = false
   const finish = () => {
+    if (finished) {
+      return
+    }
+    finished = true
+    vertical.cancel()
+    horizontal.cancel()
     ghost.remove()
     bubble.style.opacity = ""
     done()
   }
-  const flight = ghost.animate(
-    [
-      {
-        transform: `translate(${from.x - start.x}px, ${from.y - start.y}px) scale(0.96)`,
-        opacity: 0.55,
-      },
-      { opacity: 1, offset: 0.4 },
-      { transform: "none", opacity: 1 },
-    ],
-    { duration: motionMs("slow") * 1.25, easing: motionEase("enter") }
-  )
-  flight.addEventListener("finish", finish)
-  flight.addEventListener("cancel", finish)
+  /** Põe a cópia no ponto do voo, mirando a bolha onde ela está agora. */
+  const place = () => {
+    if (!bubble.isConnected) {
+      // A conversa trocou no meio do voo: nada a pousar.
+      finish()
+      return false
+    }
+    const now = bubble.getBoundingClientRect()
+    const py = progress(vertical)
+    const px = progress(horizontal)
+    const x = lerp(offsetX, now.left - target.left, px)
+    const y = lerp(offsetY, now.top - target.top, py)
+    const scale = lerp(0.94, 1, py)
+    if (
+      Math.abs(now.width - ghost.offsetWidth) > 0.5 ||
+      Math.abs(now.height - ghost.offsetHeight) > 0.5
+    ) {
+      ghost.style.width = `${now.width}px`
+      ghost.style.height = `${now.height}px`
+    }
+    ghost.style.transform = `translate(${x}px, ${y}px) scale(${scale})`
+    ghost.style.opacity = String(lerp(0.5, 1, Math.min(1, py * 2.5)))
+    return true
+  }
+  const frame = () => {
+    if (!finished && place()) {
+      window.requestAnimationFrame(frame)
+    }
+  }
+  // Primeira pintura já com a cópia sobre o campo.
+  place()
+  window.requestAnimationFrame(frame)
+  void Promise.all([vertical.finished, horizontal.finished])
+    .then(() => {
+      // Último quadro exatamente sobre a bolha, depois a troca.
+      place()
+      finish()
+    })
+    .catch(finish)
   return true
 }

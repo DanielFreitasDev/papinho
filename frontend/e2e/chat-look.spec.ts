@@ -75,7 +75,53 @@ test("campo de mensagem, voo da mensagem enviada, reações e onda de toque", as
       .toBe("1")
   }
 
-  // A mensagem enviada voa do campo até a conversa: uma cópia presa à janela, que some quando chega.
+  // A mensagem enviada voa do campo até a conversa: uma cópia presa à janela, que some quando chega. Uma sonda grava a
+  // cada quadro onde está a bolha de verdade (ela não pode mudar de lugar no caminho: a linha nova nascia com a altura
+  // provisória do content-visibility e descia ~50 px) e, quando a cópia sai da página, o último lugar dela (left/top
+  // mais o translate final), que tem de ser o da bolha.
+  await page.evaluate(() => {
+    const probe = window as unknown as {
+      tops: number[]
+      landing?: { dx: number; dy: number }
+      flightDone?: boolean
+    }
+    probe.tops = []
+    const bubbleOf = () =>
+      [...document.querySelectorAll("[data-message-id]")]
+        .find((element) => element.textContent?.includes("Voando!"))
+        ?.querySelector('[data-slot="bubble"]')
+    const tick = () => {
+      const bubble = bubbleOf()
+      if (bubble) {
+        probe.tops.push(bubble.getBoundingClientRect().top)
+      }
+      if (!probe.flightDone) {
+        requestAnimationFrame(tick)
+      }
+    }
+    requestAnimationFrame(tick)
+    new MutationObserver((records, observer) => {
+      for (const node of records.flatMap((record) => [
+        ...record.removedNodes,
+      ])) {
+        if (node instanceof HTMLElement && node.dataset.flying !== undefined) {
+          const [, x, y] = /translate\(([-\d.e]+)px, ([-\d.e]+)px\)/.exec(
+            node.style.transform
+          )!
+          const bubble = bubbleOf()!.getBoundingClientRect()
+          probe.landing = {
+            dx: Math.abs(
+              Number.parseFloat(node.style.left) + Number(x) - bubble.left
+            ),
+            dy: Math.abs(
+              Number.parseFloat(node.style.top) + Number(y) - bubble.top
+            ),
+          }
+          observer.disconnect()
+        }
+      }
+    }).observe(document.body, { childList: true })
+  })
   const timeline = await page.context().newCDPSession(page)
   await timeline.send("Animation.enable")
   await timeline.send("Animation.setPlaybackRate", { playbackRate: 0.1 })
@@ -87,6 +133,21 @@ test("campo de mensagem, voo da mensagem enviada, reações e onda de toque", as
   ).toHaveAttribute("data-flight", "")
   await timeline.send("Animation.setPlaybackRate", { playbackRate: 1 })
   await expect(page.locator("[data-flying]")).toHaveCount(0)
+  const flight = await page.evaluate(() => {
+    const probe = window as unknown as {
+      tops: number[]
+      landing?: { dx: number; dy: number }
+      flightDone?: boolean
+    }
+    probe.flightDone = true
+    return {
+      bubbleMoved: Math.max(...probe.tops) - Math.min(...probe.tops),
+      landing: probe.landing,
+    }
+  })
+  expect(flight.bubbleMoved).toBeLessThan(1)
+  expect(flight.landing!.dx).toBeLessThan(1)
+  expect(flight.landing!.dy).toBeLessThan(1)
   await expect(
     row(page, "Voando!").getByRole("img", { name: /^(Enviada|Entregue|Lida)$/ })
   ).toBeVisible()

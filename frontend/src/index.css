@@ -1229,6 +1229,15 @@ html[data-doodles="on"]:not([data-wallpaper="image"]) .chat-wallpaper::before {
   }
 }
 /*
+ * A linha que entra ao vivo já nasce com o tamanho de verdade. Com content-visibility: auto, a linha nova (ainda sem
+ * tamanho lembrado) entrava com os 10rem provisórios de contain-intrinsic-size, a lista rolava até essa altura e, um
+ * quadro depois, a linha encolhia: a bolha descia ~50 px no meio da entrada e do voo da enviada. Fora das camadas, para
+ * vencer o utilitário do MessageScrollerItem; volta ao auto quando data-enter sai, já com o tamanho lembrado.
+ */
+[data-enter] {
+  content-visibility: visible;
+}
+/*
  * Troca de tela (view transition do roteador, com o tipo da navegação em app/router.tsx). No celular, a tela nova
  * entra pela direita ao avançar e a anterior sai por cima, pela direita, ao voltar; no desktop, só o painel da
  * conversa troca com um fade curto e a lista fica parada. Sem suporte a tipos, o navegador faz o fade padrão; com

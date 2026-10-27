@@ -24,12 +24,12 @@ import {
   DENSITIES,
   FONT_SIZES,
   PALETTES,
-  WALLPAPERS,
   setDisplayPrefs,
   useDisplayPrefs,
 } from "@/lib/display-prefs"
 import i18n, { SUPPORTED_LANGUAGES, type Language } from "@/lib/i18n"
 import { SettingsSection } from "./settings-section"
+import { WallpaperPicker } from "./wallpaper-picker"
 
 const LANGUAGE_NAMES: Record<Language, string> = {
   "pt-BR": "Português (Brasil)",
@@ -90,11 +90,15 @@ export function AppearanceSettings() {
           <SwatchPicker
             label={t("appearance.palette")}
             value={display.palette}
-            options={PALETTES.map((value) => ({
-              value,
-              label: t(`appearance.palettes.${value}`),
-              swatch: `palette-${value}`,
-            }))}
+            sections={[
+              {
+                options: PALETTES.map((value) => ({
+                  value,
+                  label: t(`appearance.palettes.${value}`),
+                  swatch: `palette-${value}`,
+                })),
+              },
+            ]}
             onChange={(palette) =>
               // O app inteiro muda de cor num círculo que cresce a partir do toque, como na troca de tema.
               revealAppearance(() =>
@@ -129,16 +133,7 @@ export function AppearanceSettings() {
             </SelectContent>
           </Select>
         </Field>
-        <ChoiceField
-          id="appearance-wallpaper"
-          label={t("appearance.wallpaper")}
-          value={display.wallpaper}
-          options={WALLPAPERS.map((value) => ({
-            value,
-            label: t(`appearance.wallpapers.${value}`),
-          }))}
-          onChange={(wallpaper) => setDisplayPrefs({ wallpaper })}
-        />
+        <WallpaperPicker />
         <ChoiceField
           id="appearance-font-size"
           label={t("appearance.fontSize")}

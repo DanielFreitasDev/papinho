@@ -232,6 +232,10 @@ export function ConversationView({
   )
 }
 
+/** Separador de dia e marcador de não lidas: uma pílula no meio, legível sobre qualquer papel de parede. */
+const DAY_MARKER = "justify-center py-2 text-xs"
+const MARKER_PILL = "rounded-lg bg-card px-3 py-1 shadow-xs"
+
 /** Quanto dura o destaque da bolha depois de um salto (a animação em index.css usa o mesmo tempo). */
 const FLASH_MS = 1_600
 /** Mensagem criada há mais tempo que isso não "chega" animada (veio de uma sincronização, não ao vivo). */
@@ -1271,12 +1275,8 @@ function LoadedConversation({
                   return (
                     <Fragment key={rowKey}>
                       {newDay ? (
-                        <Marker
-                          variant="separator"
-                          className="py-2 text-xs"
-                          role="separator"
-                        >
-                          <MarkerContent>
+                        <Marker className={DAY_MARKER} role="separator">
+                          <MarkerContent className={MARKER_PILL}>
                             {formatDay(message.createdAt)}
                           </MarkerContent>
                         </Marker>
@@ -1286,7 +1286,7 @@ function LoadedConversation({
                         message={message}
                         decide={decideEntrance}
                       >
-                        <Marker className="mx-auto my-1 max-w-[90%] justify-center rounded-md bg-muted px-3 py-1 text-center text-xs text-muted-foreground">
+                        <Marker className="mx-auto my-1 w-fit max-w-[90%] justify-center rounded-lg bg-card px-3 py-1.5 text-center text-xs text-muted-foreground shadow-xs">
                           <MarkerContent>
                             {describeNotice(message.body, meId, t)}
                           </MarkerContent>
@@ -1298,23 +1298,20 @@ function LoadedConversation({
                 return (
                   <Fragment key={rowKey}>
                     {newDay ? (
-                      <Marker
-                        variant="separator"
-                        className="py-2 text-xs"
-                        role="separator"
-                      >
-                        <MarkerContent>
+                      <Marker className={DAY_MARKER} role="separator">
+                        <MarkerContent className={MARKER_PILL}>
                           {formatDay(message.createdAt)}
                         </MarkerContent>
                       </Marker>
                     ) : null}
                     {unreadHere ? (
                       <Marker
-                        variant="separator"
-                        className="py-2 text-xs font-medium text-primary"
+                        className={cn(DAY_MARKER, "font-medium")}
                         id="first-unread"
                       >
-                        <MarkerContent>
+                        <MarkerContent
+                          className={cn(MARKER_PILL, "text-primary")}
+                        >
                           {t("chat.unreadMarker", { count: unread.count })}
                         </MarkerContent>
                       </Marker>

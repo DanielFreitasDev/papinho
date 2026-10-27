@@ -809,32 +809,211 @@ html[data-density="compact"] [data-slot="message-scroller-content"] {
 html[data-density="compact"] [data-slot="bubble-content"] {
   padding-block: 0.25rem;
 }
-/* Papel de parede da conversa: padrões leves com as cores do tema, legíveis nos dois temas. */
+/*
+ * Papel de parede da conversa (UI-02), escolhido em Aparência (data-wallpaper no <html>). Fica atrás da conversa
+ * inteira (a coluna com .chat-wallpaper); as bolhas e os avisos têm fundo próprio, então o texto fica legível sobre
+ * qualquer um. As amostras do seletor ([data-swatch="wallpaper-…"]) usam as mesmas regras, no tema atual.
+ */
 .chat-wallpaper {
+  position: relative;
+  isolation: isolate;
   background-color: var(--chat);
 }
-html[data-wallpaper="dots"] .chat-wallpaper {
+[data-swatch^="wallpaper-"] {
+  background: var(--chat);
+}
+/* Cores: um tom claro no tema claro e um fechado no escuro. */
+html[data-wallpaper="color-areia"],
+[data-swatch="wallpaper-color-areia"] {
+  --wallpaper-bg: oklch(0.93 0.03 80);
+}
+html.dark[data-wallpaper="color-areia"],
+.dark [data-swatch="wallpaper-color-areia"] {
+  --wallpaper-bg: oklch(0.21 0.02 80);
+}
+html[data-wallpaper="color-pessego"],
+[data-swatch="wallpaper-color-pessego"] {
+  --wallpaper-bg: oklch(0.93 0.045 50);
+}
+html.dark[data-wallpaper="color-pessego"],
+.dark [data-swatch="wallpaper-color-pessego"] {
+  --wallpaper-bg: oklch(0.21 0.035 50);
+}
+html[data-wallpaper="color-rosa"],
+[data-swatch="wallpaper-color-rosa"] {
+  --wallpaper-bg: oklch(0.93 0.04 0);
+}
+html.dark[data-wallpaper="color-rosa"],
+.dark [data-swatch="wallpaper-color-rosa"] {
+  --wallpaper-bg: oklch(0.2 0.035 0);
+}
+html[data-wallpaper="color-lilas"],
+[data-swatch="wallpaper-color-lilas"] {
+  --wallpaper-bg: oklch(0.92 0.045 300);
+}
+html.dark[data-wallpaper="color-lilas"],
+.dark [data-swatch="wallpaper-color-lilas"] {
+  --wallpaper-bg: oklch(0.2 0.04 300);
+}
+html[data-wallpaper="color-ceu"],
+[data-swatch="wallpaper-color-ceu"] {
+  --wallpaper-bg: oklch(0.93 0.04 235);
+}
+html.dark[data-wallpaper="color-ceu"],
+.dark [data-swatch="wallpaper-color-ceu"] {
+  --wallpaper-bg: oklch(0.2 0.035 235);
+}
+html[data-wallpaper="color-menta"],
+[data-swatch="wallpaper-color-menta"] {
+  --wallpaper-bg: oklch(0.93 0.04 165);
+}
+html.dark[data-wallpaper="color-menta"],
+.dark [data-swatch="wallpaper-color-menta"] {
+  --wallpaper-bg: oklch(0.2 0.03 165);
+}
+html[data-wallpaper="color-limao"],
+[data-swatch="wallpaper-color-limao"] {
+  --wallpaper-bg: oklch(0.95 0.06 105);
+}
+html.dark[data-wallpaper="color-limao"],
+.dark [data-swatch="wallpaper-color-limao"] {
+  --wallpaper-bg: oklch(0.21 0.03 105);
+}
+html[data-wallpaper="color-salvia"],
+[data-swatch="wallpaper-color-salvia"] {
+  --wallpaper-bg: oklch(0.9 0.03 140);
+}
+html.dark[data-wallpaper="color-salvia"],
+.dark [data-swatch="wallpaper-color-salvia"] {
+  --wallpaper-bg: oklch(0.22 0.025 140);
+}
+html[data-wallpaper="color-ardosia"],
+[data-swatch="wallpaper-color-ardosia"] {
+  --wallpaper-bg: oklch(0.88 0.015 250);
+}
+html.dark[data-wallpaper="color-ardosia"],
+.dark [data-swatch="wallpaper-color-ardosia"] {
+  --wallpaper-bg: oklch(0.24 0.015 250);
+}
+html[data-wallpaper="color-oceano"],
+[data-swatch="wallpaper-color-oceano"] {
+  --wallpaper-bg: oklch(0.85 0.06 240);
+}
+html.dark[data-wallpaper="color-oceano"],
+.dark [data-swatch="wallpaper-color-oceano"] {
+  --wallpaper-bg: oklch(0.22 0.05 245);
+}
+html[data-wallpaper="color-floresta"],
+[data-swatch="wallpaper-color-floresta"] {
+  --wallpaper-bg: oklch(0.86 0.06 155);
+}
+html.dark[data-wallpaper="color-floresta"],
+.dark [data-swatch="wallpaper-color-floresta"] {
+  --wallpaper-bg: oklch(0.2 0.045 155);
+}
+html[data-wallpaper="color-noite"],
+[data-swatch="wallpaper-color-noite"] {
+  --wallpaper-bg: oklch(0.82 0.03 280);
+}
+html.dark[data-wallpaper="color-noite"],
+.dark [data-swatch="wallpaper-color-noite"] {
+  --wallpaper-bg: oklch(0.13 0.03 280);
+}
+/* Degradês suaves, também em dois tons por tema. */
+html[data-wallpaper="gradient-aurora"],
+[data-swatch="wallpaper-gradient-aurora"] {
+  --wallpaper-bg: linear-gradient(160deg, oklch(0.93 0.05 200), oklch(0.89 0.06 300));
+}
+html.dark[data-wallpaper="gradient-aurora"],
+.dark [data-swatch="wallpaper-gradient-aurora"] {
+  --wallpaper-bg: linear-gradient(160deg, oklch(0.24 0.05 200), oklch(0.2 0.06 300));
+}
+html[data-wallpaper="gradient-por-do-sol"],
+[data-swatch="wallpaper-gradient-por-do-sol"] {
+  --wallpaper-bg: linear-gradient(160deg, oklch(0.94 0.06 70), oklch(0.88 0.07 10));
+}
+html.dark[data-wallpaper="gradient-por-do-sol"],
+.dark [data-swatch="wallpaper-gradient-por-do-sol"] {
+  --wallpaper-bg: linear-gradient(160deg, oklch(0.25 0.05 60), oklch(0.19 0.06 0));
+}
+html[data-wallpaper="gradient-mar"],
+[data-swatch="wallpaper-gradient-mar"] {
+  --wallpaper-bg: linear-gradient(160deg, oklch(0.94 0.035 200), oklch(0.86 0.07 250));
+}
+html.dark[data-wallpaper="gradient-mar"],
+.dark [data-swatch="wallpaper-gradient-mar"] {
+  --wallpaper-bg: linear-gradient(160deg, oklch(0.23 0.04 200), oklch(0.17 0.06 255));
+}
+html[data-wallpaper="gradient-campo"],
+[data-swatch="wallpaper-gradient-campo"] {
+  --wallpaper-bg: linear-gradient(160deg, oklch(0.95 0.05 115), oklch(0.88 0.06 165));
+}
+html.dark[data-wallpaper="gradient-campo"],
+.dark [data-swatch="wallpaper-gradient-campo"] {
+  --wallpaper-bg: linear-gradient(160deg, oklch(0.24 0.04 115), oklch(0.18 0.045 165));
+}
+html[data-wallpaper^="color-"] .chat-wallpaper,
+html[data-wallpaper^="gradient-"] .chat-wallpaper,
+[data-swatch^="wallpaper-color-"],
+[data-swatch^="wallpaper-gradient-"] {
+  background: var(--wallpaper-bg);
+}
+/* Padrões leves com as cores do tema. */
+html[data-wallpaper="dots"] .chat-wallpaper,
+[data-swatch="wallpaper-dots"] {
   background-image: radial-gradient(
     color-mix(in oklch, var(--foreground) 9%, transparent) 1px,
     transparent 1.5px
   );
   background-size: 18px 18px;
 }
-html[data-wallpaper="grid"] .chat-wallpaper {
+html[data-wallpaper="grid"] .chat-wallpaper,
+[data-swatch="wallpaper-grid"] {
   background-image:
     linear-gradient(color-mix(in oklch, var(--foreground) 6%, transparent) 1px, transparent 1px),
     linear-gradient(90deg, color-mix(in oklch, var(--foreground) 6%, transparent) 1px, transparent 1px);
   background-size: 24px 24px;
 }
-html[data-wallpaper="waves"] .chat-wallpaper {
+html[data-wallpaper="waves"] .chat-wallpaper,
+[data-swatch="wallpaper-waves"] {
   background-image: repeating-linear-gradient(
     135deg,
     color-mix(in oklch, var(--primary) 7%, transparent) 0 12px,
     transparent 12px 24px
   );
 }
-html[data-wallpaper="tint"] .chat-wallpaper {
+html[data-wallpaper="tint"] .chat-wallpaper,
+[data-swatch="wallpaper-tint"] {
   background-color: color-mix(in oklch, var(--primary) 8%, var(--background));
+}
+/* Imagem própria (lib/wallpaper-image.ts): cobre a área toda; o escurecimento vem por cima, numa camada própria. */
+html[data-wallpaper="image"] .chat-wallpaper,
+[data-swatch="wallpaper-image"] {
+  background: var(--wallpaper-image, none) center / cover no-repeat, var(--chat);
+}
+html[data-wallpaper="image"] .chat-wallpaper::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-color: oklch(0 0 0 / var(--wallpaper-dim, 0));
+}
+/*
+ * Desenhos (como os do WhatsApp): public/wallpapers/doodles.svg como máscara, pintada com uma cor do tema por cima da
+ * cor ou do padrão. Não valem sobre a imagem própria.
+ */
+:root {
+  --doodle: color-mix(in oklch, var(--foreground) 8%, transparent);
+}
+html[data-doodles="on"]:not([data-wallpaper="image"]) .chat-wallpaper::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-color: var(--doodle);
+  mask: url("/wallpapers/doodles.svg") 0 0 / 392px 392px repeat;
 }
 
 /*

@@ -12,6 +12,8 @@ describe("preferências de exibição (UI-02)", () => {
     setDisplayPrefs({
       palette: "papinho",
       wallpaper: "none",
+      doodles: true,
+      wallpaperDim: 0,
       fontSize: "normal",
       density: "comfortable",
     })
@@ -54,5 +56,21 @@ describe("preferências de exibição (UI-02)", () => {
       fontSize: "large",
     })
     expect(parseDisplayPrefs("{quebrado").palette).toBe("papinho")
+  })
+
+  it("papel de parede com desenhos por padrão e escurecimento pelo CSSOM", () => {
+    const root = document.documentElement
+    expect(root.dataset.doodles).toBe("on")
+    setDisplayPrefs({ wallpaper: "color-menta", doodles: false })
+    expect(root.dataset.wallpaper).toBe("color-menta")
+    expect(root.dataset.doodles).toBe("off")
+    setDisplayPrefs({ wallpaper: "image", wallpaperDim: 30 })
+    expect(root.style.getPropertyValue("--wallpaper-dim")).toBe("0.3")
+    expect(
+      parseDisplayPrefs('{"wallpaperDim":35,"doodles":"sim"}')
+    ).toMatchObject({
+      wallpaperDim: 0,
+      doodles: true,
+    })
   })
 })

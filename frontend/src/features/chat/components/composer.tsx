@@ -306,7 +306,7 @@ export function Composer({
       <InputGroup
         data-composer=""
         data-recording={recording ? "" : undefined}
-        className="h-auto min-h-12 rounded-3xl bg-card shadow-xs transition-shadow dark:bg-input/30"
+        className="h-auto min-h-12 rounded-3xl bg-card shadow-xs transition-shadow dark:bg-card"
       >
         {recording ? null : (
           <InputGroupAddon

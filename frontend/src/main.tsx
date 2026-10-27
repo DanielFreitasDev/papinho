@@ -9,8 +9,10 @@ import { router } from "@/app/router"
 import { applyDisplayPrefs } from "@/lib/display-prefs"
 import { handleSkippedViewTransitions } from "@/lib/motion"
 import { registerServiceWorker } from "@/lib/pwa"
+import { restoreWallpaperImage } from "@/lib/wallpaper-image"
 
 applyDisplayPrefs()
+void restoreWallpaperImage()
 handleSkippedViewTransitions()
 registerServiceWorker((path) => router.history.push(path))
 

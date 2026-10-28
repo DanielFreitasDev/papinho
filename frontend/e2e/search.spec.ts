@@ -157,7 +157,7 @@ test("salto da busca para a última mensagem não deixa vão embaixo", async ({
   pageErrors,
 }) => {
   test.slow()
-  const tag = `${RUN}${test.info().project.name.startsWith("mobile") ? "m" : "d"}v`
+  const tag = `${RUN}${test.info().project.name.startsWith("mobile") ? "m" : "d"}u`
   const { gil, hana } = await twoFriends(browser, pageErrors, tag, "Vao")
   for (let index = 1; index <= 12; index++) {
     await send(gil.page, `Mensagem ${index} para encher a conversa`)

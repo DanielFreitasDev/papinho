@@ -1,6 +1,11 @@
 import type { Page } from "@playwright/test"
 
-import { expect, expectNoSeriousA11yViolations, test } from "./fixtures"
+import {
+  expect,
+  expectNoSeriousA11yViolations,
+  screenshot,
+  test,
+} from "./fixtures"
 import { RUN, twoFriends } from "./support"
 
 function row(page: Page, text: string) {
@@ -212,7 +217,7 @@ test("formatação no campo: barra, botão direito, atalhos e texto formatado", 
   const fieldBox = (await field.boundingBox())!
   const barBox = (await toolbar.boundingBox())!
   expect(barBox.y + barBox.height).toBeLessThanOrEqual(fieldBox.y + 11)
-  await page.screenshot({ path: test.info().outputPath("barra.png") })
+  await screenshot(page, test.info().outputPath("barra.png"), pageErrors)
   await toolbar.getByRole("button", { name: "Negrito" }).click()
   await expect(field).toHaveValue("olá *mundo* bonito")
   await expect(field).toBeFocused()
@@ -243,11 +248,23 @@ test("formatação no campo: barra, botão direito, atalhos e texto formatado", 
     ).toBeVisible()
     await expect(menu.getByText(/Shift \+ botão direito/)).toBeVisible()
     await expectNoSeriousA11yViolations(page)
-    await page.screenshot({ path: test.info().outputPath("menu.png") })
+    await screenshot(page, test.info().outputPath("menu.png"), pageErrors)
     await menu.getByRole("menuitemcheckbox", { name: /Tachado/ }).click()
     await expect(menu).toBeHidden()
     await expect(field).toHaveValue("~olá~ *mundo* *bonito*")
     await expect(field).toBeFocused()
+
+    // Selecionar arrastando o mouse: a barra só aparece ao soltar o botão.
+    await field.fill("arraste esta palavra")
+    const from = await pointOf(page, "esta")
+    await page.mouse.move(from.x - 12, from.y)
+    await page.mouse.down()
+    await page.mouse.move(from.x + 14, from.y, { steps: 4 })
+    await expect(toolbar).toBeHidden()
+    await page.mouse.up()
+    await expect(toolbar).toBeVisible()
+    await toolbar.getByRole("button", { name: "Spoiler" }).click()
+    await expect(field).toHaveValue("arraste ||esta|| palavra")
 
     // Escape esconde a barra sem cancelar nada; a lista entra em todas as linhas.
     await field.fill("primeiro\nsegundo")
@@ -300,7 +317,9 @@ test("formatação no campo: barra, botão direito, atalhos e texto formatado", 
     let offset = 0
     for (let node = walker.nextNode(); node; node = walker.nextNode()) {
       const text = node as Text
-      for (const match of text.data.matchAll(/linhas|texto/g)) {
+      for (const match of text.data.matchAll(
+        /linhas|texto|quebrar|para|com/g
+      )) {
         const range = document.createRange()
         range.setStart(text, match.index + 1)
         range.setEnd(text, match.index + 2)
@@ -330,7 +349,7 @@ test("formatação no campo: barra, botão direito, atalhos e texto formatado", 
     expect(misplaced.wrong).toEqual([])
     expect(misplaced.probed).toBeGreaterThan(5)
   }
-  await page.screenshot({ path: test.info().outputPath("espelho.png") })
+  await screenshot(page, test.info().outputPath("espelho.png"), pageErrors)
 
   // A mensagem chega formatada para a outra pessoa.
   await field.fill("olá *mundo* _lindo_ ~velho~ `código` ||segredo||")

@@ -158,3 +158,35 @@ export function horizontalScrollers(page: Page) {
     return found
   })
 }
+
+/**
+ * No WebKit, cada page.screenshot() do Playwright injeta um <style> que a CSP estrita do app recusa (comprovado numa
+ * página mínima: uma violação por captura, nenhuma no Chromium e no Firefox). Essas linhas são da ferramenta.
+ */
+const SCREENSHOT_CSP = new Set([
+  "console: Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy.",
+  "console: CSP: style-src-elem inline :5 ",
+])
+
+/**
+ * Captura a tela para revisão; no WebKit, tira do registro as violações que a própria captura acabou de gerar (as do
+ * app continuam reprovando).
+ */
+export async function screenshot(page: Page, path: string, errors: string[]) {
+  const from = errors.length
+  await page.screenshot({ path, caret: "initial" })
+  if (page.context().browser()?.browserType().name() !== "webkit") {
+    return
+  }
+  for (let wait = 0; wait < 20; wait++) {
+    if (errors.slice(from).some((error) => SCREENSHOT_CSP.has(error))) {
+      break
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100))
+  }
+  for (let index = errors.length - 1; index >= from; index--) {
+    if (SCREENSHOT_CSP.has(errors[index])) {
+      errors.splice(index, 1)
+    }
+  }
+}

@@ -4,6 +4,7 @@ import type { Page } from "@playwright/test"
 import {
   expect,
   expectNoSeriousA11yViolations,
+  screenshot,
   test,
   watchErrors,
 } from "./fixtures"
@@ -147,30 +148,6 @@ async function nativeAppearance(page: Page, theme: Theme): Promise<string[]> {
   }, theme)
 }
 
-/**
- * No WebKit, cada page.screenshot() do Playwright injeta um <style> que a CSP estrita do app recusa (comprovado numa
- * página mínima: uma violação por captura, nenhuma no Chromium e no Firefox). Essas linhas são da ferramenta.
- */
-const SCREENSHOT_CSP = new Set([
-  "console: Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy.",
-  "console: CSP: style-src-elem inline :5 ",
-])
-
-/** Tira do registro as violações que a captura do WebKit acabou de gerar (as do app continuam reprovando). */
-async function forgetScreenshotCsp(errors: string[], from: number) {
-  for (let wait = 0; wait < 20; wait++) {
-    if (errors.slice(from).some((error) => SCREENSHOT_CSP.has(error))) {
-      break
-    }
-    await new Promise((resolve) => setTimeout(resolve, 100))
-  }
-  for (let index = errors.length - 1; index >= from; index--) {
-    if (SCREENSHOT_CSP.has(errors[index])) {
-      errors.splice(index, 1)
-    }
-  }
-}
-
 /** Verificação do UI-05 numa tela, com a captura anexada ao relatório (navegador, tema e tela no nome). */
 async function verify(
   page: Page,
@@ -197,11 +174,7 @@ async function verify(
   // Arquivo na pasta do teste (test-results) e anexo no relatório HTML, para revisão visual.
   const info = test.info()
   const path = info.outputPath(`${theme}-${screen}.png`)
-  const before = errors.length
-  await page.screenshot({ path, caret: "initial" })
-  if (page.context().browser()?.browserType().name() === "webkit") {
-    await forgetScreenshotCsp(errors, before)
-  }
+  await screenshot(page, path, errors)
   await info.attach(`${info.project.name}-${theme}-${screen}`, {
     path,
     contentType: "image/png",

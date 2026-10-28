@@ -51,9 +51,9 @@ async function sendDocument(page: Page, name: string, buffer: Buffer) {
 }
 
 /**
- * Pedido do dono de 2026-10-28: PDF como no WhatsApp. A bolha mostra o nome, o tipo e o tamanho (e, com a análise do
- * servidor, as páginas e a prévia da primeira); tocar abre o visualizador do app, sem baixar: páginas com o texto
- * selecionável, página atual com anterior e próxima, zoom, download e Esc para fechar.
+ * Pedido do dono de 2026-10-28: PDF como no WhatsApp. A bolha mostra a prévia da primeira página, o nome, as páginas,
+ * o tipo e o tamanho; tocar abre o visualizador do app, sem baixar: páginas com o texto selecionável, página atual com
+ * anterior e próxima, zoom, download e Esc para fechar.
  */
 test("PDF abre no visualizador do app", async ({ browser, pageErrors }) => {
   test.slow()
@@ -75,7 +75,15 @@ test("PDF abre no visualizador do app", async ({ browser, pageErrors }) => {
     hasText: "roteiro-da-trilha.pdf",
   })
   await expect(card).toBeVisible()
-  await expect(card).toContainText(/PDF • \d/)
+  // O servidor leu as páginas e desenhou a primeira para a prévia no alto da bolha.
+  await expect(card).toContainText(/2 páginas • PDF • \d/)
+  const preview = card.locator("img").last()
+  await expect(preview).toBeVisible()
+  await expect
+    .poll(() =>
+      preview.evaluate((image: HTMLImageElement) => image.naturalWidth)
+    )
+    .toBe(480)
   await screenshot(page, test.info().outputPath("bolha.png"), pageErrors)
   await card
     .getByRole("button", { name: "Abrir roteiro-da-trilha.pdf" })

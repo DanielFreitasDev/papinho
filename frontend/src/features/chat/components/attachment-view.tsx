@@ -1,4 +1,4 @@
-import { useMemo, useState, type MouseEvent } from "react"
+import { useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { thumbHashToDataURL } from "thumbhash"
 import {
@@ -12,7 +12,16 @@ import {
 } from "lucide-react"
 import { cn } from "cn"
 
-import { Button } from "@/components/ui/button"
+import {
+  Attachment as AttachmentCard,
+  AttachmentActions,
+  AttachmentContent,
+  AttachmentDescription,
+  AttachmentMedia,
+  AttachmentTitle,
+  AttachmentTrigger,
+} from "@/components/ui/attachment"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import {
   AudioControls,
@@ -175,8 +184,9 @@ function fileType(attachment: Attachment) {
 }
 
 /**
- * Documento como no WhatsApp: a prévia da primeira página no alto (quando o servidor gerou), o ícone do tipo, o nome e
- * "5 páginas • PDF • 230 KB". Tocar no PDF abre o visualizador do app; o botão baixa.
+ * Documento como no WhatsApp, sobre o Attachment do shadcn (A95): a prévia da primeira página no alto (quando o
+ * servidor gerou), o ícone do tipo, o nome e "5 páginas • PDF • 230 KB". Tocar no PDF abre o visualizador do app; nos
+ * outros documentos, tocar baixa. O botão de baixar fica por cima da área de toque.
  */
 function DocumentCard({
   attachment,
@@ -191,7 +201,6 @@ function DocumentCard({
   const [loaded, setLoaded] = useState(false)
   const pdf = isPdf(attachment)
   const type = fileType(attachment)
-  const opens = pdf && onOpen !== undefined
   const details = [
     attachment.pageCount
       ? t("media.pages", { count: attachment.pageCount })
@@ -199,18 +208,15 @@ function DocumentCard({
     type || null,
     formatBytes(attachment.size, i18n.language),
   ].filter(Boolean)
-  const open = (event: MouseEvent) => {
-    event.stopPropagation()
-    onOpen?.(attachment)
-  }
+  const download = mediaUrl(attachment, "content", true)
   return (
-    <div
+    <AttachmentCard
       data-private="media"
       data-document=""
-      className="relative flex w-72 max-w-full flex-col overflow-hidden rounded-lg bg-black/5 dark:bg-white/10"
+      className="w-72 max-w-full focus-within:ring-3"
     >
       {attachment.hasThumbnail ? (
-        <div className="relative h-36 overflow-hidden bg-white">
+        <div className="relative h-36 w-full basis-full overflow-hidden rounded-lg bg-white">
           {blur && !loaded ? (
             <img
               src={blur}
@@ -227,39 +233,52 @@ function DocumentCard({
           />
         </div>
       ) : null}
-      <div className="flex min-w-0 items-center gap-3 p-2">
-        <span
-          aria-hidden="true"
-          data-file-tone={pdf ? "pdf" : "other"}
-          className="flex h-10 w-8 shrink-0 items-end justify-center rounded-md pb-1 text-[0.55rem] font-bold text-white"
-        >
-          {type || <FileIcon className="mb-1 size-4" />}
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium">{attachment.filename}</p>
-          <p className="truncate text-xs opacity-70">{details.join(" • ")}</p>
-        </div>
+      <AttachmentMedia
+        data-file-tone={pdf ? "pdf" : "other"}
+        className="items-end pb-1 text-[0.55rem] font-bold text-white"
+      >
+        {type || <FileIcon aria-hidden="true" />}
+      </AttachmentMedia>
+      <AttachmentContent>
+        <AttachmentTitle>{attachment.filename}</AttachmentTitle>
+        <AttachmentDescription>{details.join(" • ")}</AttachmentDescription>
+      </AttachmentContent>
+      <AttachmentActions>
         <a
-          href={mediaUrl(attachment, "content", true)}
+          href={download}
           download={attachment.filename}
           aria-label={`${t("media.download")}: ${attachment.filename}`}
           onClick={(event) => event.stopPropagation()}
-          className={cn(
-            "relative z-10 flex size-9 shrink-0 items-center justify-center rounded-full outline-none hover:bg-black/10 focus-visible:ring-3 focus-visible:ring-ring/50 dark:hover:bg-white/15 pointer-coarse:size-11"
-          )}
+          className={buttonVariants({ variant: "ghost", size: "icon" })}
         >
-          <DownloadIcon aria-hidden="true" className="size-5" />
+          <DownloadIcon />
         </a>
-      </div>
-      {opens ? (
-        <button
-          type="button"
-          aria-label={t("media.openDocument", { name: attachment.filename })}
-          onClick={open}
-          className="absolute inset-0 rounded-lg outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+      </AttachmentActions>
+      {pdf && onOpen ? (
+        <AttachmentTrigger
+          onClick={(event) => {
+            event.stopPropagation()
+            onOpen(attachment)
+          }}
+        >
+          <span className="sr-only">
+            {t("media.openDocument", { name: attachment.filename })}
+          </span>
+        </AttachmentTrigger>
+      ) : (
+        <AttachmentTrigger
+          render={
+            <a
+              href={download}
+              download={attachment.filename}
+              tabIndex={-1}
+              aria-hidden="true"
+              onClick={(event) => event.stopPropagation()}
+            />
+          }
         />
-      ) : null}
-    </div>
+      )}
+    </AttachmentCard>
   )
 }
 

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useMemo, useState, type MouseEvent } from "react"
 import { useTranslation } from "react-i18next"
 import { thumbHashToDataURL } from "thumbhash"
 import {
@@ -12,14 +12,6 @@ import {
 } from "lucide-react"
 import { cn } from "cn"
 
-import {
-  Attachment as AttachmentCard,
-  AttachmentContent,
-  AttachmentDescription,
-  AttachmentMedia,
-  AttachmentTitle,
-  AttachmentTrigger,
-} from "@/components/ui/attachment"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import {
@@ -74,14 +66,17 @@ function placeholder(thumbhash: string | null): string | null {
 export function AttachmentView({
   attachment,
   onOpenImage,
+  onOpenDocument,
   audio,
 }: {
   attachment: Attachment
   onOpenImage: (id: string) => void
+  /** Abre o PDF no visualizador do app; sem ele, o documento só baixa. */
+  onOpenDocument?: (attachment: Attachment) => void
   /** Faixa no tocador global; sem ela, o áudio toca no próprio elemento. */
   audio?: { track: Track; queue: Track[]; received: boolean }
 }) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const blur = useMemo(
     () => placeholder(attachment.thumbhash),
     [attachment.thumbhash]
@@ -152,33 +147,120 @@ export function AttachmentView({
       )
     default:
       return (
-        <AttachmentCard className="max-w-full focus-within:ring-3">
-          <AttachmentMedia>
-            <FileIcon aria-hidden="true" />
-          </AttachmentMedia>
-          <AttachmentContent>
-            <AttachmentTitle>{attachment.filename}</AttachmentTitle>
-            <AttachmentDescription>
-              {formatBytes(attachment.size, i18n.language)}
-            </AttachmentDescription>
-          </AttachmentContent>
-          <DownloadIcon aria-hidden="true" className="mr-1 size-5 shrink-0" />
-          <AttachmentTrigger
-            render={
-              <a
-                href={mediaUrl(attachment, "content", true)}
-                download={attachment.filename}
-                onClick={(event) => event.stopPropagation()}
-              />
-            }
-          >
-            <span className="sr-only">
-              {attachment.filename} — {t("media.download")}
-            </span>
-          </AttachmentTrigger>
-        </AttachmentCard>
+        <DocumentCard
+          attachment={attachment}
+          blur={blur}
+          onOpen={onOpenDocument}
+        />
       )
   }
+}
+
+/** O PDF abre no visualizador do app; os outros documentos só baixam. */
+export function isPdf(
+  attachment: Pick<Attachment, "contentType" | "filename">
+) {
+  return (
+    attachment.contentType === "application/pdf" ||
+    /\.pdf$/i.test(attachment.filename)
+  )
+}
+
+/** "PDF", "DOCX", "ZIP"...: pela extensão do nome, senão pelo tipo. */
+function fileType(attachment: Attachment) {
+  const extension = /\.([a-z0-9]{1,6})$/i.exec(attachment.filename)?.[1]
+  return (extension ?? attachment.contentType.split("/").at(-1) ?? "")
+    .slice(0, 6)
+    .toUpperCase()
+}
+
+/**
+ * Documento como no WhatsApp: a prévia da primeira página no alto (quando o servidor gerou), o ícone do tipo, o nome e
+ * "5 páginas • PDF • 230 KB". Tocar no PDF abre o visualizador do app; o botão baixa.
+ */
+function DocumentCard({
+  attachment,
+  blur,
+  onOpen,
+}: {
+  attachment: Attachment
+  blur: string | null
+  onOpen?: (attachment: Attachment) => void
+}) {
+  const { t, i18n } = useTranslation()
+  const [loaded, setLoaded] = useState(false)
+  const pdf = isPdf(attachment)
+  const type = fileType(attachment)
+  const opens = pdf && onOpen !== undefined
+  const details = [
+    attachment.pageCount
+      ? t("media.pages", { count: attachment.pageCount })
+      : null,
+    type || null,
+    formatBytes(attachment.size, i18n.language),
+  ].filter(Boolean)
+  const open = (event: MouseEvent) => {
+    event.stopPropagation()
+    onOpen?.(attachment)
+  }
+  return (
+    <div
+      data-private="media"
+      data-document=""
+      className="relative flex w-72 max-w-full flex-col overflow-hidden rounded-lg bg-black/5 dark:bg-white/10"
+    >
+      {attachment.hasThumbnail ? (
+        <div className="relative h-36 overflow-hidden bg-white">
+          {blur && !loaded ? (
+            <img
+              src={blur}
+              alt=""
+              className="absolute inset-0 size-full object-cover object-top"
+            />
+          ) : null}
+          <img
+            src={mediaUrl(attachment, "thumbnail")}
+            alt=""
+            loading="lazy"
+            onLoad={() => setLoaded(true)}
+            className="relative block size-full object-cover object-top"
+          />
+        </div>
+      ) : null}
+      <div className="flex min-w-0 items-center gap-3 p-2">
+        <span
+          aria-hidden="true"
+          data-file-tone={pdf ? "pdf" : "other"}
+          className="flex h-10 w-8 shrink-0 items-end justify-center rounded-md pb-1 text-[0.55rem] font-bold text-white"
+        >
+          {type || <FileIcon className="mb-1 size-4" />}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-medium">{attachment.filename}</p>
+          <p className="truncate text-xs opacity-70">{details.join(" • ")}</p>
+        </div>
+        <a
+          href={mediaUrl(attachment, "content", true)}
+          download={attachment.filename}
+          aria-label={`${t("media.download")}: ${attachment.filename}`}
+          onClick={(event) => event.stopPropagation()}
+          className={cn(
+            "relative z-10 flex size-9 shrink-0 items-center justify-center rounded-full outline-none hover:bg-black/10 focus-visible:ring-3 focus-visible:ring-ring/50 dark:hover:bg-white/15 pointer-coarse:size-11"
+          )}
+        >
+          <DownloadIcon aria-hidden="true" className="size-5" />
+        </a>
+      </div>
+      {opens ? (
+        <button
+          type="button"
+          aria-label={t("media.openDocument", { name: attachment.filename })}
+          onClick={open}
+          className="absolute inset-0 rounded-lg outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+        />
+      ) : null}
+    </div>
+  )
 }
 
 /** Arquivo ainda subindo: prévia local, progresso e cancelar. */

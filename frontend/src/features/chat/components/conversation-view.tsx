@@ -102,6 +102,7 @@ import { useListAction } from "../organization"
 import { useShortcut } from "@/lib/shortcuts"
 import { DeleteMessagesDialog } from "./delete-messages-dialog"
 import { ImageViewer } from "./image-viewer"
+import { PdfViewer, type OpenDocument } from "./pdf-viewer"
 import { BroadcastDetails } from "./broadcast-details"
 import { ContactDetails } from "./contact-details"
 import { ConversationAvatar, useConversationLabel } from "./conversation-avatar"
@@ -370,6 +371,8 @@ function LoadedConversation({
   })
   const [selection, setSelection] = useState<string[] | null>(null)
   const [forwardIds, setForwardIds] = useState<string[]>([])
+  // PDF aberto no visualizador do app.
+  const [openDocument, setOpenDocument] = useState<OpenDocument | null>(null)
   // Solicitação aceita de quem não está nos contatos: pergunta se já quer adicionar (CT-02).
   const [offeredContact, setOfferedContact] = useState<Peer | null>(null)
   const [infoId, setInfoId] = useState<string | null>(null)
@@ -885,6 +888,16 @@ function LoadedConversation({
     if (typeof action === "object" && "openImage" in action) {
       setViewerImages(null)
       setViewerId(action.openImage)
+      return
+    }
+    if (typeof action === "object" && "openDocument" in action) {
+      if (message.attachment) {
+        setOpenDocument({
+          attachment: message.attachment,
+          sender: nameOf(message.senderId),
+          sentAt: message.createdAt,
+        })
+      }
       return
     }
     if (!message.id || message.seq === null) {
@@ -1694,6 +1707,7 @@ function LoadedConversation({
             }}
           />
         )}
+        <PdfViewer open={openDocument} onClose={() => setOpenDocument(null)} />
         <ConfirmDialog
           open={offeredContact !== null}
           onOpenChange={(open) => {

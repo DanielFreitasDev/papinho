@@ -37,6 +37,7 @@
     "lowlight": "^3.3.0",
     "lucide-react": "^1.57.0",
     "onnxruntime-web": "1.31.0-dev.20260914-8d85527a0",
+    "pdfjs-dist": "6.4.299",
     "react": "^19.3.0",
     "react-day-picker": "^10.0.2",
     "react-dom": "^19.3.0",

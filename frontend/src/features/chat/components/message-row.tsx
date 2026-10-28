@@ -118,6 +118,7 @@ export type MessageAction =
   | "replyPrivately"
   | { react: string }
   | { openImage: string }
+  | { openDocument: string }
   | "moreReactions"
   | "openViewOnce"
   | "unreact"
@@ -358,6 +359,7 @@ function MessageRowView({
               <AttachmentView
                 attachment={message.attachment}
                 onOpenImage={(id) => onAction({ openImage: id })}
+                onOpenDocument={(item) => onAction({ openDocument: item.id })}
                 audio={
                   message.attachment.kind === "AUDIO"
                     ? {

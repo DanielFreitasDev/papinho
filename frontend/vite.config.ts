@@ -1,11 +1,70 @@
-import { resolve } from "node:path"
+import {
+  cpSync,
+  createReadStream,
+  existsSync,
+  readFileSync,
+  statSync,
+} from "node:fs"
+import { extname, resolve } from "node:path"
 import tailwindcss from "@tailwindcss/vite"
 import { tanstackRouter } from "@tanstack/router-plugin/vite"
 import react from "@vitejs/plugin-react"
 import { VitePWA } from "vite-plugin-pwa"
-import { defineConfig } from "vitest/config"
+import { defineConfig, type Plugin } from "vitest/config"
 
 const backend = process.env.PAPINHO_BACKEND_URL ?? "http://localhost:8080"
+
+const pdfjsRoot = resolve(import.meta.dirname, "node_modules/pdfjs-dist")
+const pdfjsVersion = (
+  JSON.parse(readFileSync(resolve(pdfjsRoot, "package.json"), "utf8")) as {
+    version: string
+  }
+).version
+/** Os dados do pdf.js ficam em /assets (cache de um ano no servidor): a versão no caminho troca a URL a cada versão. */
+const pdfjsData = `/assets/pdfjs-${pdfjsVersion}/`
+const PDFJS_FOLDERS = ["standard_fonts", "cmaps", "iccs", "wasm"]
+const PDFJS_TYPES: Record<string, string> = {
+  ".wasm": "application/wasm",
+  ".js": "text/javascript",
+}
+
+/**
+ * Fontes padrão, mapas de caracteres, perfis de cor e decodificadores WASM do pdf.js servidos pelo próprio Papinho:
+ * copiados para o build e, no desenvolvimento, lidos direto do node_modules.
+ */
+function pdfjsAssets(): Plugin {
+  return {
+    name: "papinho-pdfjs-assets",
+    configureServer(server) {
+      server.middlewares.use(pdfjsData, (request, response, next) => {
+        const path = decodeURIComponent((request.url ?? "").split("?")[0])
+        const file = resolve(pdfjsRoot, `.${path}`)
+        const allowed = PDFJS_FOLDERS.some((folder) =>
+          file.startsWith(resolve(pdfjsRoot, folder))
+        )
+        if (!allowed || !existsSync(file) || !statSync(file).isFile()) {
+          next()
+          return
+        }
+        response.setHeader(
+          "Content-Type",
+          PDFJS_TYPES[extname(file)] ?? "application/octet-stream"
+        )
+        createReadStream(file).pipe(response)
+      })
+    },
+    writeBundle(options) {
+      const out = options.dir ?? resolve(import.meta.dirname, "dist")
+      for (const folder of PDFJS_FOLDERS) {
+        cpSync(
+          resolve(pdfjsRoot, folder),
+          resolve(out, pdfjsData.slice(1), folder),
+          { recursive: true }
+        )
+      }
+    },
+  }
+}
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -14,6 +73,7 @@ export default defineConfig({
     tanstackRouter({ target: "react", autoCodeSplitting: true }),
     react(),
     tailwindcss(),
+    pdfjsAssets(),
     // PWA instalável (NT-04): service worker próprio (injectManifest) e atualização só quando a pessoa pede.
     VitePWA({
       strategies: "injectManifest",
@@ -66,12 +126,21 @@ export default defineConfig({
       injectManifest: {
         // O app em si; o runtime ONNX (dezenas de MB) e as capturas do manifesto ficam de fora.
         globPatterns: ["**/*.{js,css,html,woff2}"],
-        globIgnores: ["**/*.wasm", "screenshots/**", "assets/ort-*"],
+        // O pdf.js (o pacote, o worker e os dados) só vale com rede: os anexos não ficam offline.
+        globIgnores: [
+          "**/*.wasm",
+          "screenshots/**",
+          "assets/ort-*",
+          "assets/pdfjs-*/**",
+          "assets/pdf-*",
+          "assets/pdf.worker*",
+        ],
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
       },
       devOptions: { enabled: false },
     }),
   ],
+  define: { PDFJS_DATA: JSON.stringify(pdfjsData) },
   resolve: {
     alias: {
       "@": resolve(import.meta.dirname, "./src"),

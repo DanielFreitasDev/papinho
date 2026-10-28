@@ -107,6 +107,8 @@ export type Attachment = {
    * guardadas offline antes de o campo existir.
    */
   durationMs?: number | null
+  /** Páginas do PDF, lidas pelo servidor; nula em outros documentos e ausente nas mensagens antigas guardadas offline. */
+  pageCount?: number | null
   /** Só em conversa que a pessoa trancou: vai na URL do conteúdo (PV-03). */
   grant?: string | null
 }

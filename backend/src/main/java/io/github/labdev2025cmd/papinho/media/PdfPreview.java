@@ -1,5 +1,6 @@
 package io.github.labdev2025cmd.papinho.media;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -13,6 +14,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.jspecify.annotations.Nullable;
@@ -138,7 +140,7 @@ class PdfPreview {
                 "-Dpdfbox.fontcache=" + workDir,
                 // A saída é descartada; sem isso, o Logback sem configuração formataria tudo em DEBUG.
                 "-Dslf4j.provider=org.slf4j.helpers.NOP_FallbackServiceProvider",
-                "-cp", System.getProperty("java.class.path")));
+                "-cp", classPath()));
         if (BOOT_JAR) {
             command.add("-Dloader.main=" + PdfPreviewWorker.class.getName());
             command.add("org.springframework.boot.loader.launch.PropertiesLauncher");
@@ -148,6 +150,17 @@ class PdfPreview {
         command.add(pdf.toString());
         command.add(out.toString());
         return command;
+    }
+
+    /**
+     * O classpath do servidor com caminhos absolutos: o processo roda dentro da pasta de saída, e um
+     * {@code java -jar backend/target/papinho.jar} deixaria o caminho relativo apontando para lugar nenhum.
+     */
+    static String classPath() {
+        return Stream.of(System.getProperty("java.class.path").split(File.pathSeparator))
+                .filter(entry -> !entry.isEmpty())
+                .map(entry -> Path.of(entry).toAbsolutePath().normalize().toString())
+                .collect(Collectors.joining(File.pathSeparator));
     }
 
     /** O que o processo publicou; o que não fizer sentido vale como nada. */

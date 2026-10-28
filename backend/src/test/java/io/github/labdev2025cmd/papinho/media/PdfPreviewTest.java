@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.charset.StandardCharsets;
@@ -112,6 +113,22 @@ class PdfPreviewTest {
         }
 
         assertThat(previews().analyze(UUID.randomUUID(), huge)).isEqualTo(PdfPreview.Result.NOTHING);
+    }
+
+    @Test
+    @DisplayName("JAR aberto por caminho relativo: o processo, que roda em outra pasta, recebe o caminho absoluto")
+    void shouldPassAnAbsoluteClassPath() {
+        String original = System.getProperty("java.class.path");
+        String separator = File.pathSeparator;
+        try {
+            System.setProperty("java.class.path", "backend/target/papinho.jar" + separator + separator + "lib/*");
+
+            assertThat(PdfPreview.classPath()).isEqualTo(
+                    Path.of("backend/target/papinho.jar").toAbsolutePath() + separator
+                            + Path.of("lib/*").toAbsolutePath());
+        } finally {
+            System.setProperty("java.class.path", original);
+        }
     }
 
     private PdfPreview previews() {

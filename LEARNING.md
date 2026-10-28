@@ -67,6 +67,7 @@ Leia as entradas relacionadas à tarefa. Os detalhes ficam em `docs/learning/`.
 - [Licença AGPL-3.0 e imagem Docker no GHCR](docs/learning/decisao-licenca-e-imagem-docker.md) — permissão da seção 7 para o AspectJ, Alpine com o JAR testado via build-context, release idempotente.
 - [Repositório público e o runner self-hosted](docs/learning/decisao-repositorio-publico.md) — cota de minutos da conta esgotada no privado, gitleaks antes de abrir, aprovação de todo PR de fora (o runner tem root na VPS).
 - [Limpeza dos arquivos nunca usados](docs/learning/decisao-limpeza-de-arquivos-nao-usados.md) — porta MediaReferences, in_use preguiçoso, trava contra o anexo simultâneo.
+- [Prévia de PDF num processo à parte](docs/learning/decisao-previa-de-pdf-em-processo-separado.md) — o PDFBox descomprime tudo na memória; filho com 256 MB e 20 s, PropertiesLauncher no JAR.
 - [Correção da auditoria de 2026-10-17](docs/learning/decisao-auditoria-2026-10-17.md) — convite do admin no fechado, foto view-once, HEIC recusado, exportação sem trancadas, presença.
 - [Correção dos Baixos de 2026-10-17](docs/learning/decisao-auditoria-baixos-2026-10-17.md) — login por IP e conta, grant dos anexos trancados, reservas da conta apagada, antivírus fora.
 

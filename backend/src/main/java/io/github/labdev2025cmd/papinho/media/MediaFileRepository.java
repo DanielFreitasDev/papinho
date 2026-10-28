@@ -36,4 +36,8 @@ interface MediaFileRepository extends JpaRepository<MediaFile, UUID> {
     /** Áudios enviados antes de a duração ser lida no upload (AU-02), dos mais antigos aos mais novos. */
     @Query("select f from MediaFile f where f.durationPending = true order by f.createdAt")
     List<MediaFile> findDurationPending(Pageable page);
+
+    /** PDFs à espera das páginas e da prévia (MD-01), dos mais antigos aos mais novos. */
+    @Query("select f from MediaFile f where f.pagesPending = true order by f.createdAt")
+    List<MediaFile> findPagesPending(Pageable page);
 }

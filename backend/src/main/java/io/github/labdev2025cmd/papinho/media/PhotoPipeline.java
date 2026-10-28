@@ -56,7 +56,12 @@ final class PhotoPipeline {
 
     private static Result withPreview(byte[] content, BufferedImage image) throws IOException {
         BufferedImage thumbnail = ImageProcessing.fit(image, THUMBNAIL_SIDE);
-        String hash = ThumbHash.encode(ImageProcessing.fit(thumbnail, THUMBHASH_SIDE));
-        return new Result(content, image.getWidth(), image.getHeight(), ImageProcessing.jpeg(thumbnail), hash);
+        return new Result(content, image.getWidth(), image.getHeight(), ImageProcessing.jpeg(thumbnail),
+                thumbhash(thumbnail));
+    }
+
+    /** ThumbHash de uma miniatura já pronta (também a prévia dos PDFs). */
+    static String thumbhash(BufferedImage thumbnail) {
+        return ThumbHash.encode(ImageProcessing.fit(thumbnail, THUMBHASH_SIDE));
     }
 }

@@ -33,6 +33,7 @@ import io.github.labdev2025cmd.papinho.support.Accounts;
 import io.github.labdev2025cmd.papinho.support.ApiClient;
 import io.github.labdev2025cmd.papinho.support.Images;
 import io.github.labdev2025cmd.papinho.support.IntegrationTest;
+import io.github.labdev2025cmd.papinho.support.Pdfs;
 import io.github.labdev2025cmd.papinho.support.TestSupportConfiguration.ApiClients;
 import io.github.labdev2025cmd.papinho.support.Uploads;
 import tools.jackson.databind.JsonNode;
@@ -55,6 +56,9 @@ class MediaIT {
 
     @Autowired
     private AudioDurationBackfillJob durationBackfill;
+
+    @Autowired
+    private PdfPagesBackfillJob pagesBackfill;
 
     @Autowired
     private FileStorage storage;
@@ -371,6 +375,83 @@ class MediaIT {
         assertThat(jdbc.queryForObject("select count(*) from media_files where duration_pending", Integer.class))
                 .isZero();
         assertThat(durationBackfill.fillBatch()).as("nada mais a ler").isZero();
+    }
+
+    @Test
+    @DisplayName("PDF chega com o número de páginas e a primeira página como miniatura, também na mensagem; o que não abre vai sem prévia (MD-01)")
+    void shouldPreviewPdfFirstPage() {
+        String pdf = upload(ana, Pdfs.document(3), "contrato.pdf", "application/pdf");
+        JsonNode view = ana.json(ana.get("/api/v1/media/" + pdf));
+        assertThat(view.get("kind").asString()).isEqualTo("DOCUMENT");
+        assertThat(view.get("pageCount").asInt()).isEqualTo(3);
+        assertThat(view.get("hasThumbnail").asBoolean()).isTrue();
+        assertThat(view.get("width").asInt()).as("largura das miniaturas").isEqualTo(480);
+        assertThat(view.get("height").asInt()).as("proporção do A4 em pé").isEqualTo(679);
+        assertThat(view.get("thumbhash").asString()).isNotBlank();
+        assertThat(view.get("durationMs").isNull()).isTrue();
+        MvcTestResult thumbnail = ana.get("/api/v1/media/" + pdf + "/thumbnail");
+        assertThat(thumbnail).hasStatusOk();
+        assertThat(thumbnail.getResponse().getContentType()).isEqualTo("image/jpeg");
+        assertThat(ana.get("/api/v1/media/" + pdf + "/content").getResponse().getContentType())
+                .as("o PDF em si continua só para baixar").isEqualTo("application/octet-stream");
+
+        sendWith(ana, pdf, "contrato");
+        JsonNode attachment = bruno.json(bruno.get("/api/v1/conversations/" + conversation + "/messages"))
+                .get("messages").get(0).get("attachment");
+        assertThat(attachment.get("pageCount").asInt()).as("para quem recebe").isEqualTo(3);
+        assertThat(attachment.get("hasThumbnail").asBoolean()).isTrue();
+        assertThat(attachment.get("height").asInt()).isEqualTo(679);
+        assertThat(bruno.get("/api/v1/media/" + pdf + "/thumbnail")).hasStatusOk();
+        assertThat(carla.get("/api/v1/media/" + pdf + "/thumbnail")).as("quem é de fora").hasStatus(404);
+
+        for (byte[] unreadable : List.of("%PDF-1.4 doc".getBytes(StandardCharsets.US_ASCII),
+                Pdfs.withPassword("segredo"))) {
+            String id = upload(ana, unreadable, "quebrado.pdf", "application/pdf");
+            JsonNode file = ana.json(ana.get("/api/v1/media/" + id));
+            assertThat(file.get("contentType").asString()).isEqualTo("application/pdf");
+            assertThat(file.get("pageCount").isNull()).isTrue();
+            assertThat(file.get("hasThumbnail").asBoolean()).isFalse();
+            assertThat(ana.get("/api/v1/media/" + id + "/thumbnail")).hasStatus(404);
+        }
+        assertThat(jdbc.queryForObject("select count(*) from media_files where pages_pending", Integer.class))
+                .as("lidos no upload, nada para o job").isZero();
+    }
+
+    @Test
+    @DisplayName("PDFs enviados antes das páginas as ganham em segundo plano, com a prévia; os que não abrem não são relidos (MD-01)")
+    void shouldBackfillPagesOfOldPdfs() throws Exception {
+        String old = upload(ana, Pdfs.document(3), "antigo.pdf", "application/pdf");
+        String broken = upload(ana, "%PDF-1.4 doc".getBytes(StandardCharsets.US_ASCII), "quebrado.pdf",
+                "application/pdf");
+        String gone = upload(ana, Pdfs.document(1), "sumiu.pdf", "application/pdf");
+        String photo = upload(ana, Images.png(20, 20), "foto.png", "image/png");
+        // Como estavam antes da migration: sem páginas nem prévia e marcados para o job.
+        jdbc.update("""
+                update media_files set page_count = null, pages_pending = true, has_thumbnail = false, width = null,
+                       height = null, thumbhash = null
+                 where content_type = 'application/pdf'
+                """);
+        for (String id : List.of(old, gone)) {
+            storage.delete(MediaFile.thumbnailKey(UUID.fromString(id)));
+        }
+        storage.delete(MediaFile.contentKey(UUID.fromString(gone)));
+
+        assertThat(pagesBackfill.fillBatch()).isEqualTo(3);
+
+        JsonNode filled = ana.json(ana.get("/api/v1/media/" + old));
+        assertThat(filled.get("pageCount").asInt()).isEqualTo(3);
+        assertThat(filled.get("hasThumbnail").asBoolean()).isTrue();
+        assertThat(filled.get("width").asInt()).isEqualTo(480);
+        assertThat(filled.get("height").asInt()).isEqualTo(679);
+        assertThat(filled.get("thumbhash").asString()).isNotBlank();
+        assertThat(ana.get("/api/v1/media/" + old + "/thumbnail").getResponse().getContentType())
+                .isEqualTo("image/jpeg");
+        assertThat(ana.json(ana.get("/api/v1/media/" + broken)).get("pageCount").isNull()).isTrue();
+        assertThat(ana.json(ana.get("/api/v1/media/" + gone)).get("pageCount").isNull()).isTrue();
+        assertThat(ana.json(ana.get("/api/v1/media/" + photo)).get("pageCount").isNull()).isTrue();
+        assertThat(jdbc.queryForObject("select count(*) from media_files where pages_pending", Integer.class))
+                .isZero();
+        assertThat(pagesBackfill.fillBatch()).as("nada mais a ler").isZero();
     }
 
     @Test

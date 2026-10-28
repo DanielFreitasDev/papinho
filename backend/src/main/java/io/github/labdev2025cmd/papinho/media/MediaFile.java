@@ -61,6 +61,13 @@ class MediaFile {
     @Column(nullable = false)
     private boolean durationPending;
 
+    /** Número de páginas do PDF (MD-01); nulo quando não é PDF ou ele não abre. */
+    private @Nullable Integer pageCount;
+
+    /** PDF à espera do job que lê as páginas e desenha a prévia (enviado antes disso ou com o servidor ocupado). */
+    @Column(nullable = false)
+    private boolean pagesPending;
+
     protected MediaFile() {
         this.id = new UUID(0, 0);
         this.kind = MediaKind.DOCUMENT;
@@ -104,6 +111,10 @@ class MediaFile {
         return contentType;
     }
 
+    long size() {
+        return size;
+    }
+
     String filename() {
         return filename;
     }
@@ -126,8 +137,24 @@ class MediaFile {
         this.durationPending = false;
     }
 
+    /**
+     * Páginas e prévia do PDF, lidas no upload ou pelo job (MD-01). A prévia ocupa o lugar da miniatura das imagens,
+     * com as dimensões dela; a análise que nem rodou deixa o PDF para o job.
+     */
+    void pagesRead(PdfPreview.Result result) {
+        this.pageCount = result.pages();
+        this.pagesPending = !result.ran();
+        PdfPreview.Page page = result.page();
+        if (page != null) {
+            this.width = page.width();
+            this.height = page.height();
+            this.thumbhash = page.thumbhash();
+            this.hasThumbnail = true;
+        }
+    }
+
     MediaView toView() {
         return new MediaView(id, ownerId == null ? new UUID(0, 0) : ownerId, kind, contentType, size, filename, width,
-                height, thumbhash, hasThumbnail, durationMs, createdAt);
+                height, thumbhash, hasThumbnail, durationMs, pageCount, createdAt);
     }
 }

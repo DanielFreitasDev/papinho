@@ -14,12 +14,13 @@ import io.github.labdev2025cmd.papinho.TestcontainersConfiguration;
 
 /**
  * Teste de integração com o contexto completo, MockMvc e PostgreSQL do Testcontainers. O banco é zerado antes
- * de cada teste por {@link DatabaseCleaner}; todos os testes que usam esta anotação compartilham o contexto. O job
- * da duração dos áudios antigos não roda sozinho durante a suíte (o teste dele o chama na hora certa).
+ * de cada teste por {@link DatabaseCleaner}; todos os testes que usam esta anotação compartilham o contexto. Os jobs
+ * da duração dos áudios e das páginas dos PDFs antigos não rodam sozinhos durante a suíte (os testes deles os chamam
+ * na hora certa).
  */
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
-@SpringBootTest(properties = "app.media.duration-backfill-delay=1d")
+@SpringBootTest(properties = {"app.media.duration-backfill-delay=1d", "app.media.pages-backfill-delay=1d"})
 @AutoConfigureMockMvc
 @Import({TestcontainersConfiguration.class, TestSupportConfiguration.class})
 @TestExecutionListeners(listeners = DatabaseCleaner.class, mergeMode = TestExecutionListeners.MergeMode.MERGE_WITH_DEFAULTS)

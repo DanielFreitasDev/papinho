@@ -16,6 +16,8 @@ final class ContentTypes {
     /** Fotos com EXIF que o servidor não decodifica nem limpa (HEIC/HEIF do iPhone, AVIF): recusadas (MD-02). */
     static final Set<String> UNCLEANABLE_PHOTOS = Set.of("image/heic", "image/heif", "image/heic-sequence",
             "image/heif-sequence", "image/avif");
+    /** Documento que ganha número de páginas e prévia da primeira página ({@link PdfPreview}). */
+    static final String PDF = "application/pdf";
     private static final Set<String> VIDEOS = Set.of("video/mp4", "video/webm", "video/quicktime");
     /** Os nomes antigos continuam aqui para os arquivos guardados antes da troca pelos nomes de {@link #ALIASES}. */
     private static final Set<String> AUDIOS = Set.of("audio/ogg", "audio/webm", "audio/mp4", "audio/mpeg",

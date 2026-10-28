@@ -38,8 +38,8 @@ import io.github.labdev2025cmd.papinho.shared.security.RateLimiter;
  * Upload retomável pelo protocolo tus 1.0 (MD-01, ADR 0009): criação com tamanho declarado (limite de 1 GB e
  * cota por usuário), escrita em pedaços com {@code Upload-Offset}, consulta do deslocamento para retomar e
  * cancelamento. Ao completar, o tipo é detectado pelo conteúdo (Tika), imagens são tratadas (MD-02), a duração
- * dos áudios é lida do arquivo (AU-02), o antivírus opcional analisa (MD-06) e o arquivo vai para a porta de
- * armazenamento.
+ * dos áudios é lida do arquivo (AU-02), os PDFs ganham número de páginas e prévia (MD-01), o antivírus opcional
+ * analisa (MD-06) e o arquivo vai para a porta de armazenamento.
  *
  * <p>Os pedaços ficam num diretório local até completar; um pedaço por vez por upload (marca em memória:
  * instância única, ADR 0004).</p>
@@ -57,6 +57,7 @@ public class UploadService {
     private final MediaFileRepository files;
     private final FileStorage storage;
     private final MalwareScanner scanner;
+    private final PdfPreview pdfPreview;
     private final InstanceSettingsService settings;
     private final RateLimiter rateLimiter;
     private final TransactionTemplate transactions;
@@ -72,13 +73,14 @@ public class UploadService {
     private final Set<UUID> busy = ConcurrentHashMap.newKeySet();
 
     UploadService(MediaUploadRepository uploads, MediaFileRepository files, FileStorage storage,
-            MalwareScanner scanner, InstanceSettingsService settings, RateLimiter rateLimiter,
+            MalwareScanner scanner, PdfPreview pdfPreview, InstanceSettingsService settings, RateLimiter rateLimiter,
             TransactionTemplate transactions, JdbcTemplate jdbc, MediaProperties properties, Clock clock)
             throws IOException {
         this.uploads = uploads;
         this.files = files;
         this.storage = storage;
         this.scanner = scanner;
+        this.pdfPreview = pdfPreview;
         this.settings = settings;
         this.rateLimiter = rateLimiter;
         this.transactions = transactions;
@@ -270,8 +272,19 @@ public class UploadService {
                 duration = AudioDuration.millis(in, type);
             }
         }
+        PdfPreview.Result pages = null;
+        if (type.equals(ContentTypes.PDF)) {
+            pages = pdfPreview.analyze(id, file);
+            PdfPreview.Page page = pages.page();
+            if (page != null) {
+                storage.write(MediaFile.thumbnailKey(id), new ByteArrayInputStream(page.jpeg()));
+            }
+        }
         MediaFile media = new MediaFile(id, upload.ownerId(), kind, type, size, filename, sha256, width, height,
                 thumbhash, thumbnail, duration, clock.instant());
+        if (pages != null) {
+            media.pagesRead(pages);
+        }
         MediaFile saved = transactions.execute(status -> {
             uploads.deleteById(id);
             return files.save(media);

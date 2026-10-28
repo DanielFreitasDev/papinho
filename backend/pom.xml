@@ -17,6 +17,7 @@
 		<archunit.version>1.5.1</archunit.version>
 		<bucket4j.version>8.21.0</bucket4j.version>
 		<tika.version>4.1.0</tika.version>
+		<pdfbox.version>3.0.8</pdfbox.version>
 		<jsoup.version>1.23.2</jsoup.version>
 		<shedlock.version>7.10.1</shedlock.version>
 		<greenmail.version>2.1.14</greenmail.version>
@@ -118,6 +119,12 @@
 			<groupId>org.apache.tika</groupId>
 			<artifactId>tika-core</artifactId>
 			<version>${tika.version}</version>
+		</dependency>
+		<!-- Prévia dos PDFs (MD-01): número de páginas e a primeira página, desenhada num processo Java à parte -->
+		<dependency>
+			<groupId>org.apache.pdfbox</groupId>
+			<artifactId>pdfbox</artifactId>
+			<version>${pdfbox.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.jsoup</groupId>

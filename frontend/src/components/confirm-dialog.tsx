@@ -12,13 +12,14 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 
-/** Confirmação reutilizável para ações destrutivas (UI.md §8.11). */
+/** Confirmação reutilizável para ações destrutivas (UI.md §8.11) e perguntas de sim ou não (destructive={false}). */
 export function ConfirmDialog({
   open,
   onOpenChange,
   title,
   description,
   confirmLabel,
+  cancelLabel,
   onConfirm,
   destructive = true,
   children,
@@ -28,6 +29,8 @@ export function ConfirmDialog({
   title: string
   description?: ReactNode
   confirmLabel: string
+  /** Texto do botão que fecha sem fazer nada; o padrão é "Cancelar". */
+  cancelLabel?: string
   onConfirm: () => void
   destructive?: boolean
   children?: ReactNode
@@ -44,7 +47,9 @@ export function ConfirmDialog({
         </AlertDialogHeader>
         {children}
         <AlertDialogFooter>
-          <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+          <AlertDialogCancel>
+            {cancelLabel ?? t("common.cancel")}
+          </AlertDialogCancel>
           <AlertDialogAction
             variant={destructive ? "destructive" : "default"}
             onClick={() => {

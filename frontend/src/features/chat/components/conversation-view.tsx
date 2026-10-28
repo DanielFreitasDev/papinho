@@ -53,7 +53,8 @@ import { attachGif } from "@/features/sticker"
 import { Skeleton } from "@/components/ui/skeleton"
 import { toast } from "@/components/ui/toast"
 import { authQueries } from "@/features/auth"
-import { useBlock } from "@/features/contact"
+import { ConfirmDialog } from "@/components/confirm-dialog"
+import { useAddContact, useBlock } from "@/features/contact"
 import { useMediaQuery } from "@/hooks/use-media-query"
 import { MAX_FILE_SIZE, type Track } from "@/features/media"
 import { ApiError, errorMessage } from "@/lib/api-client"
@@ -90,6 +91,7 @@ import type {
   LocalAttachment,
   Message,
   MessageStatus,
+  Peer,
   ReplyPreview,
 } from "../types"
 import { cancelFile, retryFile, sendFile } from "../attachments"
@@ -341,6 +343,7 @@ function LoadedConversation({
   const conversationAction = useConversationAction()
   const showError = useErrorToast()
   const block = useBlock()
+  const addContact = useAddContact()
   const editMessage = useEditMessage()
   const instance = useQuery(authQueries.instance())
   const pinned = useQuery(chatQueries.pinned(conversation.id))
@@ -367,6 +370,8 @@ function LoadedConversation({
   })
   const [selection, setSelection] = useState<string[] | null>(null)
   const [forwardIds, setForwardIds] = useState<string[]>([])
+  // Solicitação aceita de quem não está nos contatos: pergunta se já quer adicionar (CT-02).
+  const [offeredContact, setOfferedContact] = useState<Peer | null>(null)
   const [infoId, setInfoId] = useState<string | null>(null)
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [files, setFiles] = useState<File[]>([])
@@ -1280,12 +1285,20 @@ function LoadedConversation({
               <span className="flex flex-wrap gap-2">
                 <Button
                   size="sm"
-                  onClick={() =>
+                  onClick={() => {
+                    const peer = conversation.peer
                     conversationAction.mutate(
                       { conversationId: conversation.id, action: "accept" },
-                      { onError: showError }
+                      {
+                        onError: showError,
+                        onSuccess: () => {
+                          if (peer && !peer.contact) {
+                            setOfferedContact(peer)
+                          }
+                        },
+                      }
                     )
-                  }
+                  }}
                 >
                   {t("chat.accept")}
                 </Button>
@@ -1681,6 +1694,37 @@ function LoadedConversation({
             }}
           />
         )}
+        <ConfirmDialog
+          open={offeredContact !== null}
+          onOpenChange={(open) => {
+            if (!open) {
+              setOfferedContact(null)
+            }
+          }}
+          destructive={false}
+          title={t("chat.offerContactTitle", {
+            name: offeredContact?.displayName ?? "",
+          })}
+          description={t("chat.offerContactDescription", {
+            name: offeredContact?.displayName ?? "",
+          })}
+          confirmLabel={t("chat.addToContacts")}
+          cancelLabel={t("common.notNow")}
+          onConfirm={() => {
+            const peer = offeredContact
+            if (!peer) {
+              return
+            }
+            addContact.mutate(
+              { username: peer.username },
+              {
+                onError: showError,
+                onSuccess: () =>
+                  toast.add({ title: t("contacts.added"), type: "success" }),
+              }
+            )
+          }}
+        />
         <ForwardDialog
           messageIds={forwardIds}
           onClose={(sent) => {

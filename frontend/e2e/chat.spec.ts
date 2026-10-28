@@ -90,6 +90,23 @@ test("duas pessoas conversam em tempo real, da solicitação à leitura", async 
   await expectNoSeriousA11yViolations(pageB)
   await pageB.getByRole("button", { name: "Aceitar" }).click()
   await expect(pageB.getByText(/não está nos seus contatos/)).toBeHidden()
+  // Aceita, a Bia já pode pôr a Ana nos contatos (pedido do dono de 2026-10-28).
+  const offer = pageB.getByRole("alertdialog", {
+    name: "Adicionar Ana Conversa aos contatos?",
+  })
+  await expect(offer).toBeVisible()
+  await expect(offer).toContainText("só para os seus contatos")
+  await expectNoSeriousA11yViolations(pageB)
+  await offer.getByRole("button", { name: "Adicionar aos contatos" }).click()
+  await expect(offer).toBeHidden()
+  await expect(pageB.getByText("Contato adicionado")).toBeVisible()
+  const contacts = await pageB.request.get("/api/v1/contacts")
+  expect(await contacts.json()).toEqual([
+    expect.objectContaining({ username: ana }),
+  ])
+  await expect(
+    pageB.getByRole("main").getByText(/não está nos seus contatos/)
+  ).toHaveCount(0)
 
   // Spoiler só aparece ao tocar; a leitura da Bia chega para a Ana como dois tiques azuis.
   const spoiler = row(pageB, "Bia!").getByRole("button", {

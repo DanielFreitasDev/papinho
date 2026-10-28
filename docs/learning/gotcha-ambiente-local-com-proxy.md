@@ -1,10 +1,10 @@
 ---
 name: Máquina local do dono — proxy no Maven, portas ocupadas e /tmp
-description: proxy do settings.xml virava argumento do vite (sem proxy em 2026-10-24); 5432 ocupada; /tmp some no reboot; conta do gh (push só no repositório novo); 12 workers e ambiente e2e local
+description: proxy do settings.xml virava argumento do vite (sem proxy em 2026-10-24); 5432 ocupada; /tmp some no reboot; conta do gh (push só no repositório novo); 12 workers, ERR_NETWORK_CHANGED com Docker ao lado e ambiente e2e local
 type: project
 category: gotcha
 date: 2026-10-16
-updated: 2026-10-24
+updated: 2026-10-28
 ---
 Diferenças da máquina local em relação ao sandbox de nuvem das passadas 1 a 6:
 
@@ -29,6 +29,9 @@ Diferenças da máquina local em relação ao sandbox de nuvem das passadas 1 a 
 - Com o proxy ligado, a internet só sai por ele (`127.0.0.1:3128`, nas variáveis `*_proxy`); conexão direta não passa. O JVM
   ignora essas variáveis. No e2e, o Chromium só precisa de internet no `whisper.spec.ts`, que recebe o proxy por
   `PAPINHO_E2E_PROXY` (a instância local continua direta pelo `bypass`).
+- Contêineres que sobem ou caem durante o e2e (Testcontainers de outro `./mvnw verify`, `docker run`) mudam a rede da
+  máquina e o Chromium falha as requisições em andamento com `net::ERR_NETWORK_CHANGED`; o fixture reprova pelo erro de
+  console. Não rode o e2e junto com testes que usam Docker; a falha some ao repetir sozinho (2026-10-28).
 - O Playwright usa por padrão metade dos núcleos (12 workers aqui; 2 no runner do CI): fluxos longos estouram os
   30 s padrão e corridas de teste aparecem aqui antes do CI. Fluxo longo ganha `test.slow()`.
 - Os navegadores em `~/.cache/ms-playwright` podem ser de uma versão anterior do `@playwright/test` do lockfile
@@ -38,7 +41,7 @@ Diferenças da máquina local em relação ao sandbox de nuvem das passadas 1 a 
   --network 127.0.0.0/8` num `PAPINHO_PKI_DIR` temporário e as duas instâncias com o **mesmo** `PAPINHO_DATA_DIR`:
   padrão com `--server.port=18080` e `PAPINHO_ALLOWED_ORIGINS=http://localhost:18080`; lan com `--server.port=18443
   --app.pki.http-port=18081 --app.pki.public-http-port=18081 --app.pki.public-https-port=18443` e
-  `PAPINHO_ALLOWED_ORIGINS=https://127.0.0.1:18443`; `PAPINHO_RATE_LIMIT_MULTIPLIER=10` nas duas. Os specs rodam com
+  `PAPINHO_ALLOWED_ORIGINS=https://127.0.0.1:18443`; `PAPINHO_RATE_LIMIT_MULTIPLIER=20` nas duas. Os specs rodam com
   `PAPINHO_E2E_URL`, `PAPINHO_E2E_SETUP_URL` e `PAPINHO_E2E_HTTPS_URL` apontando para essas portas. A imagem do
   Mailpit não está no cache local: o `email.spec.ts` precisa dela (passada 12).
 

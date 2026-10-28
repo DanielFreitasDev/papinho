@@ -21,6 +21,7 @@ Leia as entradas relacionadas à tarefa. Os detalhes ficam em `docs/learning/`.
 - [Travas do ShedLock deslocadas fora de UTC](docs/learning/bug-shedlock-com-fuso-fora-de-utc.md) — sessão JDBC sempre em UTC (connection-init-sql); options=-c TimeZone não vence o fuso da JVM.
 - [Linha da conversa recorta o que passa dela](docs/learning/bug-conteudo-cortado-pela-linha-da-conversa.md) — content-visibility recorta a pintura e dá altura provisória à linha nova: reação e rabinho cabem na linha, a que entra nasce visível, o voo usa cópia fixa.
 - [Banco IndexedDB "papinho-*" apagado ao abrir](docs/learning/bug-banco-indexeddb-apagado-pelo-offline.md) — o isolamento do offline apaga bancos de outra conta; dado do aparelho usa papinho.device.
+- [Salto para uma das últimas mensagens deixava um vão](docs/learning/bug-vao-depois-do-salto-da-busca.md) — o MessageScroller cria um espaçador para alinhar o alvo; perto do fim, role até o fim.
 
 ## Pegadinhas de ambiente, dependências e bibliotecas
 - [PKIX do JDK/BC ignora Name Constraints da âncora](docs/learning/gotcha-pkix-ignora-name-constraints-da-ancora.md) — prove a CA da LAN com openssl verify ou certutil.
@@ -42,7 +43,7 @@ Leia as entradas relacionadas à tarefa. Os detalhes ficam em `docs/learning/`.
 - [unaccent troca formas largas por curingas do LIKE](docs/learning/gotcha-unaccent-curingas-e-palavras.md) — escapar antes do unaccent não protege (％ vira %); prefixo com starts_with; [:punct:] inclui emoji.
 - [Frontend: salto, service worker, toque e foco](docs/learning/gotcha-frontend-auditoria-2026-10-17.md) — scrollToMessage sem item, workbox.register sem catch, data-slot do Base UI, TabsContent sem foco.
 - [S3 nos testes sem MinIO](docs/learning/gotcha-s3-nos-testes-sem-minio.md) — adobe/s3mock, espera pelo log, skip vira Range.
-- [Máquina local: proxy no Maven, portas e /tmp](docs/learning/gotcha-ambiente-local-com-proxy.md) — proxy virava argumento do vite, e2e local em portas altas (receita), navegadores do Playwright desatualizados, gh com push só no repositório novo, proxy às vezes (sem ele em 2026-10-24).
+- [Máquina local: proxy no Maven, portas e /tmp](docs/learning/gotcha-ambiente-local-com-proxy.md) — proxy virava argumento do vite, e2e local em portas altas (receita), navegadores do Playwright desatualizados, gh com push só no repositório novo, proxy às vezes, ERR_NETWORK_CHANGED com Docker ao lado.
 - [Correção dos Baixos de 2026-10-17](docs/learning/gotcha-correcao-baixos-2026-10-17.md) — Enter no celular, safe area pelo CDP, Mockito com varargs, mutação equivalente, 416 do Spring, shadcn add.
 - [Janela de mensagens sobre o MessageScroller](docs/learning/gotcha-janela-de-mensagens-e-message-scroller.md) — âncora que volta ao DOM salta, root e observador recriado após o commit, lado do corte pela borda, compensação pela linha visível.
 - [Spring Modulith 2.1.2: proxy nas implementações internas da API](docs/learning/gotcha-modulith-proxy-de-observabilidade.md) — getClass() vira CGLIB; use AopUtils.getTargetClass e nada de método final.
@@ -60,6 +61,8 @@ Leia as entradas relacionadas à tarefa. Os detalhes ficam em `docs/learning/`.
 - [Destaque da busca pela mesma regra do servidor](docs/learning/decisao-destaque-da-busca.md) — Snowball português igual ao portuguese_stem, fixture conferida nos dois lados, termo pelo estado do histórico.
 - [Escala de espaçamento e auditoria das bordas](docs/learning/decisao-escala-de-espacamento.md) — tokens na forma de variável (cn), menu com largura própria, fieldset min-w-0, addons presos embaixo, data-scroll-x.
 - [Animações sem biblioteca, com tokens e só ao vivo](docs/learning/decisao-animacoes.md) — nada de Motion nem ViewTransition do React na lista, entrada decidida antes de pintar, chave remetente+clientMessageId, bola, onda e voo.
+- [Busca de pessoas por nome no "Adicionar contato"](docs/learning/decisao-busca-de-pessoas-por-nome.md) — todos aparecem e cada um pode sair; @usuario exato e contatos sempre acham; bloqueio nunca.
+- [Formatação no campo com um espelho](docs/learning/decisao-formatacao-no-campo.md) — marcadores do WhatsApp, espelho que não muda a largura das letras, insertText para o desfazer, prova letra por letra.
 - [Paletas de cor e papéis de parede](docs/learning/decisao-paletas-e-papel-de-parede.md) — OKLCH por fórmula com contraste conferido, hover por color-mix, doodles do Lucide como máscara, imagem só no aparelho.
 - [Licença AGPL-3.0 e imagem Docker no GHCR](docs/learning/decisao-licenca-e-imagem-docker.md) — permissão da seção 7 para o AspectJ, Alpine com o JAR testado via build-context, release idempotente.
 - [Repositório público e o runner self-hosted](docs/learning/decisao-repositorio-publico.md) — cota de minutos da conta esgotada no privado, gitleaks antes de abrir, aprovação de todo PR de fora (o runner tem root na VPS).

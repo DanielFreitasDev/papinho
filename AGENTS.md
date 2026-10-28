@@ -32,9 +32,10 @@ the product's own name-constrained CA) and may later deploy it on a VPS behind a
   `PAPINHO_E2E_SETUP_URL=http://localhost:8080/setup` for a `lan`-profile instance. A preinstalled Chromium can
   be used with `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/path/to/chrome`. Run it against a freshly started jar with an
   empty database: the `primeiro-admin` project creates the first admin, and rate limits live in memory
-  (start that jar with `PAPINHO_RATE_LIMIT_MULTIPLIER=10`, as CI does; never in production).
-  The UI-05 spec also runs in Firefox and WebKit (`playwright install chromium firefox webkit`); WebKit rejects
-  `Secure` cookies on http://localhost, so it needs `PAPINHO_E2E_HTTPS_URL` pointing to the `lan` instance (same DB).
+  (start that jar with `PAPINHO_RATE_LIMIT_MULTIPLIER=20`, as CI does; never in production).
+  The UI-05 and composer specs also run in Firefox and WebKit (`playwright install chromium firefox webkit`);
+  WebKit rejects `Secure` cookies on http://localhost, so it needs `PAPINHO_E2E_HTTPS_URL` pointing to the `lan`
+  instance (same DB).
   The real in-browser Whisper spec (AU-04) needs internet and downloads ~80 MB: `PAPINHO_E2E_WHISPER=1 pnpm e2e
   whisper.spec.ts --project=desktop-chromium --project=whisper-webgpu` (WASM and software WebGPU); behind a proxy
   add `PAPINHO_E2E_PROXY=http://host:port`. Never run two Playwright commands at once in `frontend/`: each one
@@ -69,6 +70,9 @@ the product's own name-constrained CA) and may later deploy it on a VPS behind a
   `prefersReducedMotion()` (CSS is covered by the global reduced-motion rule).
 - Effects that reveal or hide content on `:hover` go inside `@media (hover: hover)`: on touch screens the tapped
   element stays `:hover` until the next tap (PV-01 uses long press there).
+- The message box draws its formatting in a mirror under a transparent textarea (`composer-format.tsx`): nothing in
+  the mirror may change glyph widths (no `font-bold`, `font-mono`, padding or margin on a run), or the caret drifts;
+  `e2e/composer.spec.ts` checks it letter by letter. Formatting edits go through `insertText` (native undo).
 - Never mark a STATUS item `feito` without executed evidence; blocked items need the concrete reason.
 
 ## Guides (root; read only the relevant section)

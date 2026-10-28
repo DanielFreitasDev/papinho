@@ -40,8 +40,11 @@ class PdfPreview {
     private static final Duration WAIT = Duration.ofSeconds(10);
     /** Sobra para os PDFs comuns; a "bomba de descompressão" estoura aqui, não no servidor. */
     private static final String HEAP = "-Xmx256m";
-    /** Opções do servidor que não podem chegar ao processo (agentes, outro heap). */
-    private static final Set<String> JVM_OPTIONS = Set.of("JAVA_TOOL_OPTIONS", "JDK_JAVA_OPTIONS", "_JAVA_OPTIONS");
+    /**
+     * Variáveis do servidor que o processo recebe: só caminho, idioma e fuso. Ficam de fora os segredos (senha do
+     * banco, chaves) e as opções da JVM do servidor (agentes, outro heap): ele só lê o PDF e grava a prévia.
+     */
+    private static final Set<String> ENVIRONMENT = Set.of("PATH", "LANG", "LC_ALL", "LC_CTYPE", "TZ");
     /** No JAR do Spring Boot as classes ficam aninhadas: o processo sobe pelo lançador dele. */
     private static final boolean BOOT_JAR = bootJar();
 
@@ -106,7 +109,7 @@ class PdfPreview {
     private Result run(UUID id, Path pdf, Path out, Duration timeout) throws IOException, InterruptedException {
         ProcessBuilder builder = new ProcessBuilder(command(pdf, out)).directory(out.toFile())
                 .redirectOutput(ProcessBuilder.Redirect.DISCARD).redirectError(ProcessBuilder.Redirect.DISCARD);
-        builder.environment().keySet().removeAll(JVM_OPTIONS);
+        builder.environment().keySet().retainAll(ENVIRONMENT);
         Process process = builder.start();
         try {
             if (!process.waitFor(timeout.toMillis(), TimeUnit.MILLISECONDS)) {

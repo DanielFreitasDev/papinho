@@ -25,7 +25,8 @@ import io.github.labdev2025cmd.papinho.profile.ProfileVisibilityPolicy;
 /**
  * Configurações de privacidade de cada pessoa e as regras que os outros módulos aplicam: visibilidade de visto
  * por último, online, foto e recado (PV-04) com reciprocidade na presença (PV-05), confirmação de leitura global
- * (PV-06), quem pode me adicionar a grupos (PV-07), notificações sem conteúdo (PV-08) e desfoque (PV-01).
+ * (PV-06), quem pode me adicionar a grupos (PV-07), notificações sem conteúdo (PV-08), desfoque (PV-01) e aparecer
+ * na busca de pessoas por nome.
  */
 @Service
 public class PrivacyService implements ProfileVisibilityPolicy {
@@ -34,7 +35,7 @@ public class PrivacyService implements ProfileVisibilityPolicy {
     static final int MAX_REVEAL_DELAY_MS = 10_000;
 
     private static final Settings DEFAULTS = new Settings(Visibility.EVERYONE, Visibility.EVERYONE,
-            Visibility.EVERYONE, Visibility.EVERYONE, Visibility.EVERYONE, true, false,
+            Visibility.EVERYONE, Visibility.EVERYONE, Visibility.EVERYONE, true, false, true,
             new Blur(false, true, true, false, false, true, 0));
 
     private final NamedParameterJdbcTemplate jdbc;
@@ -71,17 +72,20 @@ public class PrivacyService implements ProfileVisibilityPolicy {
         Settings next = new Settings(or(change.lastSeen(), current.lastSeen()), or(change.online(), current.online()),
                 or(change.photo(), current.photo()), or(change.about(), current.about()),
                 or(change.groupsAdd(), current.groupsAdd()), or(change.readReceipts(), current.readReceipts()),
-                or(change.hideNotificationContent(), current.hideNotificationContent()), nextBlur);
+                or(change.hideNotificationContent(), current.hideNotificationContent()),
+                or(change.nameSearch(), current.nameSearch()), nextBlur);
         jdbc.update("""
                 insert into privacy_settings (user_id, last_seen, online, photo, about, groups_add, read_receipts,
-                       hide_notification_content, private_mode, blur_messages, blur_previews, blur_names, blur_photos,
-                       blur_media, reveal_delay_ms, updated_at)
+                       hide_notification_content, name_search, private_mode, blur_messages, blur_previews, blur_names,
+                       blur_photos, blur_media, reveal_delay_ms, updated_at)
                 values (:userId, :lastSeen, :online, :photo, :about, :groupsAdd, :readReceipts, :hideContent,
-                       :privateMode, :blurMessages, :blurPreviews, :blurNames, :blurPhotos, :blurMedia, :delay, :now)
+                       :nameSearch, :privateMode, :blurMessages, :blurPreviews, :blurNames, :blurPhotos, :blurMedia,
+                       :delay, :now)
                 on conflict (user_id) do update set last_seen = excluded.last_seen, online = excluded.online,
                        photo = excluded.photo, about = excluded.about, groups_add = excluded.groups_add,
                        read_receipts = excluded.read_receipts,
                        hide_notification_content = excluded.hide_notification_content,
+                       name_search = excluded.name_search,
                        private_mode = excluded.private_mode, blur_messages = excluded.blur_messages,
                        blur_previews = excluded.blur_previews, blur_names = excluded.blur_names,
                        blur_photos = excluded.blur_photos, blur_media = excluded.blur_media,
@@ -90,7 +94,7 @@ public class PrivacyService implements ProfileVisibilityPolicy {
                 .addValue("online", next.online().name()).addValue("photo", next.photo().name())
                 .addValue("about", next.about().name()).addValue("groupsAdd", next.groupsAdd().name())
                 .addValue("readReceipts", next.readReceipts())
-                .addValue("hideContent", next.hideNotificationContent())
+                .addValue("hideContent", next.hideNotificationContent()).addValue("nameSearch", next.nameSearch())
                 .addValue("privateMode", nextBlur.privateMode()).addValue("blurMessages", nextBlur.messages())
                 .addValue("blurPreviews", nextBlur.previews()).addValue("blurNames", nextBlur.names())
                 .addValue("blurPhotos", nextBlur.photos()).addValue("blurMedia", nextBlur.media())
@@ -222,7 +226,7 @@ public class PrivacyService implements ProfileVisibilityPolicy {
                             Visibility.valueOf(row.getString("last_seen")), Visibility.valueOf(row.getString("online")),
                             Visibility.valueOf(row.getString("photo")), Visibility.valueOf(row.getString("about")),
                             Visibility.valueOf(row.getString("groups_add")), row.getBoolean("read_receipts"),
-                            row.getBoolean("hide_notification_content"),
+                            row.getBoolean("hide_notification_content"), row.getBoolean("name_search"),
                             new Blur(row.getBoolean("private_mode"), row.getBoolean("blur_messages"),
                                     row.getBoolean("blur_previews"), row.getBoolean("blur_names"),
                                     row.getBoolean("blur_photos"), row.getBoolean("blur_media"),
@@ -240,10 +244,13 @@ public class PrivacyService implements ProfileVisibilityPolicy {
      *
      * @param readReceipts confirmação de leitura nas conversas individuais (grupos e conversas podem sobrepor)
      * @param hideNotificationContent notificações mostram só "Nova mensagem" (PV-08)
+     * @param nameSearch aparece nas sugestões da busca de pessoas por nome; desligado, só o {@code @usuario} exato e
+     *        quem já tem a pessoa nos contatos a acham
      * @param blur desfoque do modo privado (PV-01)
      */
     public record Settings(Visibility lastSeen, Visibility online, Visibility photo, Visibility about,
-            Visibility groupsAdd, boolean readReceipts, boolean hideNotificationContent, Blur blur) {
+            Visibility groupsAdd, boolean readReceipts, boolean hideNotificationContent, boolean nameSearch,
+            Blur blur) {
 
         Visibility of(PrivacyItem item) {
             return switch (item) {
@@ -269,8 +276,9 @@ public class PrivacyService implements ProfileVisibilityPolicy {
     /** Alteração parcial: campos nulos ficam como estão. */
     public record SettingsChange(@Nullable Visibility lastSeen, @Nullable Visibility online,
             @Nullable Visibility photo, @Nullable Visibility about, @Nullable Visibility groupsAdd,
-            @Nullable Boolean readReceipts, @Nullable Boolean hideNotificationContent, @Nullable Boolean privateMode,
-            @Nullable Boolean blurMessages, @Nullable Boolean blurPreviews, @Nullable Boolean blurNames,
-            @Nullable Boolean blurPhotos, @Nullable Boolean blurMedia, @Nullable Integer revealDelayMs) {
+            @Nullable Boolean readReceipts, @Nullable Boolean hideNotificationContent, @Nullable Boolean nameSearch,
+            @Nullable Boolean privateMode, @Nullable Boolean blurMessages, @Nullable Boolean blurPreviews,
+            @Nullable Boolean blurNames, @Nullable Boolean blurPhotos, @Nullable Boolean blurMedia,
+            @Nullable Integer revealDelayMs) {
     }
 }

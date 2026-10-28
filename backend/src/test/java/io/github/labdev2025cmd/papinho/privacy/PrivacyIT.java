@@ -79,6 +79,24 @@ class PrivacyIT {
     }
 
     @Test
+    @DisplayName("aparecer na busca por nome: ligado por padrão e mudado só pelo campo dele no PATCH parcial")
+    void shouldToggleNameSearch() {
+        assertThat(settings(ana).get("nameSearch").asBoolean()).as("sem linha no banco, aparece").isTrue();
+
+        JsonNode off = patch(ana, Map.of("nameSearch", false));
+        assertThat(off.get("nameSearch").asBoolean()).isFalse();
+        assertThat(off.get("readReceipts").asBoolean()).as("o resto fica como estava").isTrue();
+        assertThat(off.get("lastSeen").asString()).isEqualTo("EVERYONE");
+        assertThat(settings(ana).get("nameSearch").asBoolean()).as("guardado").isFalse();
+        assertThat(patch(ana, Map.of("hideNotificationContent", true)).get("nameSearch").asBoolean())
+                .as("mudar outro campo não religa").isFalse();
+        assertThat(settings(bruno).get("nameSearch").asBoolean()).as("a escolha é de cada um").isTrue();
+
+        assertThat(patch(ana, Map.of("nameSearch", true)).get("nameSearch").asBoolean()).isTrue();
+        assertThat(settings(ana).get("nameSearch").asBoolean()).isTrue();
+    }
+
+    @Test
     @DisplayName("foto e recado: todos, meus contatos, meus contatos exceto e ninguém (PV-04)")
     void shouldApplyPhotoAndAboutVisibility() {
         ana.put("/api/v1/profile", Map.of("displayName", "Ana", "about", "Disponível"));
@@ -500,5 +518,15 @@ class PrivacyIT {
 
     private static String photo(String userId) {
         return "/api/v1/users/" + userId + "/photo";
+    }
+
+    private static JsonNode settings(ApiClient client) {
+        return client.json(client.get("/api/v1/privacy")).get("settings");
+    }
+
+    private static JsonNode patch(ApiClient client, Map<String, Object> change) {
+        MvcTestResult result = client.patch("/api/v1/privacy", change);
+        assertThat(result).as(ApiClient.text(result)).hasStatusOk();
+        return client.json(result).get("settings");
     }
 }

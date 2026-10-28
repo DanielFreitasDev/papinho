@@ -71,6 +71,7 @@ class AccountDataIT {
         send(bruno, "", upload);
         assertThat(bruno.post("/api/v1/folders", Map.of("name", "Família", "conversationIds",
                 java.util.List.of(conversation)))).hasStatus(201);
+        assertThat(bruno.patch("/api/v1/privacy", Map.of("nameSearch", false))).hasStatusOk();
 
         Map<String, byte[]> zip = unzip(bruno.get("/api/v1/account/export?files=true"));
         String raw = new String(zip.get("dados.json"), StandardCharsets.UTF_8);
@@ -83,6 +84,8 @@ class AccountDataIT {
         assertThat(data.get("mensagens").get("listas").get(0).get("nome").asString()).isEqualTo("Família");
         assertThat(data.get("arquivos").get(0).get("nome").asString()).isEqualTo("nota.png");
         assertThat(data.has("privacidade")).isTrue();
+        assertThat(data.get("privacidade").get("configuracoes").get("name_search").asBoolean())
+                .as("a escolha de aparecer na busca por nome vai junto").isFalse();
         assertThat(data.has("notificacoes")).isTrue();
         assertThat(raw).doesNotContain("password").doesNotContain("argon").doesNotContain("secret_hash")
                 .doesNotContain("totp_secret").doesNotContain("p256dh");

@@ -42,6 +42,7 @@
 | ⚡ **Tempo real e offline** | STOMP sobre WebSocket com sincronização por sequência; PWA instalável, conversas recentes offline e fila de envio. |
 | 💬 **Com a cara do WhatsApp** | Microfone dentro da caixa de texto, mensagem que voa até o lugar dela, dois cliques ao lado da mensagem para responder, reações, foto de quem fala no grupo, menu de anexos e os atalhos do WhatsApp Web. |
 | ✍️ **Formatação enquanto escreve** | Selecione um trecho e escolha negrito, itálico, tachado, código, spoiler, citação, listas ou bloco de código na barra flutuante, no botão direito ou por atalho; o texto já aparece formatado no campo. |
+| 📄 **PDF sem baixar** | A conversa mostra a primeira página, o número de páginas, o tipo e o tamanho; tocar abre o PDF no próprio Papinho, com zoom e o texto selecionável. |
 | 🔎 **Ache as pessoas pelo nome** | No "Adicionar contato", as sugestões aparecem enquanto você digita o nome ou o @usuario, sem diferenciar acentos; quem prefere sai da busca em Privacidade. |
 | 🎨 **Do seu jeito** | Oito paletas de cor para o app inteiro, no claro e no escuro, e papel de parede com desenhos, cores, degradês ou uma foto sua (que não sai do aparelho). |
 | 👥 **Tudo de um mensageiro moderno** | Grupos com admins e convite por QR Code, transmissões, enquetes, figurinhas, temporárias, agendadas, visualização única e listas personalizadas. |
@@ -75,6 +76,10 @@
   <tr>
     <td width="50%"><img src="docs/images/responder.png" alt="Dois cliques ao lado da mensagem: a bolha se afasta, a seta de responder aparece e a resposta entra no campo"><p align="center"><sub>Dois cliques ao lado da mensagem para responder</sub></p></td>
     <td width="50%"><img src="docs/images/adicionar-contato.png" alt="Adicionar contato com as pessoas sugeridas pelo nome enquanto se digita"><p align="center"><sub>Adicionar contato: sugestões pelo nome</sub></p></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/images/documento.png" alt="PDF na conversa com a prévia da primeira página, o nome, 3 páginas, o tipo e o tamanho"><p align="center"><sub>PDF com a prévia, as páginas e o tamanho</sub></p></td>
+    <td width="50%"><img src="docs/images/visualizador-pdf.png" alt="Visualizador de PDF do Papinho com a página, o zoom, o download e a página atual"><p align="center"><sub>O PDF abre no próprio Papinho, sem baixar</sub></p></td>
   </tr>
 </table>
 
@@ -206,6 +211,14 @@ aparece formatado enquanto você digita, e Ctrl+Z desfaz a formatação como qua
 
 Para responder, use "Responder" no menu da mensagem ou dê **dois cliques com o botão esquerdo ao lado dela** (fora da
 bolha, onde os dois cliques continuam selecionando a palavra), como no WhatsApp Web.
+
+Documentos aparecem com o tipo e o tamanho. No **PDF**, como no WhatsApp, a bolha mostra a primeira página e o número
+de páginas ("5 páginas • PDF • 230 KB"), e tocar abre o PDF no próprio Papinho, sem baixar: as páginas com o texto
+selecionável, a página atual com anterior e próxima, zoom (+ e -) e download. A prévia é feita pelo servidor ao
+receber o arquivo (e, para os PDFs antigos, por um job em segundo plano), num processo Java à parte, um por vez, com
+até 256 MB e 20 s: um PDF feito para estourar a memória perde só a prévia. Reserve uns 300 MB a mais para esse
+processo no limite de memória do contêiner; se ela acabar, o sistema encerra ele primeiro e o servidor continua no ar.
+PDFs com senha, corrompidos ou acima de 100 MB ficam sem prévia e continuam baixando normalmente.
 
 Grupos (com admins, permissões e convite por link ou QR Code), listas de transmissão, mensagens salvas,
 enquetes, figurinhas, mensagens temporárias, agendadas e de visualização única. Os jobs agendados (mensagens

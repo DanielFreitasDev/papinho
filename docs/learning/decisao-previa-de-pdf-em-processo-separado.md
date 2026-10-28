@@ -23,7 +23,10 @@ fluxo só); pré-varrer o arquivo atrás de fluxos Flate (filtros em cadeia, flu
 conteúdo escapam).
 **Como aplicar:** no JAR do Spring Boot (classe carregada pelo `LaunchedClassLoader`) o filho sobe por
 `-cp papinho.jar -Dloader.main=<classe> org.springframework.boot.loader.launch.PropertiesLauncher`; fora dele, com o
-`java.class.path`. O Logback sem configuração formataria tudo em DEBUG no filho:
+`java.class.path`. Os dois com caminhos absolutos: o filho roda dentro da pasta de saída, e o CI sobe
+`java -jar backend/target/papinho.jar` (relativo); sem isso o filho saía com código 1 ("Could not find or load main
+class ...PropertiesLauncher"), o e2e do PDF ficava sem "2 páginas" e a produção (caminho absoluto) nem via
+(CI de `d72fb0c`, 2026-10-28). O Logback sem configuração formataria tudo em DEBUG no filho:
 `-Dslf4j.provider=org.slf4j.helpers.NOP_FallbackServiceProvider`. O PDFBox grava a lista das fontes do sistema em
 `~/.pdfbox.cache`; `-Dpdfbox.fontcache` a manda para a pasta dos uploads. Cada processo pode ocupar ~300 MB além do
 servidor, dentro do mesmo limite (o cgroup do contêiner ou o `MemoryMax=1536M` da unit). Por isso o filho sobe o

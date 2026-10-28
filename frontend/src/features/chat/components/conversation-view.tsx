@@ -572,6 +572,43 @@ function LoadedConversation({
   }
 
   /**
+   * Leva a mensagem para o meio da área visível; perto do fim da conversa, rola até o fim. Para centralizar uma das
+   * últimas, o MessageScroller cria um espaçador depois delas e só o tira quando a lista rola até o fim pelo botão: a
+   * mensagem achada "subia" e ficava um vão embaixo até fechar a conversa (relatado pelo dono em 2026-10-28).
+   */
+  function centerOn(
+    messageId: string,
+    viewport: HTMLElement,
+    behavior: ScrollBehavior
+  ) {
+    const element = viewport.querySelector<HTMLElement>(
+      `[data-message-id="${CSS.escape(messageId)}"]`
+    )
+    const content = element?.parentElement
+    if (!element || !content) {
+      return
+    }
+    // Fim de verdade do conteúdo: a última linha mais o respiro de baixo, sem o espaçador.
+    let bottom = 0
+    for (const child of content.children) {
+      if (
+        !(child as HTMLElement).hasAttribute("data-message-scroller-spacer")
+      ) {
+        bottom = Math.max(bottom, child.getBoundingClientRect().bottom)
+      }
+    }
+    bottom += Number.parseFloat(getComputedStyle(content).paddingBottom) || 0
+    const box = element.getBoundingClientRect()
+    const area = viewport.getBoundingClientRect()
+    const shift = box.top - (area.top + (area.height - box.height) / 2)
+    if (bottom - shift < area.bottom + 1) {
+      scroller.scrollToEnd({ behavior })
+    } else {
+      scroller.scrollToMessage(messageId, { align: "center", behavior })
+    }
+  }
+
+  /**
    * Rola até a mensagem e só para com ela na área visível (MS-04). A lista usa content-visibility: itens ainda
    * não desenhados ocupam a altura estimada e, ao entrar na tela no caminho da rolagem suave, assumem a real; o
    * destino calculado no começo fica errado e a original parava centenas de px fora da tela. Quando a rolagem
@@ -594,10 +631,7 @@ function LoadedConversation({
       return
     }
     await nextFrame()
-    scroller.scrollToMessage(messageId, {
-      align: "center",
-      behavior: scrollBehavior(),
-    })
+    centerOn(messageId, viewport, scrollBehavior())
     let interrupted = false
     const interrupt = () => {
       interrupted = true
@@ -627,10 +661,7 @@ function LoadedConversation({
           return
         }
         if (!visible) {
-          scroller.scrollToMessage(messageId, {
-            align: "center",
-            behavior: "auto",
-          })
+          centerOn(messageId, viewport, "auto")
         }
         previous = visible ? top : null
         await nextFrame()

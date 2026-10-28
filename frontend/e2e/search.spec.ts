@@ -128,3 +128,73 @@ test("destaca o termo buscado nas mensagens e nos resultados", async ({
 
   await Promise.all([gil.context.close(), hana.context.close()])
 })
+
+/** Distância entre a última linha da conversa e o fim da área visível, e a altura do espaçador do MessageScroller. */
+function bottomGap(page: Page) {
+  return page.evaluate(() => {
+    const viewport = document.querySelector<HTMLElement>(
+      '[data-slot="message-scroller-viewport"]'
+    )!
+    const spacer = viewport.querySelector<HTMLElement>(
+      "[data-message-scroller-spacer]"
+    )
+    const rows = viewport.querySelectorAll('[data-slot="message"]')
+    const last = rows[rows.length - 1].getBoundingClientRect()
+    return {
+      spacer: !spacer || spacer.hidden ? 0 : spacer.offsetHeight,
+      below: Math.round(viewport.getBoundingClientRect().bottom - last.bottom),
+    }
+  })
+}
+
+/**
+ * Bug relatado pelo dono em 2026-10-28: a busca da conversa que caía na última mensagem a "levantava" para o meio da
+ * tela e deixava um vão embaixo, que só sumia fechando e abrindo a conversa. Para centralizar o alvo, o
+ * MessageScroller cria um espaçador no fim da lista e só o tira ao rolar até o fim pelo botão.
+ */
+test("salto da busca para a última mensagem não deixa vão embaixo", async ({
+  browser,
+  pageErrors,
+}) => {
+  test.slow()
+  const tag = `${RUN}${test.info().project.name.startsWith("mobile") ? "m" : "d"}v`
+  const { gil, hana } = await twoFriends(browser, pageErrors, tag, "Vao")
+  for (let index = 1; index <= 12; index++) {
+    await send(gil.page, `Mensagem ${index} para encher a conversa`)
+  }
+  await send(gil.page, "A última fala do abacaxi")
+  await expect(row(hana.page, "abacaxi")).toBeVisible()
+  await expect
+    .poll(async () => (await bottomGap(hana.page)).below)
+    .toBeLessThan(40)
+
+  await hana.page.getByRole("button", { name: "Buscar nesta conversa" }).click()
+  const inside = hana.page.getByRole("search", {
+    name: "Buscar nesta conversa",
+  })
+  await inside.getByRole("searchbox").fill("abacaxi")
+  await expect(inside.getByRole("status")).toHaveText("1 de 1")
+  await expect(flashing(row(hana.page, "abacaxi"))).toBeVisible()
+  // A última mensagem fica no fim da tela, sem espaço vazio embaixo, também depois de a correção do salto terminar.
+  await hana.page.waitForTimeout(1_000)
+  expect(await bottomGap(hana.page)).toEqual({
+    spacer: 0,
+    below: expect.any(Number),
+  })
+  expect((await bottomGap(hana.page)).below).toBeLessThan(40)
+
+  // Uma mensagem do meio vai para o centro; voltar à última e fechar a busca não deixa vão.
+  await inside.getByRole("searchbox").fill("encher")
+  await expect(inside.getByRole("status")).toHaveText(/^1 de 1[0-9]$/)
+  await inside.getByRole("button", { name: "Resultado mais antigo" }).click()
+  await expect(inside.getByRole("status")).toHaveText(/^2 de 1[0-9]$/)
+  await inside.getByRole("searchbox").press("Escape")
+  await expect(inside).toBeHidden()
+  await send(hana.page, "Respondo depois da busca")
+  await expect
+    .poll(async () => (await bottomGap(hana.page)).below)
+    .toBeLessThan(40)
+  expect((await bottomGap(hana.page)).spacer).toBe(0)
+
+  await Promise.all([gil.context.close(), hana.context.close()])
+})

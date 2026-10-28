@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
 
 import javax.imageio.ImageIO;
 
@@ -38,11 +39,14 @@ final class PdfPreviewWorker {
     private static final long SCRATCH_MEMORY = 16L * 1024 * 1024;
     /** ...até este teto, somando memória e disco. */
     private static final long SCRATCH_LIMIT = 512L * 1024 * 1024;
+    /** No Linux, o quanto o kernel prefere este processo quando a memória acaba (1000: o primeiro da fila). */
+    private static final Path OOM_SCORE_ADJ = Path.of("/proc/self/oom_score_adj");
 
     private PdfPreviewWorker() {
     }
 
     public static void main(String[] args) {
+        offerToOomKiller();
         Path pdf = Path.of(args[0]);
         Path out = Path.of(args[1]);
         ImageIO.setUseCache(false);
@@ -97,6 +101,19 @@ final class PdfPreviewWorker {
     }
 
     /** Grava o resultado de uma vez (renomeando), para o servidor nunca ler um arquivo pela metade. */
+    /**
+     * O filho divide o limite de memória do servidor (o cgroup do contêiner ou o {@code MemoryMax} da unit): se ela
+     * acabar, o kernel encerra este processo primeiro, e o PDF perde só a prévia. Subir o próprio valor não pede
+     * privilégio.
+     */
+    private static void offerToOomKiller() {
+        try {
+            Files.writeString(OOM_SCORE_ADJ, "1000", StandardOpenOption.WRITE);
+        } catch (IOException | RuntimeException unsupported) {
+            // Fora do Linux, ou sem /proc: vale só o teto do heap.
+        }
+    }
+
     private static void publish(Path out, String result) throws IOException {
         Path partial = out.resolve(RESULT + ".partial");
         Files.writeString(partial, result);

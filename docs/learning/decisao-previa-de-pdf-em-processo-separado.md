@@ -26,8 +26,12 @@ conteúdo escapam).
 `java.class.path`. O Logback sem configuração formataria tudo em DEBUG no filho:
 `-Dslf4j.provider=org.slf4j.helpers.NOP_FallbackServiceProvider`. O PDFBox grava a lista das fontes do sistema em
 `~/.pdfbox.cache`; `-Dpdfbox.fontcache` a manda para a pasta dos uploads. Cada processo pode ocupar ~300 MB além do
-servidor: num contêiner com limite de memória apertado, conte com isso.
+servidor, dentro do mesmo limite (o cgroup do contêiner ou o `MemoryMax=1536M` da unit). Por isso o filho sobe o
+próprio `oom_score_adj` para 1000 (subir não pede privilégio), e o kernel o escolhe primeiro quando a memória acaba; e
+a unit usa `OOMPolicy=continue`, porque o padrão `stop` do systemd encerra o serviço inteiro quando o kernel mata
+qualquer processo dele. O `deploy.sh` só troca o JAR: a unit da VPS se atualiza à mão (`deploy/PRODUCAO.md`).
 **Evidência:** `PdfPreviewTest` (6): bomba de 512 MB num PDF de ~500 KB, o filho sai com código 3 e o teste segue,
 com a página contada; com `/FlateDecode` solto a mesma bomba desenhava em 9,9 s sem estourar. `MediaIT`
 (`shouldPreviewPdfFirstPage`, `shouldBackfillPagesOfOldPdfs`). Medido em 2026-10-28: ~0,3 s por PDF no classpath dos
-testes; pelo `papinho.jar` empacotado, 0,7 s (1,0 s na primeira vez, varrendo as fontes).
+testes; pelo `papinho.jar` empacotado, 0,7 s (1,0 s na primeira vez, varrendo as fontes). Lido no `/proc` dos 6
+filhos do `PdfPreviewTest`: `oom_score_adj` 0 na partida da JVM e 1000 assim que o `main` roda.

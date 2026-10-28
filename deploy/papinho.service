@@ -27,6 +27,9 @@ LockPersonality=true
 ReadWritePaths=/var/lib/papinho
 UMask=0077
 MemoryMax=1536M
+# A prévia de PDF roda num processo filho dentro deste limite: se a memória acabar, o kernel encerra esse processo
+# primeiro (oom_score_adj 1000) e o serviço continua; o padrão (stop) derrubaria o Papinho inteiro.
+OOMPolicy=continue
 CPUQuota=150%
 
 [Install]

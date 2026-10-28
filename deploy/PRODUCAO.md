@@ -77,6 +77,18 @@ curl -s http://127.0.0.1:54326/actuator/health
 sudo systemctl restart papinho
 ```
 
+O `deploy.sh` só troca o JAR. Quando a [`papinho.service`](papinho.service) muda (em 2026-10-28 ganhou
+`OOMPolicy=continue`, para o processo da prévia de PDF não derrubar o serviço ao estourar o `MemoryMax`), copie-a para
+a VPS, confira a diferença e recarregue o systemd:
+
+```bash
+scp deploy/papinho.service ubuntu@<vps>:/tmp/papinho.service    # da sua máquina, na raiz do repositório
+# na VPS:
+diff /etc/systemd/system/papinho.service /tmp/papinho.service
+sudo install -o root -g root -m 0644 /tmp/papinho.service /etc/systemd/system/papinho.service
+sudo systemctl daemon-reload && systemctl show papinho -p OOMPolicy    # OOMPolicy=continue
+```
+
 Backup: `scripts/backup.sh` com `PGHOST=127.0.0.1 PGUSER=papinho PGPASSWORD=... PAPINHO_DATA_DIR=/var/lib/papinho`
 (veja a seção Backup do README). Antes de um deploy com migração nova do Flyway (o `deploy.sh` só volta o JAR), um
 dump do banco, legível só pelo root:

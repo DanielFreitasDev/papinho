@@ -11,7 +11,7 @@
 	<name>papinho-backend</name>
 	<description>Backend do Papinho: API, WebSocket e SPA empacotado</description>
 	<properties>
-		<spring-modulith.version>2.1.1</spring-modulith.version>
+		<spring-modulith.version>2.1.2</spring-modulith.version>
 		<bouncycastle.version>1.86</bouncycastle.version>
 		<zxing.version>3.5.4</zxing.version>
 		<archunit.version>1.5.1</archunit.version>

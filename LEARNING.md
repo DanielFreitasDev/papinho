@@ -39,6 +39,7 @@ Leia as entradas relacionadas à tarefa. Os detalhes ficam em `docs/learning/`.
 - [IP do cliente atrás de proxy](docs/learning/gotcha-ip-do-cliente-atras-de-proxy.md) — framework confia no X-Forwarded-For do cliente; use native (RemoteIpValve).
 - [Busca externa: prazo total e fora da transação](docs/learning/gotcha-busca-externa-prazo-total-e-transacao.md) — timeout é por leitura; cancel() com prazo; @Transactional esgota o Hikari; multipart em streaming.
 - [Detail do PostgreSQL e erros fora do MVC](docs/learning/gotcha-detalhe-do-postgres-e-erros-fora-do-mvc.md) — logServerErrorDetail=false; /error próprio; válvula do Tomcat; socket cru no teste.
+- [unaccent troca formas largas por curingas do LIKE](docs/learning/gotcha-unaccent-curingas-e-palavras.md) — escapar antes do unaccent não protege (％ vira %); prefixo com starts_with; [:punct:] inclui emoji.
 - [Frontend: salto, service worker, toque e foco](docs/learning/gotcha-frontend-auditoria-2026-10-17.md) — scrollToMessage sem item, workbox.register sem catch, data-slot do Base UI, TabsContent sem foco.
 - [S3 nos testes sem MinIO](docs/learning/gotcha-s3-nos-testes-sem-minio.md) — adobe/s3mock, espera pelo log, skip vira Range.
 - [Máquina local: proxy no Maven, portas e /tmp](docs/learning/gotcha-ambiente-local-com-proxy.md) — proxy virava argumento do vite, e2e local em portas altas (receita), navegadores do Playwright desatualizados, gh com push só no repositório novo, proxy às vezes (sem ele em 2026-10-24).

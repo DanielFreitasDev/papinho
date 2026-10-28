@@ -4,6 +4,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
+import java.text.Normalizer;
 import java.time.Clock;
 import java.util.Collection;
 import java.util.List;
@@ -23,7 +24,7 @@ import io.github.labdev2025cmd.papinho.media.ImageProcessing;
 import io.github.labdev2025cmd.papinho.shared.error.ApiException;
 import io.github.labdev2025cmd.papinho.shared.id.Uuids;
 
-/** Casos de uso do perfil (ID-02). */
+/** Casos de uso do perfil (ID-02) e a busca por nome de exibição. */
 @Service
 public class ProfileService {
 
@@ -32,13 +33,15 @@ public class ProfileService {
     static final int THUMB_SIZE = 96;
 
     private final ProfileRepository repository;
+    private final ProfileSearch search;
     private final FileStorage storage;
     private final List<ProfileVisibilityPolicy> policies;
     private final Clock clock;
 
-    ProfileService(ProfileRepository repository, FileStorage storage, List<ProfileVisibilityPolicy> policies,
-            Clock clock) {
+    ProfileService(ProfileRepository repository, ProfileSearch search, FileStorage storage,
+            List<ProfileVisibilityPolicy> policies, Clock clock) {
         this.repository = repository;
+        this.search = search;
         this.storage = storage;
         this.policies = policies;
         this.clock = clock;
@@ -72,6 +75,26 @@ public class ProfileService {
         }
         return repository.findByUserIdIn(owners).stream().map(profile -> toView(viewer, profile))
                 .collect(Collectors.toMap(ProfileView::userId, Function.identity()));
+    }
+
+    /**
+     * Busca por nome de exibição: cada palavra da busca precisa ser o começo de alguma palavra do nome, sem diferença
+     * de maiúsculas e acentos ("dan fre" e "frei" acham "Daniel Freitas"; "niel" não). Quem tem o nome começando
+     * pela busca vem antes. Não olha conta, bloqueio nem privacidade: quem chama decide quem aparece.
+     */
+    @Transactional(readOnly = true)
+    public List<NameMatch> searchByName(String query, int limit) {
+        return search.byName(Normalizer.normalize(query, Normalizer.Form.NFC), limit);
+    }
+
+    /** Nomes de exibição de vários usuários; o nome é sempre visível (foto e recado passam por {@link #viewAll}). */
+    @Transactional(readOnly = true)
+    public Map<UUID, String> displayNames(Collection<UUID> userIds) {
+        if (userIds.isEmpty()) {
+            return Map.of();
+        }
+        return repository.findByUserIdIn(userIds).stream()
+                .collect(Collectors.toMap(Profile::userId, Profile::displayName));
     }
 
     @Transactional
@@ -156,12 +179,20 @@ public class ProfileService {
     }
 
     static String normalizeDisplayName(String raw) {
-        String value = java.text.Normalizer.normalize(raw, java.text.Normalizer.Form.NFC).strip()
+        String value = Normalizer.normalize(raw, Normalizer.Form.NFC).strip()
                 .replaceAll("\\p{Cntrl}", "");
         if (value.isEmpty() || value.length() > Profile.DISPLAY_NAME_MAX) {
             throw new InvalidDisplayNameException();
         }
         return value;
+    }
+
+    /**
+     * Pessoa achada pela busca por nome.
+     *
+     * @param startsWithQuery o nome começa pela busca inteira (vem antes nas sugestões)
+     */
+    public record NameMatch(UUID userId, boolean startsWithQuery) {
     }
 
     /** Nome de exibição vazio ou longo demais. */

@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import io.github.labdev2025cmd.papinho.contact.ContactQueries;
+import io.github.labdev2025cmd.papinho.contact.NameSearchPolicy;
 import io.github.labdev2025cmd.papinho.privacy.PrivacyExceptions.InvalidPrivacyException;
 import io.github.labdev2025cmd.papinho.profile.ProfileVisibilityPolicy;
 
@@ -29,7 +30,7 @@ import io.github.labdev2025cmd.papinho.profile.ProfileVisibilityPolicy;
  * na busca de pessoas por nome.
  */
 @Service
-public class PrivacyService implements ProfileVisibilityPolicy {
+public class PrivacyService implements ProfileVisibilityPolicy, NameSearchPolicy {
 
     /** Maior atraso para revelar ao passar o mouse (PV-01). */
     static final int MAX_REVEAL_DELAY_MS = 10_000;
@@ -206,6 +207,17 @@ public class PrivacyService implements ProfileVisibilityPolicy {
     @Override
     public boolean canSeeAbout(UUID viewer, UUID owner) {
         return allows(owner, PrivacyItem.ABOUT, viewer);
+    }
+
+    /** Quem desligou "Aparecer na busca por nome"; sem linha no banco, aparece (o padrão). */
+    @Override
+    @Transactional(readOnly = true)
+    public Set<UUID> hiddenFromNameSearch(Collection<UUID> userIds) {
+        if (userIds.isEmpty()) {
+            return Set.of();
+        }
+        return Set.copyOf(jdbc.queryForList("select user_id from privacy_settings where user_id in (:ids) "
+                + "and not name_search", new MapSqlParameterSource("ids", userIds), UUID.class));
     }
 
     private boolean isExcepted(UUID owner, PrivacyItem item, UUID viewer) {

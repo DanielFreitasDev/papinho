@@ -1,10 +1,12 @@
 package io.github.labdev2025cmd.papinho.contact;
 
+import java.text.Normalizer;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 import org.jspecify.annotations.Nullable;
 import org.springframework.http.HttpStatus;
@@ -16,23 +18,36 @@ import io.github.labdev2025cmd.papinho.identity.UserDirectory.UserSummary;
 import io.github.labdev2025cmd.papinho.profile.ProfileService;
 import io.github.labdev2025cmd.papinho.profile.ProfileView;
 import io.github.labdev2025cmd.papinho.shared.error.ApiException;
+import io.github.labdev2025cmd.papinho.shared.security.RateLimiter;
 
-/** Casos de uso de contatos e bloqueios (CT-01, CT-03). */
+/** Casos de uso de contatos e bloqueios (CT-01, CT-03) e a busca de pessoas para adicionar. */
 @Service
 public class ContactService {
+
+    /** Sugestões da busca de pessoas: no máximo 20, para buscas de 2 a 64 caracteres. */
+    static final int SEARCH_LIMIT = 20;
+    static final int SEARCH_MIN_LENGTH = 2;
+    static final int SEARCH_MAX_LENGTH = 64;
+
+    /** Espaços, inclusive os invisíveis (sem quebra, de largura fixa), e caracteres de controle. */
+    private static final Pattern SPACES = Pattern.compile("[\\p{Z}\\p{Cc}]+");
 
     private final ContactRepository contacts;
     private final BlockRepository blocks;
     private final UserDirectory users;
     private final ProfileService profiles;
+    private final PeopleSearch people;
+    private final RateLimiter rateLimiter;
     private final Clock clock;
 
     ContactService(ContactRepository contacts, BlockRepository blocks, UserDirectory users, ProfileService profiles,
-            Clock clock) {
+            PeopleSearch people, RateLimiter rateLimiter, Clock clock) {
         this.contacts = contacts;
         this.blocks = blocks;
         this.users = users;
         this.profiles = profiles;
+        this.people = people;
+        this.rateLimiter = rateLimiter;
         this.clock = clock;
     }
 
@@ -41,6 +56,24 @@ public class ContactService {
     public PersonView lookup(UUID viewer, String username) {
         UserSummary user = users.findByUsername(username).orElseThrow(NotFoundException::new);
         return person(viewer, user);
+    }
+
+    /**
+     * Sugestões de pessoas da instância pelo nome ou pelo começo do {@code @usuario}, enquanto se digita na tela
+     * "adicionar contato" (regras em {@link PeopleSearch}). Com menos de 2 caracteres não busca nada; acima de 64 é
+     * erro. Sem transação aqui: a consulta só pega uma conexão (somente leitura) quando há o que buscar.
+     */
+    public List<PersonView> search(UUID viewer, String rawQuery) {
+        String query = normalizeQuery(rawQuery);
+        int length = query.codePointCount(0, query.length());
+        if (length > SEARCH_MAX_LENGTH) {
+            throw new SearchTooLongException();
+        }
+        if (length < SEARCH_MIN_LENGTH) {
+            return List.of();
+        }
+        rateLimiter.consume(RateLimiter.Policy.PEOPLE_SEARCH_BY_USER, viewer.toString());
+        return people.find(viewer, query, SEARCH_LIMIT);
     }
 
     /** Adiciona (ou atualiza o apelido de) um contato. Adicionar a si mesmo não é permitido. */
@@ -119,8 +152,7 @@ public class ContactService {
         ProfileView view = profiles.view(viewer, user.id()).orElseThrow(NotFoundException::new);
         boolean contact = contacts.existsById(new Contact.Key(viewer, user.id()));
         boolean blocked = blocks.existsById(new Block.Key(viewer, user.id()));
-        return new PersonView(user.id(), user.username(), view.displayName(), view.about(), view.hasPhoto(),
-                view.updatedAt(), contact, blocked, viewer.equals(user.id()));
+        return PersonView.of(user, view, contact, blocked, viewer.equals(user.id()));
     }
 
     private ContactView toView(UUID owner, Contact contact, UserSummary user) {
@@ -133,6 +165,12 @@ public class ContactService {
         return new ContactView(user.id(), user.username(), displayName, nickname,
                 nickname != null ? nickname : displayName, view != null && view.hasPhoto(),
                 view == null ? Instant.EPOCH : view.updatedAt(), view == null ? null : view.about());
+    }
+
+    /** A busca como foi digitada: NFC, espaços seguidos viram um só, sem as pontas e sem o {@code @} inicial. */
+    static String normalizeQuery(String raw) {
+        String text = SPACES.matcher(Normalizer.normalize(raw, Normalizer.Form.NFC)).replaceAll(" ").strip();
+        return text.startsWith("@") ? text.substring(1).stripLeading() : text;
     }
 
     private static @Nullable String clean(@Nullable String nickname) {
@@ -153,9 +191,15 @@ public class ContactService {
             String label, boolean hasPhoto, Instant photoVersion, @Nullable String about) {
     }
 
-    /** Cartão de uma pessoa visto por alguém. */
+    /** Cartão de uma pessoa visto por alguém (também cada sugestão da busca de pessoas). */
     public record PersonView(UUID userId, String username, String displayName, @Nullable String about,
             boolean hasPhoto, Instant photoVersion, boolean contact, boolean blocked, boolean self) {
+
+        /** Cartão com foto e recado já filtrados pelo perfil para quem vê. */
+        static PersonView of(UserSummary user, ProfileView view, boolean contact, boolean blocked, boolean self) {
+            return new PersonView(user.id(), user.username(), view.displayName(), view.about(), view.hasPhoto(),
+                    view.updatedAt(), contact, blocked, self);
+        }
     }
 
     /** Pessoa na lista de bloqueados. */
@@ -171,6 +215,13 @@ public class ContactService {
     static class SelfContactException extends ApiException {
         SelfContactException() {
             super(HttpStatus.BAD_REQUEST, "contact-self", "Cannot add or block yourself");
+        }
+    }
+
+    /** Busca de pessoas com mais de {@value #SEARCH_MAX_LENGTH} caracteres. */
+    static class SearchTooLongException extends ApiException {
+        SearchTooLongException() {
+            super(HttpStatus.BAD_REQUEST, "search-too-long", "People search query too long", SEARCH_MAX_LENGTH);
         }
     }
 }

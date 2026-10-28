@@ -45,6 +45,8 @@ public class RateLimiter {
         public static final Policy GROUP_INVITE_BY_USER = new Policy("group-invite-user", 60, Duration.ofHours(1));
         public static final Policy UPLOAD_BY_USER = new Policy("upload-user", 200, Duration.ofHours(1));
         public static final Policy LINK_PREVIEW_BY_USER = new Policy("link-preview-user", 120, Duration.ofHours(1));
+        /** Busca de pessoas enquanto se digita (adicionar contato): folgada para quem digita, contra varrer a lista. */
+        public static final Policy PEOPLE_SEARCH_BY_USER = new Policy("people-search-user", 120, Duration.ofMinutes(1));
         public static final Policy TRANSCRIBE_BY_USER = new Policy("transcribe-user", 60, Duration.ofHours(1));
         /** Exportar conversa ou dados da conta (BK-01, BK-02): pesado, poucas vezes por hora. */
         public static final Policy EXPORT_BY_USER = new Policy("export-user", 10, Duration.ofHours(1));

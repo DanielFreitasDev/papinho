@@ -6,7 +6,10 @@
  * de desbloqueio curto (PV-03).
  *
  * <p>Depende só de contatos, identidade e perfil; mensagens e presença consultam este módulo. A participação nas
- * conversas chega pela porta {@link io.github.labdev2025cmd.papinho.privacy.ConversationMembership}.</p>
+ * conversas chega pela porta {@link io.github.labdev2025cmd.papinho.privacy.ConversationMembership}. As regras
+ * chegam ao perfil e à busca de pessoas pelas portas que este módulo implementa
+ * ({@link io.github.labdev2025cmd.papinho.profile.ProfileVisibilityPolicy} e
+ * {@link io.github.labdev2025cmd.papinho.contact.NameSearchPolicy}).</p>
  */
 @ApplicationModule(displayName = "Privacidade")
 @NullMarked

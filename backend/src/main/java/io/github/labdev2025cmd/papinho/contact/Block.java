@@ -35,6 +35,11 @@ class Block {
         return key.blockedId();
     }
 
+    /** A outra pessoa do bloqueio, para {@code userId} (que bloqueou ou foi bloqueado). */
+    UUID otherThan(UUID userId) {
+        return key.blockerId().equals(userId) ? key.blockedId() : key.blockerId();
+    }
+
     Instant createdAt() {
         return createdAt;
     }

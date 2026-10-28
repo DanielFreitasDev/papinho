@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
@@ -24,7 +25,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
-/** Contatos, cartão por {@code @usuario}, link/QR próprio e bloqueios (CT-01, CT-03). */
+/** Contatos, busca de pessoas, cartão por {@code @usuario}, link/QR próprio e bloqueios (CT-01, CT-03). */
 @RestController
 @RequestMapping("/api/v1")
 class ContactController {
@@ -57,6 +58,15 @@ class ContactController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     void remove(@PathVariable UUID userId) {
         contacts.remove(CurrentUser.id(), userId);
+    }
+
+    /**
+     * Sugestões ao adicionar contato: até 20 pessoas da instância pelo nome ou pelo começo do {@code @usuario}
+     * (aceita {@code @}), no mesmo formato do cartão. Menos de 2 caracteres devolve a lista vazia.
+     */
+    @GetMapping("/people")
+    List<ContactService.PersonView> search(@RequestParam(defaultValue = "") String q) {
+        return contacts.search(CurrentUser.id(), q);
     }
 
     /** Cartão de alguém pelo {@code @usuario} (aceita {@code @} e maiúsculas). */

@@ -1,5 +1,6 @@
 package io.github.labdev2025cmd.papinho.identity;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -16,4 +17,11 @@ interface UserAccountRepository extends JpaRepository<UserAccount, UUID> {
 
     @Query("select u from UserAccount u where (:query = '' or u.username like concat('%', :query, '%')) order by u.username")
     Page<UserAccount> search(String query, Pageable pageable);
+
+    /** Contas ativas com o {@code @usuario} começando por {@code prefix}; starts_with não tem curingas. */
+    @Query(value = """
+            select * from user_accounts where enabled and starts_with(username, :prefix)
+            order by username collate "C" limit :limit
+            """, nativeQuery = true)
+    List<UserAccount> findEnabledByUsernamePrefix(String prefix, int limit);
 }

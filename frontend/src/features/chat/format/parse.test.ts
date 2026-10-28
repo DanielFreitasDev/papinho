@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest"
 
-import { firstLink, parseInline, parseMessage, plainText } from "./parse"
+import {
+  firstLink,
+  parseInline,
+  parseMessage,
+  plainText,
+  scanMessage,
+  type PositionedBlock,
+  type PositionedInline,
+} from "./parse"
 
 describe("formatação do WhatsApp (MS-01)", () => {
   it("reconhece negrito, itálico, riscado e mono", () => {
@@ -139,6 +147,16 @@ describe("formatação do WhatsApp (MS-01)", () => {
     ])
   })
 
+  it("bloco sem linguagem começa na linha de baixo da cerca", () => {
+    expect(parseMessage("```\ncódigo\n```")).toEqual([
+      { type: "code", language: null, value: "código" },
+    ])
+    // Texto que não é nome de linguagem depois da cerca já é código.
+    expect(parseMessage("```olá mundo\nsegunda\n```")).toEqual([
+      { type: "code", language: null, value: "olá mundo\nsegunda" },
+    ])
+  })
+
   it("texto puro para prévias esconde o spoiler", () => {
     expect(plainText("*Oi* ||surpresa|| `x`")).toBe("Oi ▒▒▒ x")
   })
@@ -151,5 +169,77 @@ describe("formatação do WhatsApp (MS-01)", () => {
       "https://q.com"
     )
     expect(firstLink("sem link")).toBeNull()
+  })
+
+  it("guarda onde cada trecho está no texto (campo de mensagem)", () => {
+    const corpus = [
+      "*a* _b_ ~c~ `d` ||e||",
+      "> citação com *negrito*\n> - item `mono`\n- fora _dela_",
+      "```js\nconst x = 1\n```\n```solto```\n1. um\n2. dois https://a.com/x. @Ana.Silva",
+      "```\ncódigo\n```",
+      "linha\nsegunda *forte*",
+    ]
+    for (const text of corpus) {
+      const inline = (nodes: PositionedInline[]) => {
+        for (const node of nodes) {
+          const slice = text.slice(node.from, node.to)
+          switch (node.type) {
+            case "text":
+              expect(slice).toBe(node.value)
+              break
+            case "break":
+              expect(slice).toBe("\n")
+              break
+            case "code":
+              expect(slice).toBe(`\`${node.value}\``)
+              break
+            case "link":
+              expect(slice).toBe(node.href)
+              break
+            case "mention":
+              expect(slice.toLowerCase()).toBe(`@${node.username}`)
+              break
+            default: {
+              const token = slice.slice(0, node.marker)
+              expect(["*", "_", "~", "||"]).toContain(token)
+              expect(slice.endsWith(token)).toBe(true)
+              inline(node.children)
+            }
+          }
+        }
+      }
+      const blocks = (list: PositionedBlock[]) => {
+        for (const block of list) {
+          if (block.type === "paragraph") {
+            inline(block.children)
+          } else if (block.type === "code") {
+            expect(
+              text.slice(block.markers[0].from, block.markers[0].to)
+            ).toMatch(/^```/)
+            expect(text.slice(block.markers[1].from, block.markers[1].to)).toBe(
+              "```"
+            )
+            expect(
+              block.body
+                .map((span) => text.slice(span.from, span.to))
+                .join("\n")
+            ).toBe(block.value)
+          } else if (block.type === "quote") {
+            block.markers.forEach((span) =>
+              expect(text.slice(span.from, span.to)).toMatch(/^> ?$/)
+            )
+            blocks(block.children)
+          } else {
+            block.items.forEach((item) => {
+              expect(text.slice(item.marker.from, item.marker.to)).toMatch(
+                /^([-*•]|\d{1,3}[.)]) +$/
+              )
+              inline(item.children)
+            })
+          }
+        }
+      }
+      blocks(scanMessage(text))
+    }
   })
 })

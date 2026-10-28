@@ -144,8 +144,8 @@ jobs:
         run: ./mvnw -B -q install -DskipTests
       - name: Subir o Papinho (padrão e perfil lan)
         env:
-          # O e2e roda tudo de um IP só; os limites de tentativas reais são provados no IdentityIT.
-          PAPINHO_RATE_LIMIT_MULTIPLIER: "10"
+          # O e2e roda tudo de um IP só (mais de 100 cadastros por rodada); os limites reais são provados no IdentityIT.
+          PAPINHO_RATE_LIMIT_MULTIPLIER: "20"
           PAPINHO_MAIL_ENABLED: "true"
           PAPINHO_MAIL_FROM: papinho@papinho.test
           PAPINHO_PUBLIC_URL: http://localhost:8080

@@ -1,4 +1,4 @@
-import { memo, useState } from "react"
+import { memo, useLayoutEffect, useRef, useState, type RefObject } from "react"
 import { useTranslation } from "react-i18next"
 import {
   BanIcon,
@@ -46,6 +46,7 @@ import { Message, MessageContent } from "@/components/ui/message"
 import { toast } from "@/components/ui/toast"
 import { mediaUrl, type Track } from "@/features/media"
 import { formatTime } from "@/lib/format"
+import { motionEase, motionMs, prefersReducedMotion } from "@/lib/motion"
 import { LinkPreviewCard } from "@/features/linkpreview"
 import { MessageText } from "../format/message-text"
 import type { SearchTerms } from "../format/search-match"
@@ -157,6 +158,7 @@ function MessageRowView({
   audioQueue = [],
   conversationId,
   canEdit = false,
+  canReply = false,
   showSender = false,
   canReplyPrivately = false,
   highlight = null,
@@ -180,6 +182,8 @@ function MessageRowView({
   conversationId?: string
   /** Ainda dentro da janela de edição (MS-05). */
   canEdit?: boolean
+  /** A conversa aceita resposta agora (o campo está na tela e nada está selecionado): "Responder" e os dois cliques. */
+  canReply?: boolean
   /** Em grupo, o nome de quem mandou aparece no balão (GR-01). */
   showSender?: boolean
   /** Mensagem de outra pessoa num grupo: "Responder em privado". */
@@ -203,6 +207,11 @@ function MessageRowView({
   )
   // Botão direito abre o menu da mensagem onde o mouse está (no toque, o menu ⋮).
   const menu = useContextMenu()
+  // Dois cliques ao lado da bolha respondem (a seta e o puxão da bolha mostram que pegou); o ponteiro do último toque
+  // diz se veio do mouse.
+  const bubble = useRef<HTMLDivElement>(null)
+  const pointer = useRef("")
+  const [replyCue, setReplyCue] = useState(0)
   const onAction = (action: MessageAction) => onMessageAction(message, action)
   const confirmed = message.id !== null
   if (message.deleted) {
@@ -221,6 +230,8 @@ function MessageRowView({
   }
   const myReaction = message.reactions.find((r) => r.userId === meId)
   const grouped = groupReactions(message.reactions)
+  const replyable =
+    canReply && confirmed && !selecting && message.status !== "failed"
 
   return (
     <Message
@@ -237,6 +248,37 @@ function MessageRowView({
       onContextMenu={
         confirmed && !selecting && message.status !== "failed"
           ? menu.onContextMenu
+          : undefined
+      }
+      onPointerDown={(event) => {
+        pointer.current = event.pointerType
+      }}
+      // O segundo clique fora da bolha não seleciona o texto em volta; dentro dela, os dois cliques seguem
+      // selecionando a palavra.
+      onMouseDown={
+        replyable
+          ? (event) => {
+              if (event.detail > 1 && besideBubble(event.target)) {
+                event.preventDefault()
+              }
+            }
+          : undefined
+      }
+      onDoubleClick={
+        replyable
+          ? (event) => {
+              if (
+                event.button !== 0 ||
+                pointer.current !== "mouse" ||
+                !besideBubble(event.target)
+              ) {
+                return
+              }
+              if (!prefersReducedMotion()) {
+                setReplyCue((count) => count + 1)
+              }
+              onAction("reply")
+            }
           : undefined
       }
     >
@@ -257,11 +299,21 @@ function MessageRowView({
         />
       ) : null}
       {/* Largura do conteúdo (até 80%): os atalhos ficam colados na bolha, não na borda da conversa. */}
-      <MessageContent className="w-auto max-w-[min(80%,36rem)] min-w-0">
+      <MessageContent className="relative w-auto max-w-[min(80%,36rem)] min-w-0">
+        {/* Antes da bolha no DOM: as duas são posicionadas, então a seta fica embaixo e aparece quando a bolha sai. */}
+        {replyCue > 0 ? (
+          <ReplyCue
+            key={replyCue}
+            side={mine ? "end" : "start"}
+            bubble={bubble}
+            onDone={() => setReplyCue(0)}
+          />
+        ) : null}
         {/* Com reações, a pílula entra só 6 px na bolha (no respiro de baixo, sem cobrir a hora) e a bolha reserva o
             resto embaixo: cada linha da lista tem content-visibility (contenção de pintura), e o que passa da caixa
             dela não aparece. */}
         <Bubble
+          ref={bubble}
           variant={mine ? "tinted" : "incoming"}
           align={mine ? "end" : "start"}
           className={cn("max-w-full", grouped.length > 0 && "mb-6")}
@@ -488,10 +540,12 @@ function MessageRowView({
               <QuickReactions myEmoji={myReaction?.emoji} onAction={onAction} />
               <DropdownMenuSeparator />
               <DropdownMenuGroup>
-                <DropdownMenuItem onClick={() => onAction("reply")}>
-                  <CornerUpLeftIcon />
-                  {t("chat.reply")}
-                </DropdownMenuItem>
+                {canReply ? (
+                  <DropdownMenuItem onClick={() => onAction("reply")}>
+                    <CornerUpLeftIcon />
+                    {t("chat.reply")}
+                  </DropdownMenuItem>
+                ) : null}
                 {canReplyPrivately ? (
                   <DropdownMenuItem onClick={() => onAction("replyPrivately")}>
                     <MessageCircleReplyIcon />
@@ -599,6 +653,98 @@ function SenderAvatar({
 /** Atalho que só aparece com o ponteiro sobre a linha (no toque, as ações ficam no menu ⋮). */
 const HOVER_ACTION =
   "hidden shrink-0 group-hover/row:inline-flex data-popup-open:inline-flex"
+
+/** O clique caiu no espaço vazio da linha (ou na foto de quem mandou), não na bolha nem num controle. */
+function besideBubble(target: EventTarget) {
+  return (
+    target instanceof Element &&
+    !target.closest(
+      '[data-slot="bubble"], button, a, input, [role="checkbox"], [role="menuitem"]'
+    )
+  )
+}
+
+/**
+ * Resposta pelos dois cliques, como ao arrastar a mensagem para o lado no celular: a bolha dá um puxão para o meio da
+ * conversa e, no lugar de onde saiu, aparece a seta de responder, que some quando ela volta. Só transform e opacity,
+ * pela Web Animations API com os tokens de movimento; a linha não desenha a seta com movimento reduzido.
+ */
+function ReplyCue({
+  side,
+  bubble,
+  onDone,
+}: {
+  side: "start" | "end"
+  bubble: RefObject<HTMLDivElement | null>
+  onDone: () => void
+}) {
+  const icon = useRef<HTMLSpanElement>(null)
+  // Uma vez por montagem: cada dois cliques remonta a seta (key) e recomeça as animações.
+  useLayoutEffect(() => {
+    if (typeof icon.current?.animate !== "function") {
+      onDone()
+      return
+    }
+    const out = motionMs("fast")
+    const back = motionMs("slow")
+    const turn = out / (out + back)
+    const timing = { duration: out + back }
+    const shift = side === "start" ? "2.75rem" : "-2.75rem"
+    const tug = bubble.current?.animate(
+      [
+        { transform: "translateX(0)", easing: motionEase("enter") },
+        {
+          transform: `translateX(${shift})`,
+          offset: turn,
+          easing: motionEase("spring"),
+        },
+        { transform: "translateX(0)" },
+      ],
+      timing
+    )
+    const pop = icon.current?.animate(
+      [
+        { opacity: 0, transform: "scale(0.4)", easing: motionEase("enter") },
+        { opacity: 1, transform: "scale(1)", offset: turn },
+        { opacity: 1, transform: "scale(1)", offset: (1 + turn) / 2 },
+        { opacity: 0, transform: "scale(1)" },
+      ],
+      timing
+    )
+    let mounted = true
+    void pop?.finished.then(
+      () => {
+        if (mounted) {
+          onDone()
+        }
+      },
+      () => undefined
+    )
+    return () => {
+      mounted = false
+      tug?.cancel()
+      pop?.cancel()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  return (
+    <span
+      aria-hidden="true"
+      data-reply-cue=""
+      className={cn(
+        "pointer-events-none absolute inset-y-0 flex items-center",
+        side === "start" ? "left-1" : "right-1"
+      )}
+    >
+      <span
+        ref={icon}
+        className="flex size-8 items-center justify-center rounded-full bg-card text-muted-foreground opacity-0 shadow-xs ring-1 ring-foreground/10"
+      >
+        <CornerUpLeftIcon className="size-4" />
+      </span>
+    </span>
+  )
+}
 
 /** Reações rápidas e "Mais reações", no atalho ao lado da bolha e no menu ⋮. */
 function QuickReactions({

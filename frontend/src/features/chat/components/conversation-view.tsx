@@ -1137,6 +1137,8 @@ function LoadedConversation({
       : (cache.messages.find((message) => message.seq >= unread.seq)?.id ??
         null)
   const canWrite = conversation.canSend && selection === null
+  // Responder pelo menu ou pelos dois cliques só quando o campo está na tela.
+  const canReply = canWrite && !conversation.blockedByMe
 
   return (
     <div
@@ -1476,6 +1478,7 @@ function LoadedConversation({
                             : undefined
                         }
                         canEdit={canEdit(message)}
+                        canReply={canReply}
                         conversationId={conversation.id}
                         showSender={group !== null}
                         canReplyPrivately={

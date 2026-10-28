@@ -62,6 +62,7 @@ Leia as entradas relacionadas à tarefa. Os detalhes ficam em `docs/learning/`.
 - [Escala de espaçamento e auditoria das bordas](docs/learning/decisao-escala-de-espacamento.md) — tokens na forma de variável (cn), menu com largura própria, fieldset min-w-0, addons presos embaixo, data-scroll-x.
 - [Animações sem biblioteca, com tokens e só ao vivo](docs/learning/decisao-animacoes.md) — nada de Motion nem ViewTransition do React na lista, entrada decidida antes de pintar, chave remetente+clientMessageId, bola, onda e voo.
 - [Busca de pessoas por nome no "Adicionar contato"](docs/learning/decisao-busca-de-pessoas-por-nome.md) — todos aparecem e cada um pode sair; @usuario exato e contatos sempre acham; bloqueio nunca.
+- [Visualizador de PDF com o pdf.js 6](docs/learning/decisao-visualizador-de-pdf.md) — carregado ao abrir, dados em /assets/pdfjs-<versão>/, sem eval, TextLayer com --total-scale-factor.
 - [Formatação no campo com um espelho](docs/learning/decisao-formatacao-no-campo.md) — marcadores do WhatsApp, espelho que não muda a largura das letras, insertText para o desfazer, prova letra por letra.
 - [Paletas de cor e papéis de parede](docs/learning/decisao-paletas-e-papel-de-parede.md) — OKLCH por fórmula com contraste conferido, hover por color-mix, doodles do Lucide como máscara, imagem só no aparelho.
 - [Licença AGPL-3.0 e imagem Docker no GHCR](docs/learning/decisao-licenca-e-imagem-docker.md) — permissão da seção 7 para o AspectJ, Alpine com o JAR testado via build-context, release idempotente.

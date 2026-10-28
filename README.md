@@ -40,7 +40,9 @@
 | 🔒 **Privacidade aplicada no servidor** | Visto por último, online, foto, recado e confirmação de leitura com reciprocidade; ninguém burla pelo navegador. |
 | 🙈 **Modo privado e conversas trancadas** | Desfoque de mensagens, nomes e mídia (Alt+Shift+P), bloqueio de tela por PIN e conversas que só abrem com código. |
 | ⚡ **Tempo real e offline** | STOMP sobre WebSocket com sincronização por sequência; PWA instalável, conversas recentes offline e fila de envio. |
-| 💬 **Com a cara do WhatsApp** | Microfone dentro da caixa de texto, mensagem que voa até o lugar dela, reações, foto de quem fala no grupo, menu de anexos e os atalhos do WhatsApp Web. |
+| 💬 **Com a cara do WhatsApp** | Microfone dentro da caixa de texto, mensagem que voa até o lugar dela, dois cliques ao lado da mensagem para responder, reações, foto de quem fala no grupo, menu de anexos e os atalhos do WhatsApp Web. |
+| ✍️ **Formatação enquanto escreve** | Selecione um trecho e escolha negrito, itálico, tachado, código, spoiler, citação, listas ou bloco de código na barra flutuante, no botão direito ou por atalho; o texto já aparece formatado no campo. |
+| 🔎 **Ache as pessoas pelo nome** | No "Adicionar contato", as sugestões aparecem enquanto você digita o nome ou o @usuario, sem diferenciar acentos; quem prefere sai da busca em Privacidade. |
 | 🎨 **Do seu jeito** | Oito paletas de cor para o app inteiro, no claro e no escuro, e papel de parede com desenhos, cores, degradês ou uma foto sua (que não sai do aparelho). |
 | 👥 **Tudo de um mensageiro moderno** | Grupos com admins e convite por QR Code, transmissões, enquetes, figurinhas, temporárias, agendadas, visualização única e listas personalizadas. |
 | 🎙️ **Áudio com transcrição** | Whisper no próprio navegador (o áudio não sai do aparelho) ou um provedor compatível com a API da OpenAI. |
@@ -65,6 +67,14 @@
   <tr>
     <td width="50%"><img src="docs/images/aparencia.png" alt="Configurações de aparência com o tema, as cores do app e o papel de parede com prévia"><p align="center"><sub>Aparência: tema, cores do app e papel de parede</sub></p></td>
     <td width="50%"><img src="docs/images/anexos.png" alt="Menu de anexos com documento, fotos e vídeos, câmera, áudio, enquete e figurinhas"><p align="center"><sub>Menu de anexos</sub></p></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/images/formatacao.png" alt="Campo de mensagem com o texto já formatado e a barra de formatação sobre o trecho selecionado"><p align="center"><sub>Formatação: a barra aparece ao selecionar</sub></p></td>
+    <td width="50%"><img src="docs/images/menu-formatacao.png" alt="Menu do botão direito no campo de mensagem com a formatação, recortar, copiar, colar e selecionar tudo"><p align="center"><sub>Botão direito: formatação e área de transferência</sub></p></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/images/responder.png" alt="Dois cliques ao lado da mensagem: a bolha se afasta, a seta de responder aparece e a resposta entra no campo"><p align="center"><sub>Dois cliques ao lado da mensagem para responder</sub></p></td>
+    <td width="50%"><img src="docs/images/adicionar-contato.png" alt="Adicionar contato com as pessoas sugeridas pelo nome enquanto se digita"><p align="center"><sub>Adicionar contato: sugestões pelo nome</sub></p></td>
   </tr>
 </table>
 
@@ -173,7 +183,29 @@ A cota por usuário (padrão 5 GB), as janelas de edição e exclusão e os prov
 painel do admin. Arquivos têm limite de 1 GB e sobem por upload retomável (tus): atrás de um proxy, libere
 `PATCH` em `/api/v1/uploads/**` com corpo de até 50 MB por requisição.
 
+### Contatos e solicitações
+
+Em "Adicionar contato", as pessoas do Papinho aparecem enquanto você digita parte do nome (sem diferenciar acentos e
+maiúsculas: "joao sil" acha "João Silva") ou o começo do `@usuario`. "Adicionar" põe a pessoa nos contatos e
+"Conversar" abre a conversa. Quem desliga **Aparecer na busca por nome** (Configurações > Privacidade) só aparece pelo
+`@usuario` completo, pelo próprio link ou QR Code e para quem já o tem nos contatos; pessoas bloqueadas (de qualquer
+lado) nunca aparecem. O apelido que só você vê fica em "Mudar apelido", na lista de contatos.
+
+Mensagem de quem não está nos seus contatos chega em **Solicitações de mensagem**: antes de aceitar, a pessoa não vê se
+você está online nem se leu. Dá para aceitar, recusar ou bloquear; ao aceitar, o Papinho pergunta se você já quer
+adicionar a pessoa aos contatos (contatos veem o que você mostra só para contatos).
+
 ### Mensagens
+
+Formatação do WhatsApp: `*negrito*`, `_itálico_`, `~tachado~`, `` `código` ``, `||spoiler||` (revela ao tocar),
+blocos de código com ```` ``` ```` (com destaque de sintaxe quando a primeira linha diz a linguagem), citação com `> `
+e listas com `- ` ou `1. `. Não precisa decorar: ao selecionar um trecho no campo, uma barra flutuante oferece cada
+formato, o botão direito do mouse abre as mesmas opções com recortar, copiar, colar e selecionar tudo
+(**Shift + botão direito** abre o menu do navegador, com a correção ortográfica) e há atalhos (abaixo). O texto
+aparece formatado enquanto você digita, e Ctrl+Z desfaz a formatação como qualquer edição.
+
+Para responder, use "Responder" no menu da mensagem ou dê **dois cliques com o botão esquerdo ao lado dela** (fora da
+bolha, onde os dois cliques continuam selecionando a palavra), como no WhatsApp Web.
 
 Grupos (com admins, permissões e convite por link ou QR Code), listas de transmissão, mensagens salvas,
 enquetes, figurinhas, mensagens temporárias, agendadas e de visualização única. Os jobs agendados (mensagens
@@ -196,6 +228,8 @@ cada um). Em Configurações > Privacidade também ficam:
 - **Conversas trancadas**: trancadas pelo painel da conversa com um código (o mesmo código em várias conversas
   abre todas juntas). Saem da lista e só abrem com o código; recarregar a página ou reiniciar o servidor tranca
   de novo. Um código esquecido não tem recuperação.
+- **Aparecer na busca por nome** (ligado por padrão): desligado, ninguém acha você pelo nome no "Adicionar contato";
+  continuam valendo o `@usuario` completo, o seu link e o QR Code, e os seus contatos continuam achando você.
 
 ### Lista, busca e notificações
 
@@ -249,6 +283,16 @@ Os atalhos de teclado são os do WhatsApp Web (no Mac, ⌘ no lugar do Ctrl); `?
 | Ctrl+Alt+P / Ctrl+Alt+, | Perfil / configurações |
 | Alt+Shift+P | Modo privado |
 | Esc | Fecha o que está aberto e, sem nada aberto, sai da conversa |
+
+No campo de mensagem, com um trecho selecionado (sem seleção, vale a palavra onde está o cursor):
+
+| Atalho | Formato |
+|---|---|
+| Ctrl+B / Ctrl+I | Negrito / itálico |
+| Ctrl+Shift+X | Tachado |
+| Ctrl+E | Código |
+| Ctrl+Shift+7 / 8 / 9 | Lista numerada / lista com marcadores / citação |
+| Alt+F10 | Vai para a barra de formatação (Esc volta ao campo) |
 
 ### App instalável e offline
 

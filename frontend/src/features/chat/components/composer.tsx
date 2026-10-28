@@ -53,6 +53,11 @@ import { playSendSound } from "@/lib/sounds"
 import { saveDraft } from "../api"
 import { markSendOrigin } from "../send-flight"
 import { plainText } from "../format/parse"
+import {
+  FormattedMirror,
+  replacingText,
+  useComposerFormat,
+} from "./composer-format"
 import { VoiceRecorder } from "./voice-recorder"
 import type { ReplyPreview } from "../types"
 
@@ -67,6 +72,11 @@ const MAX_LENGTH = 65_536
 const COMPOSER_ADDON = "h-[calc(3rem-2px)] self-end gap-1 py-0"
 /** Ícone redondo dentro da pílula: 40 px no mouse, 44 px no toque (AR-02, pelo próprio Button). */
 const COMPOSER_ICON = "size-10"
+/**
+ * Tipografia e respiro do texto do campo, iguais no textarea e no espelho que desenha a formatação por baixo dele:
+ * uma linha de 24 px com 11 px em cima e embaixo, no meio dos 46 px da pílula, na altura dos ícones.
+ */
+const FIELD_TEXT = "px-2.5 py-[11px] text-base leading-6 md:text-sm"
 
 /** Itens do menu de anexos, na ordem do WhatsApp; a cor do círculo de cada um vem do index.css (data-attach-tone). */
 const ATTACH_KINDS = [
@@ -185,6 +195,9 @@ export function Composer({
     return () => window.clearTimeout(timer)
   }, [conversationId, editing, value])
   const textarea = useRef<HTMLTextAreaElement>(null)
+  // Negrito, itálico e companhia como no WhatsApp: barra na seleção, botão direito, atalhos e o texto já formatado.
+  const mirror = useRef<HTMLDivElement>(null)
+  const format = useComposerFormat({ field: textarea, mirror, value, disabled })
   const fileInput = useRef<HTMLInputElement>(null)
   const [recording, setRecording] = useState(false)
   const showSend = value.trim() !== "" || Boolean(editing)
@@ -513,74 +526,97 @@ export function Composer({
           </InputGroupAddon>
         )}
         {recording ? null : (
-          <InputGroupTextarea
-            ref={textarea}
-            aria-label={t("chat.composerLabel")}
-            placeholder={t("chat.composerPlaceholder")}
-            value={value}
-            maxLength={MAX_LENGTH}
-            rows={1}
-            disabled={disabled}
-            enterKeyHint="send"
-            spellCheck={chatPrefs.spellcheck}
-            // Uma linha de 24 px com 11 px em cima e embaixo: o texto fica no meio dos 46 px, na altura dos ícones.
-            className={cn(
-              "field-sizing-content max-h-40 min-h-[calc(3rem-2px)] resize-none py-[11px] leading-6",
-              returning &&
-                "animate-in duration-(--duration-base) ease-(--ease-enter) fade-in"
-            )}
-            onChange={(event) => {
-              const field = event.target
-              const caret = field.selectionStart ?? field.value.length
-              // ":) " vira "🙂 " ao digitar o espaço (Configurações > Conversas), como no WhatsApp.
-              const replaced =
-                chatPrefs.emojiReplace &&
-                (event.nativeEvent as InputEvent).inputType === "insertText"
-                  ? replaceEmoticon(field.value, caret)
-                  : null
-              typing(replaced?.text ?? field.value)
-              if (replaced) {
-                window.requestAnimationFrame(() =>
-                  field.setSelectionRange(replaced.caret, replaced.caret)
-                )
-              }
-            }}
-            onPaste={(event) => {
-              const pasted = [...event.clipboardData.files]
-              if (pasted.length > 0) {
-                event.preventDefault()
-                onFiles(pasted)
-              }
-            }}
-            onKeyDown={(event) => {
-              const coarse = window.matchMedia("(pointer: coarse)").matches
-              if (
-                event.key === "Enter" &&
-                !event.shiftKey &&
-                enterSends(chatPrefs, coarse) &&
-                !event.nativeEvent.isComposing
-              ) {
-                event.preventDefault()
-                submit()
-              }
-              if (event.key === "Escape" && editing) {
-                event.preventDefault()
-                cancelEdit()
-              } else if (event.key === "Escape" && replyTo) {
-                event.preventDefault()
-                onCancelReply()
-              }
-              if (
-                event.key === "ArrowUp" &&
-                value === "" &&
-                !editing &&
-                onEditLast
-              ) {
-                event.preventDefault()
-                onEditLast()
-              }
-            }}
-          />
+          // O textarea fica com o texto transparente por cima do espelho, que mostra a formatação; cursor, seleção,
+          // correção ortográfica e teclado continuam os do textarea.
+          <div
+            data-slot="composer-field"
+            className="relative flex min-w-0 flex-1"
+          >
+            <FormattedMirror
+              ref={mirror}
+              segments={format.analysis.segments}
+              text={value}
+              className={cn(
+                FIELD_TEXT,
+                returning &&
+                  "animate-in duration-(--duration-base) ease-(--ease-enter) fade-in"
+              )}
+            />
+            <InputGroupTextarea
+              ref={textarea}
+              aria-label={t("chat.composerLabel")}
+              placeholder={t("chat.composerPlaceholder")}
+              value={value}
+              maxLength={MAX_LENGTH}
+              rows={1}
+              disabled={disabled}
+              enterKeyHint="send"
+              spellCheck={chatPrefs.spellcheck}
+              {...format.fieldProps}
+              className={cn(
+                "relative field-sizing-content max-h-40 min-h-[calc(3rem-2px)] resize-none scrollbar-gutter-stable [-webkit-text-fill-color:transparent] placeholder:[-webkit-text-fill-color:var(--muted-foreground)] forced-colors:[-webkit-text-fill-color:CanvasText]",
+                FIELD_TEXT,
+                returning &&
+                  "animate-in duration-(--duration-base) ease-(--ease-enter) fade-in"
+              )}
+              onChange={(event) => {
+                const field = event.target
+                const caret = field.selectionStart ?? field.value.length
+                // ":) " vira "🙂 " ao digitar o espaço (Configurações > Conversas), como no WhatsApp.
+                const replaced =
+                  chatPrefs.emojiReplace &&
+                  (event.nativeEvent as InputEvent).inputType ===
+                    "insertText" &&
+                  !replacingText()
+                    ? replaceEmoticon(field.value, caret)
+                    : null
+                typing(replaced?.text ?? field.value)
+                if (replaced) {
+                  window.requestAnimationFrame(() =>
+                    field.setSelectionRange(replaced.caret, replaced.caret)
+                  )
+                }
+              }}
+              onPaste={(event) => {
+                const pasted = [...event.clipboardData.files]
+                if (pasted.length > 0) {
+                  event.preventDefault()
+                  onFiles(pasted)
+                }
+              }}
+              onKeyDown={(event) => {
+                if (format.onKeyDown(event)) {
+                  return
+                }
+                const coarse = window.matchMedia("(pointer: coarse)").matches
+                if (
+                  event.key === "Enter" &&
+                  !event.shiftKey &&
+                  enterSends(chatPrefs, coarse) &&
+                  !event.nativeEvent.isComposing
+                ) {
+                  event.preventDefault()
+                  submit()
+                }
+                if (event.key === "Escape" && editing) {
+                  event.preventDefault()
+                  cancelEdit()
+                } else if (event.key === "Escape" && replyTo) {
+                  event.preventDefault()
+                  onCancelReply()
+                }
+                if (
+                  event.key === "ArrowUp" &&
+                  value === "" &&
+                  !editing &&
+                  onEditLast
+                ) {
+                  event.preventDefault()
+                  onEditLast()
+                }
+              }}
+            />
+          </div>
         )}
         {/* O microfone (ou o enviar, quando há texto) fica dentro da pílula, como no WhatsApp; gravando, o gravador
             ocupa a pílula inteira. */}
@@ -660,6 +696,7 @@ export function Composer({
         open={managingStickers}
         onOpenChange={setManagingStickers}
       />
+      {format.ui}
     </form>
   )
 }

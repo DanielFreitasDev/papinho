@@ -7,6 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { FORMAT_KEYS, type Format } from "@/features/chat"
 import { isMac, shortcutKeys, type ShortcutName } from "@/lib/shortcuts"
 
 type Row = { keys: string[]; label: string }
@@ -28,6 +29,7 @@ export function ShortcutsDialog({
     keys: shortcutKeys(name),
     label: t(`shortcuts.action.${name}`),
   })
+  const formats = Object.entries(FORMAT_KEYS) as [Format, string[]][]
   const groups: { title: string; rows: Row[] }[] = [
     {
       title: t("shortcuts.groupMessage"),
@@ -37,6 +39,16 @@ export function ShortcutsDialog({
         { keys: ["↑"], label: t("shortcuts.editLast") },
         { keys: [mod, "V"], label: t("shortcuts.pasteImage") },
         shortcut("emoji"),
+      ],
+    },
+    {
+      title: t("shortcuts.groupFormat"),
+      rows: [
+        ...formats.map(([format, keys]) => ({
+          keys,
+          label: t(`format.${format}`),
+        })),
+        { keys: ["Alt", "F10"], label: t("format.toolbarKey") },
       ],
     },
     {

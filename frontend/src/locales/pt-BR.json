@@ -785,6 +785,7 @@
     "groupMessage": "Mensagem",
     "groupConversation": "Conversa aberta",
     "groupApp": "App",
+    "groupFormat": "Formatação no campo",
     "action": {
       "markUnread": "Marcar como não lida",
       "archive": "Arquivar ou desarquivar",
@@ -799,6 +800,26 @@
       "settings": "Configurações",
       "emoji": "Painel de emojis"
     }
+  },
+  "format": {
+    "toolbar": "Formatação",
+    "inline": "Texto",
+    "blocks": "Blocos",
+    "bold": "Negrito",
+    "italic": "Itálico",
+    "strike": "Tachado",
+    "code": "Código",
+    "spoiler": "Spoiler",
+    "quote": "Citação",
+    "bulletList": "Lista com marcadores",
+    "orderedList": "Lista numerada",
+    "codeBlock": "Bloco de código",
+    "cut": "Recortar",
+    "paste": "Colar",
+    "selectAll": "Selecionar tudo",
+    "browserMenu": "Shift + botão direito abre o menu do navegador, com a correção ortográfica.",
+    "pasteBlocked": "O navegador não deixou colar por aqui. Use {{keys}}.",
+    "toolbarKey": "Ir para a barra de formatação"
   },
   "poll": {
     "new": "Nova enquete",

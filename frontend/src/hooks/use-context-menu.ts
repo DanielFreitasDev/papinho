@@ -25,12 +25,19 @@ export function useContextMenu() {
     onContextMenu(event: MouseEvent) {
       if (
         event.defaultPrevented ||
-        !window.matchMedia("(pointer: fine)").matches
+        !window.matchMedia("(pointer: fine)").matches ||
+        // Tela de toque num computador com mouse: o toque longo segue com o navegador.
+        (event.nativeEvent as PointerEvent).pointerType === "touch"
       ) {
         return
       }
       event.preventDefault()
       setPoint({ x: event.clientX, y: event.clientY })
+      setOpen(true)
+    },
+    /** Abre num ponto escolhido (pelo teclado, onde está o cursor do texto). */
+    openAt(x: number, y: number) {
+      setPoint({ x, y })
       setOpen(true)
     },
   }

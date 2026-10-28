@@ -29,8 +29,11 @@ const chromium = {
   permissions: ["microphone"],
 }
 
-/** UI-05 (aparência própria) também roda no Firefox e no WebKit. */
-const NATIVE_CONTROLS = /native-controls\.spec\.ts/
+/**
+ * UI-05 (aparência própria) também roda no Firefox e no WebKit, e o campo com a formatação desenhada por baixo do
+ * texto: cada motor desenha o texto do seu jeito, e o espelho precisa quebrar as linhas igual ao textarea.
+ */
+const NATIVE_CONTROLS = /(native-controls|composer)\.spec\.ts/
 
 /**
  * Whisper de verdade (AU-04), só com PAPINHO_E2E_WHISPER: o projeto desktop-chromium cobre o WASM (o headless não

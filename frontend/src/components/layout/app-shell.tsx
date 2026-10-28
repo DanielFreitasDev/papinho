@@ -151,6 +151,22 @@ function SignedInShell({ me }: { me: Me }) {
   }, [])
 
   const [tab, setTab] = useState("conversations")
+  /** Abre (ou cria) a conversa com a pessoa: pela lista de contatos e pelo "Adicionar contato". */
+  async function startChat(username: string) {
+    try {
+      const conversation = await openDirect.mutateAsync(username)
+      setTab("conversations")
+      await navigate({
+        to: "/c/$conversationId",
+        params: { conversationId: conversation.id },
+      })
+    } catch (error) {
+      toast.add({
+        title: errorMessage(error, t("common.genericError")),
+        type: "error",
+      })
+    }
+  }
 
   // Atalhos do WhatsApp que são do app inteiro (os da conversa aberta ficam na conversa).
   const conversationId = /^\/c\/([^/]+)/.exec(pathname)?.[1] ?? null
@@ -399,23 +415,7 @@ function SignedInShell({ me }: { me: Me }) {
               <ScrollArea className="h-full">
                 <div className="px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
                   <ContactList
-                    onOpen={async (contact) => {
-                      try {
-                        const conversation = await openDirect.mutateAsync(
-                          contact.username
-                        )
-                        setTab("conversations")
-                        await navigate({
-                          to: "/c/$conversationId",
-                          params: { conversationId: conversation.id },
-                        })
-                      } catch (error) {
-                        toast.add({
-                          title: errorMessage(error, t("common.genericError")),
-                          type: "error",
-                        })
-                      }
-                    }}
+                    onOpen={(contact) => startChat(contact.username)}
                   />
                 </div>
               </ScrollArea>
@@ -432,7 +432,11 @@ function SignedInShell({ me }: { me: Me }) {
           <Outlet />
         </main>
       </div>
-      <AddContactDialog open={addOpen} onOpenChange={setAddOpen} />
+      <AddContactDialog
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        onStartChat={startChat}
+      />
       <MyLinkDialog open={linkOpen} onOpenChange={setLinkOpen} />
       <InviteDialog open={inviteOpen} onOpenChange={setInviteOpen} />
       <NewGroupDialog open={groupOpen} onOpenChange={setGroupOpen} />

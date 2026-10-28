@@ -8,6 +8,7 @@ import {
 import {
   ADMIN,
   createInvite,
+  addContact,
   ensureAdmin,
   loginThroughUi,
   logoutThroughUi,
@@ -49,15 +50,18 @@ test.describe.serial("contas e contatos", () => {
     await registerThroughUi(page, bruno, "Bruno Teste")
     await expect(page.getByText(`@${bruno}`)).toBeVisible()
 
-    await page.getByRole("button", { name: "Adicionar contato" }).click()
-    const dialog = page.getByRole("dialog", { name: "Adicionar contato" })
-    await dialog.getByLabel("@usuario").fill(`@${ADMIN.toUpperCase()}`)
-    await dialog.getByLabel("Apelido (só você vê)").fill("Chefe")
-    await dialog.getByRole("button", { name: "Adicionar", exact: true }).click()
+    // A busca aceita o @ e maiúsculas; o apelido local vem depois, pela lista de contatos.
+    await addContact(page, `@${ADMIN.toUpperCase()}`, "Anfitrião")
     await openContactsTab(page)
-    await expect(
-      page.getByRole("complementary").getByText("Chefe")
-    ).toBeVisible()
+    const contacts = page.getByRole("complementary")
+    await contacts
+      .getByRole("button", { name: "Ações do contato: Anfitrião" })
+      .click()
+    await page.getByRole("menuitem", { name: "Mudar apelido" }).click()
+    const rename = page.getByRole("dialog", { name: "Mudar apelido" })
+    await rename.getByLabel("Apelido (só você vê)").fill("Chefe")
+    await rename.getByRole("button", { name: "Salvar" }).click()
+    await expect(contacts.getByText("Chefe")).toBeVisible()
 
     await admin.page.goto(`/add/${bruno}`)
     await expect(

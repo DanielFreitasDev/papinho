@@ -121,6 +121,23 @@ export async function createInvite(page: Page) {
   return url
 }
 
+/**
+ * Adiciona um contato pelo "Adicionar contato": busca pelo @usuario (ou parte do nome) e toca em "Adicionar" no
+ * resultado; espera a pessoa virar contato ("Conversar") e fecha o diálogo pelo botão, como faz quem usa o mouse
+ * (com Esc, o foco volta pelo teclado ao botão do cabeçalho e a dica dele cobre as abas da lista).
+ */
+export async function addContact(page: Page, search: string, name: string) {
+  await page.getByRole("button", { name: "Adicionar contato" }).click()
+  const dialog = page.getByRole("dialog", { name: "Adicionar contato" })
+  await dialog.getByRole("searchbox", { name: "Nome ou @usuario" }).fill(search)
+  await dialog.getByRole("button", { name: `Adicionar ${name}` }).click()
+  await expect(
+    dialog.getByRole("button", { name: `Conversar com ${name}` })
+  ).toBeVisible()
+  await dialog.getByRole("button", { name: "Fechar" }).click()
+  await expect(dialog).toBeHidden()
+}
+
 /** Duas pessoas que se adicionaram e estão com a conversa aberta; `tag` é única por spec (gil.<tag>). */
 export async function twoFriends(
   browser: Browser,
@@ -149,11 +166,7 @@ export async function twoFriends(
     [gil, hana],
     [hana, gil],
   ]) {
-    await me.page.getByRole("button", { name: "Adicionar contato" }).click()
-    const add = me.page.getByRole("dialog", { name: "Adicionar contato" })
-    await add.getByLabel("@usuario").fill(other.username)
-    await add.getByRole("button", { name: "Adicionar", exact: true }).click()
-    await expect(add).toBeHidden()
+    await addContact(me.page, other.username, other.name)
   }
   for (const [me, other] of [
     [gil, hana],

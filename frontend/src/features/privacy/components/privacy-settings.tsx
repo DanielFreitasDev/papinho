@@ -112,6 +112,17 @@ export function PrivacySettings() {
         </FieldGroup>
       </SettingsSection>
 
+      <SettingsSection title={t("privacy.discoveryTitle")}>
+        <SwitchField
+          id="privacy-name-search"
+          label={t("privacy.nameSearch")}
+          description={t("privacy.nameSearchDescription")}
+          checked={settings.nameSearch}
+          disabled={update.isPending}
+          onChange={(nameSearch) => change({ nameSearch })}
+        />
+      </SettingsSection>
+
       <SettingsSection
         title={t("privacy.groupsTitle")}
         description={t("privacy.groupsDescription")}

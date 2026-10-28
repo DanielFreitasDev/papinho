@@ -7,6 +7,7 @@ import {
   watchErrors,
 } from "./fixtures"
 import {
+  addContact,
   createInvite,
   ensureAdmin,
   openMenuItem,
@@ -42,11 +43,7 @@ test("denúncia com bloqueio chega à fila do admin", async ({
   await registerThroughUi(pageE, eva, "Eva Denuncia")
 
   // Davi escreve para a Eva, que não o tem nos contatos.
-  await pageD.getByRole("button", { name: "Adicionar contato" }).click()
-  const add = pageD.getByRole("dialog", { name: "Adicionar contato" })
-  await add.getByLabel("@usuario").fill(eva)
-  await add.getByRole("button", { name: "Adicionar", exact: true }).click()
-  await expect(add).toBeHidden()
+  await addContact(pageD, eva, "Eva Denuncia")
   await pageD
     .getByRole("complementary")
     .getByRole("tab", { name: "Contatos" })
@@ -160,11 +157,7 @@ test("solicitação recusada some e a bloqueada impede novos envios", async ({
   const [fabi, gui, iara] = people
 
   const writeToFabi = async (sender: (typeof people)[number], text: string) => {
-    await sender.page.getByRole("button", { name: "Adicionar contato" }).click()
-    const add = sender.page.getByRole("dialog", { name: "Adicionar contato" })
-    await add.getByLabel("@usuario").fill(fabi.username)
-    await add.getByRole("button", { name: "Adicionar", exact: true }).click()
-    await expect(add).toBeHidden()
+    await addContact(sender.page, fabi.username, fabi.name)
     await sender.page
       .getByRole("complementary")
       .getByRole("tab", { name: "Contatos" })

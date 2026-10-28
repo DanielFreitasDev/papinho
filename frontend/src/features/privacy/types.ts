@@ -24,6 +24,8 @@ export type PrivacySettings = {
   groupsAdd: Visibility
   readReceipts: boolean
   hideNotificationContent: boolean
+  /** Aparece para os outros na busca por nome do "Adicionar contato" (o @usuario exato sempre acha). */
+  nameSearch: boolean
   blur: BlurSettings
 }
 

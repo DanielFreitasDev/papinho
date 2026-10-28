@@ -7,7 +7,13 @@ import {
   test,
   watchErrors,
 } from "./fixtures"
-import { createInvite, ensureAdmin, registerThroughUi, RUN } from "./support"
+import {
+  addContact,
+  createInvite,
+  ensureAdmin,
+  registerThroughUi,
+  RUN,
+} from "./support"
 
 /** Linha da mensagem pelo texto do próprio corpo (não pela citação de uma resposta). */
 function row(page: Page, text: string) {
@@ -60,11 +66,7 @@ test("duas pessoas conversam em tempo real, da solicitação à leitura", async 
   await registerThroughUi(pageB, bia, "Bia Conversa")
 
   // Ana adiciona a Bia e abre a conversa pelo contato.
-  await pageA.getByRole("button", { name: "Adicionar contato" }).click()
-  const add = pageA.getByRole("dialog", { name: "Adicionar contato" })
-  await add.getByLabel("@usuario").fill(bia)
-  await add.getByRole("button", { name: "Adicionar", exact: true }).click()
-  await expect(add).toBeHidden()
+  await addContact(pageA, bia, "Bia Conversa")
   await pageA
     .getByRole("complementary")
     .getByRole("tab", { name: "Contatos" })

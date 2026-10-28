@@ -11,6 +11,7 @@ export const contactKeys = {
   all: ["contacts"] as const,
   list: ["contacts", "list"] as const,
   person: (username: string) => ["contacts", "person", username] as const,
+  search: (query: string) => ["contacts", "search", query] as const,
   myLink: ["contacts", "my-link"] as const,
   blocks: ["contacts", "blocks"] as const,
 }
@@ -30,6 +31,18 @@ export const contactQueries = {
           signal,
         }),
       retry: false,
+    }),
+  /** Pessoas da instância pelo nome ou pelo @usuario (o servidor aplica bloqueio e "aparecer na busca"). */
+  search: (query: string) =>
+    queryOptions({
+      queryKey: contactKeys.search(query),
+      queryFn: ({ signal }) =>
+        apiFetch<Person[]>(`/api/v1/people?q=${encodeURIComponent(query)}`, {
+          signal,
+        }),
+      // A lista anterior fica na tela enquanto a nova chega: nada pisca a cada letra.
+      placeholderData: (previous) => previous,
+      staleTime: 30_000,
     }),
   myLink: () =>
     queryOptions({

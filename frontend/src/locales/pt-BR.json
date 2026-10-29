@@ -407,6 +407,10 @@
     "adminBadge": "admin"
   },
   "chat": {
+    "unreadMention": "Menção a você",
+    "mentionList": "Mencionar alguém",
+    "mentionEveryone": "todos",
+    "mentionEveryoneHint": "Mencione todos os membros do grupo",
     "conversations": "Conversas",
     "sidebar": "Conversas e contatos",
     "emptyList": "Nenhuma conversa ainda",
@@ -603,6 +607,19 @@
     "statusDISMISSED": "Arquivada"
   },
   "media": {
+    "removeCurrent": "Tirar da seleção",
+    "dropHere": "Solte os arquivos aqui",
+    "captionPlaceholder": "Digite uma mensagem",
+    "clearCaption": "Apagar legenda",
+    "noPreview": "Nenhuma prévia disponível",
+    "pages_one": "{{count}} página",
+    "pages_other": "{{count}} páginas",
+    "selectedFiles": "Arquivos escolhidos",
+    "addFiles": "Adicionar arquivos",
+    "showFile": "Mostrar {{name}}",
+    "removeFile": "Tirar {{name}}",
+    "discardTitle": "Deseja descartar a seleção?",
+    "discard": "Descartar",
     "attachMenu": "Anexar",
     "attachKind": {
       "document": "Documento",

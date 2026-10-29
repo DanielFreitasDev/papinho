@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
 import { cn } from "cn"
@@ -54,10 +54,18 @@ import { saveDraft } from "../api"
 import { markSendOrigin } from "../send-flight"
 import { plainText } from "../format/parse"
 import {
+  filterMentions,
+  matchesEveryone,
+  mentionQuery,
+  type MentionCandidate,
+} from "../format/mention"
+import {
   FormattedMirror,
+  replaceText,
   replacingText,
   useComposerFormat,
 } from "./composer-format"
+import { MentionList, type MentionOption } from "./mention-list"
 import { VoiceRecorder } from "./voice-recorder"
 import type { ReplyPreview } from "../types"
 
@@ -148,6 +156,7 @@ export function Composer({
   onSchedule,
   onSticker,
   onGif,
+  mentions,
 }: {
   conversationId: string
   replyTo: ReplyPreview | null
@@ -174,6 +183,8 @@ export function Composer({
   /** Enviar figurinha ou GIF (MS-10). */
   onSticker?: (stickerId: string) => void
   onGif?: (gif: GifResult) => void
+  /** Membros do grupo que o "@" oferece (MS-04); sem a lista, o "@" não abre nada. */
+  mentions?: MentionCandidate[]
 }) {
   const { t } = useTranslation()
   const chatPrefs = useChatPrefs()
@@ -199,6 +210,39 @@ export function Composer({
   const mirror = useRef<HTMLDivElement>(null)
   const format = useComposerFormat({ field: textarea, mirror, value, disabled })
   const fileInput = useRef<HTMLInputElement>(null)
+  const quoting = Boolean(editing) || replyTo !== null
+  // Menções (MS-04): o "@" no cursor abre a lista; Esc fecha até começar outro "@".
+  const mentionListId = useId()
+  const typedMention =
+    mentions &&
+    format.focused &&
+    format.selection.start === format.selection.end
+      ? mentionQuery(value, format.selection.end)
+      : null
+  const mentionOptions: MentionOption[] = typedMention
+    ? [
+        ...(matchesEveryone(typedMention.query)
+          ? [{ username: "todos", candidate: null }]
+          : []),
+        ...filterMentions(mentions ?? [], typedMention.query).map(
+          (candidate) => ({ username: candidate.username, candidate })
+        ),
+      ]
+    : []
+  const [mentionClosedAt, setMentionClosedAt] = useState<number | null>(null)
+  const mentionOpen =
+    typedMention !== null &&
+    mentionOptions.length > 0 &&
+    mentionClosedAt !== typedMention.from &&
+    !disabled
+  const mentionKey = typedMention
+    ? `${typedMention.from}:${typedMention.query}`
+    : ""
+  const [mentionActive, setMentionActive] = useState({ key: "", index: 0 })
+  const activeMention =
+    mentionActive.key === mentionKey
+      ? Math.min(mentionActive.index, mentionOptions.length - 1)
+      : 0
   const [recording, setRecording] = useState(false)
   const showSend = value.trim() !== "" || Boolean(editing)
   // A troca entre o microfone e o enviar e a volta do campo depois da gravação animam só depois de uma mudança: na
@@ -302,6 +346,49 @@ export function Composer({
     input.click()
   }
 
+  /** Troca o "@..." digitado por "@usuario " pelo insertText (entra no Ctrl+Z). */
+  function pickMention(username: string) {
+    const field = textarea.current
+    if (!field || !typedMention) {
+      return
+    }
+    const insert = `@${username} `
+    const caret = typedMention.from + insert.length
+    replaceText(field, {
+      from: typedMention.from,
+      to: format.selection.end,
+      insert,
+      selection: [caret, caret],
+    })
+  }
+
+  /** ↑, ↓, Enter, Tab e Esc com a lista de menções aberta; true quando a tecla foi dela. */
+  function mentionKeyDown(event: KeyboardEvent): boolean {
+    if (!mentionOpen || !typedMention) {
+      return false
+    }
+    const count = mentionOptions.length
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      const step = event.key === "ArrowDown" ? 1 : -1
+      setMentionActive({
+        key: mentionKey,
+        index: (activeMention + step + count) % count,
+      })
+    } else if (
+      (event.key === "Enter" || event.key === "Tab") &&
+      !event.shiftKey &&
+      !event.nativeEvent.isComposing
+    ) {
+      pickMention(mentionOptions[activeMention].username)
+    } else if (event.key === "Escape") {
+      setMentionClosedAt(typedMention.from)
+    } else {
+      return false
+    }
+    event.preventDefault()
+    return true
+  }
+
   function cancelEdit() {
     setValue("")
     onCancelEdit?.()
@@ -337,53 +424,12 @@ export function Composer({
   return (
     <form
       noValidate
-      className="flex flex-col gap-2 px-(--spacing-gutter) pt-1 pb-[max(0.5rem,env(safe-area-inset-bottom))]"
+      className="relative flex flex-col gap-2 px-(--spacing-gutter) pt-1 pb-[max(0.5rem,env(safe-area-inset-bottom))]"
       onSubmit={(event) => {
         event.preventDefault()
         submit()
       }}
     >
-      {editing ? (
-        <div className="flex animate-in items-start gap-2 rounded-md border-l-4 border-primary bg-muted px-2 py-1 text-xs duration-(--duration-base) ease-(--ease-enter) fade-in slide-in-from-bottom-2">
-          <PencilIcon aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
-          <div className="min-w-0 flex-1">
-            <p className="font-medium">{t("chat.editing")}</p>
-            <p className="line-clamp-2 text-muted-foreground">
-              {plainText(editing.body)}
-            </p>
-          </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            aria-label={t("chat.cancelEdit")}
-            onClick={cancelEdit}
-          >
-            <XIcon />
-          </Button>
-        </div>
-      ) : null}
-      {replyTo && !editing ? (
-        <div className="flex animate-in items-start gap-2 rounded-md border-l-4 border-primary bg-muted px-2 py-1 text-xs duration-(--duration-base) ease-(--ease-enter) fade-in slide-in-from-bottom-2">
-          <div className="min-w-0 flex-1">
-            <p className="font-medium">
-              {t("chat.replyingTo", { name: replyName })}
-            </p>
-            <p className="line-clamp-2 text-muted-foreground">
-              {plainText(replyTo.body)}
-            </p>
-          </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            aria-label={t("chat.cancelReply")}
-            onClick={onCancelReply}
-          >
-            <XIcon />
-          </Button>
-        </div>
-      ) : null}
       <input
         ref={fileInput}
         type="file"
@@ -399,299 +445,359 @@ export function Composer({
           }
         }}
       />
-      {/* A pílula fica montada também durante a gravação: o gravador mora nela (à direita) e ocupa a largura toda. */}
-      <InputGroup
-        data-composer=""
-        data-recording={recording ? "" : undefined}
-        className="h-auto min-h-12 rounded-3xl bg-card shadow-xs transition-shadow dark:bg-card"
+      {/* Respondendo ou editando, a citação mora dentro da caixa, em cima do campo, como no WhatsApp: um cartão com a
+          barra verde, o nome e duas linhas do texto, e o X à direita. */}
+      <div
+        className={cn(
+          quoting &&
+            "flex flex-col rounded-3xl bg-card p-1.5 pb-0 shadow-xs ring-1 ring-input dark:bg-card"
+        )}
       >
-        {recording ? null : (
-          <InputGroupAddon
-            align="inline-start"
-            className={cn(
-              COMPOSER_ADDON,
-              returning &&
-                "animate-in duration-(--duration-base) ease-(--ease-enter) fade-in slide-in-from-left-4"
-            )}
-          >
-            {/* Menu de anexos como o do WhatsApp: cada tipo com o próprio ícone colorido e o filtro certo no seletor
-                de arquivos (a câmera abre direto no celular). */}
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <Button
-                    type="button"
-                    variant="ball"
-                    size="icon"
-                    className={COMPOSER_ICON}
-                    aria-label={t("media.attachMenu")}
-                    disabled={disabled}
-                  />
-                }
-              >
-                <PaperclipIcon className="transition-transform duration-(--duration-base) ease-(--ease-spring) group-data-popup-open/button:-rotate-45" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                side="top"
-                align="start"
-                className="min-w-56"
-              >
-                {ATTACH_KINDS.map(
-                  ({ key, icon: Icon, tone, accept, capture }) =>
-                    key === "poll" && !onPoll ? null : (
-                      <DropdownMenuItem
-                        key={key}
-                        className="gap-3 py-2"
-                        onClick={() => {
-                          if (key === "poll") {
-                            onPoll?.()
-                          } else if (key === "sticker") {
-                            setManagingStickers(true)
-                          } else {
-                            pickFiles(accept, capture)
-                          }
-                        }}
-                      >
-                        <span
-                          aria-hidden="true"
-                          data-attach-tone={tone}
-                          className="flex size-8 items-center justify-center rounded-full text-white"
-                        >
-                          <Icon className="size-4" />
-                        </span>
-                        {t(`media.attachKind.${key}`)}
-                      </DropdownMenuItem>
-                    )
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <Popover open={emojiOpen} onOpenChange={setEmojiOpen}>
-              <PopoverTrigger
-                render={
-                  <Button
-                    type="button"
-                    variant="ball"
-                    size="icon"
-                    className={COMPOSER_ICON}
-                    aria-label={t("emoji.open")}
-                    disabled={disabled}
-                  />
-                }
-              >
-                <SmileIcon />
-              </PopoverTrigger>
-              <PopoverContent side="top" align="start" className="w-auto">
-                <Tabs defaultValue="emoji">
-                  <TabsList>
-                    <TabsTrigger value="emoji">{t("emoji.tab")}</TabsTrigger>
-                    {onSticker ? (
-                      <TabsTrigger value="stickers">
-                        {t("sticker.tab")}
-                      </TabsTrigger>
-                    ) : null}
-                    {onGif && gifStatus.data?.enabled ? (
-                      <TabsTrigger value="gifs">{t("gif.tab")}</TabsTrigger>
-                    ) : null}
-                  </TabsList>
-                  <TabsContent value="emoji">
-                    <EmojiPicker onSelect={insertEmoji} />
-                  </TabsContent>
-                  {onSticker ? (
-                    <TabsContent value="stickers">
-                      <StickerPanel
-                        onSelect={(sticker) => {
-                          setEmojiOpen(false)
-                          onSticker(sticker.id)
-                        }}
-                        onManage={() => {
-                          setEmojiOpen(false)
-                          setManagingStickers(true)
-                        }}
-                      />
-                    </TabsContent>
-                  ) : null}
-                  {onGif && gifStatus.data?.enabled ? (
-                    <TabsContent value="gifs">
-                      <GifPanel
-                        onSelect={(gif) => {
-                          setEmojiOpen(false)
-                          onGif(gif)
-                        }}
-                      />
-                    </TabsContent>
-                  ) : null}
-                </Tabs>
-              </PopoverContent>
-            </Popover>
-          </InputGroupAddon>
-        )}
-        {recording ? null : (
-          // O textarea fica com o texto transparente por cima do espelho, que mostra a formatação; cursor, seleção,
-          // correção ortográfica e teclado continuam os do textarea.
-          <div
-            data-slot="composer-field"
-            className="relative flex min-w-0 flex-1"
-          >
-            <FormattedMirror
-              ref={mirror}
-              segments={format.analysis.segments}
-              text={value}
-              className={cn(
-                FIELD_TEXT,
-                returning &&
-                  "animate-in duration-(--duration-base) ease-(--ease-enter) fade-in"
-              )}
-            />
-            <InputGroupTextarea
-              ref={textarea}
-              aria-label={t("chat.composerLabel")}
-              placeholder={t("chat.composerPlaceholder")}
-              value={value}
-              maxLength={MAX_LENGTH}
-              rows={1}
-              disabled={disabled}
-              enterKeyHint="send"
-              spellCheck={chatPrefs.spellcheck}
-              {...format.fieldProps}
-              className={cn(
-                "relative field-sizing-content max-h-40 min-h-[calc(3rem-2px)] resize-none scrollbar-gutter-stable [-webkit-text-fill-color:transparent] placeholder:[-webkit-text-fill-color:var(--muted-foreground)] forced-colors:[-webkit-text-fill-color:CanvasText]",
-                FIELD_TEXT,
-                returning &&
-                  "animate-in duration-(--duration-base) ease-(--ease-enter) fade-in"
-              )}
-              onChange={(event) => {
-                const field = event.target
-                const caret = field.selectionStart ?? field.value.length
-                // ":) " vira "🙂 " ao digitar o espaço (Configurações > Conversas), como no WhatsApp.
-                const replaced =
-                  chatPrefs.emojiReplace &&
-                  (event.nativeEvent as InputEvent).inputType ===
-                    "insertText" &&
-                  !replacingText()
-                    ? replaceEmoticon(field.value, caret)
-                    : null
-                typing(replaced?.text ?? field.value)
-                if (replaced) {
-                  window.requestAnimationFrame(() =>
-                    field.setSelectionRange(replaced.caret, replaced.caret)
-                  )
-                }
-              }}
-              onPaste={(event) => {
-                const pasted = [...event.clipboardData.files]
-                if (pasted.length > 0) {
-                  event.preventDefault()
-                  onFiles(pasted)
-                }
-              }}
-              onKeyDown={(event) => {
-                if (format.onKeyDown(event)) {
-                  return
-                }
-                const coarse = window.matchMedia("(pointer: coarse)").matches
-                if (
-                  event.key === "Enter" &&
-                  !event.shiftKey &&
-                  enterSends(chatPrefs, coarse) &&
-                  !event.nativeEvent.isComposing
-                ) {
-                  event.preventDefault()
-                  submit()
-                }
-                if (event.key === "Escape" && editing) {
-                  event.preventDefault()
-                  cancelEdit()
-                } else if (event.key === "Escape" && replyTo) {
-                  event.preventDefault()
-                  onCancelReply()
-                }
-                if (
-                  event.key === "ArrowUp" &&
-                  value === "" &&
-                  !editing &&
-                  onEditLast
-                ) {
-                  event.preventDefault()
-                  onEditLast()
-                }
-              }}
-            />
+        {quoting ? (
+          <div className="flex animate-in items-center gap-2 overflow-hidden rounded-2xl border-l-4 border-primary bg-muted py-2 pr-1.5 pl-3 duration-(--duration-base) ease-(--ease-enter) fade-in slide-in-from-bottom-2">
+            {editing ? (
+              <PencilIcon
+                aria-hidden="true"
+                className="size-4 shrink-0 text-primary"
+              />
+            ) : null}
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-primary">
+                {editing
+                  ? t("chat.editing")
+                  : t("chat.replyingTo", { name: replyName })}
+              </p>
+              <p className="line-clamp-2 text-sm text-muted-foreground">
+                {plainText(editing ? editing.body : (replyTo?.body ?? ""))}
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label={
+                editing ? t("chat.cancelEdit") : t("chat.cancelReply")
+              }
+              onClick={editing ? cancelEdit : onCancelReply}
+            >
+              <XIcon />
+            </Button>
           </div>
-        )}
-        {/* O microfone (ou o enviar, quando há texto) fica dentro da pílula, como no WhatsApp; gravando, o gravador
-            ocupa a pílula inteira. */}
-        <InputGroupAddon
-          align="inline-end"
+        ) : null}
+        {/* A pílula fica montada também durante a gravação: o gravador mora nela (à direita) e ocupa a largura toda. */}
+        <InputGroup
+          data-composer=""
+          data-recording={recording ? "" : undefined}
           className={cn(
-            COMPOSER_ADDON,
-            recording &&
-              "min-w-0 flex-1 cursor-default justify-stretch pl-2 text-foreground"
+            "h-auto min-h-12 rounded-3xl bg-card shadow-xs transition-shadow dark:bg-card",
+            quoting &&
+              "border-0 bg-transparent shadow-none ring-0 has-[[data-slot=input-group-control]:focus-visible]:ring-0 dark:bg-transparent"
           )}
         >
-          {showSend && !editing && onSchedule && !recording ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <Button
-                    type="button"
-                    variant="ball"
-                    size="icon"
-                    className={COMPOSER_ICON}
-                    aria-label={t("chat.sendOptions")}
-                    disabled={disabled}
-                  />
-                }
-              >
-                <ChevronUpIcon />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" side="top">
-                <DropdownMenuItem onClick={() => submit({ silent: true })}>
-                  <BellOffIcon />
-                  {t("chat.sendSilently")}
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => {
-                    const body = value.trim()
-                    if (body !== "") {
-                      onSchedule(body)
-                      savedDraft.current = ""
-                      setValue("")
-                      void saveDraft(conversationId, "").catch(() => undefined)
-                    }
-                  }}
-                >
-                  <CalendarClockIcon />
-                  {t("chat.schedule")}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : null}
-          {/* O enviar ocupa o lugar redondo do microfone e os dois chegam com o "pop" na troca. */}
-          {showSend && !recording ? (
-            <Button
-              type="submit"
-              size="icon"
+          {recording ? null : (
+            <InputGroupAddon
+              align="inline-start"
               className={cn(
-                COMPOSER_ICON,
-                "rounded-full",
-                swap && "animate-pop"
+                COMPOSER_ADDON,
+                returning &&
+                  "animate-in duration-(--duration-base) ease-(--ease-enter) fade-in slide-in-from-left-4"
               )}
-              aria-label={editing ? t("chat.saveEdit") : t("chat.send")}
-              disabled={disabled || value.trim() === ""}
             >
-              {editing ? <CheckIcon /> : <SendHorizontalIcon />}
-            </Button>
-          ) : (
-            <VoiceRecorder
-              conversationId={conversationId}
-              disabled={disabled}
-              animateIn={swap}
-              onActiveChange={setRecording}
-              onSend={onVoice}
-            />
+              {/* Menu de anexos como o do WhatsApp: cada tipo com o próprio ícone colorido e o filtro certo no seletor
+                de arquivos (a câmera abre direto no celular). */}
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <Button
+                      type="button"
+                      variant="ball"
+                      size="icon"
+                      className={COMPOSER_ICON}
+                      aria-label={t("media.attachMenu")}
+                      disabled={disabled}
+                    />
+                  }
+                >
+                  <PaperclipIcon className="transition-transform duration-(--duration-base) ease-(--ease-spring) group-data-popup-open/button:-rotate-45" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  side="top"
+                  align="start"
+                  className="min-w-56"
+                >
+                  {ATTACH_KINDS.map(
+                    ({ key, icon: Icon, tone, accept, capture }) =>
+                      key === "poll" && !onPoll ? null : (
+                        <DropdownMenuItem
+                          key={key}
+                          className="gap-3 py-2"
+                          onClick={() => {
+                            if (key === "poll") {
+                              onPoll?.()
+                            } else if (key === "sticker") {
+                              setManagingStickers(true)
+                            } else {
+                              pickFiles(accept, capture)
+                            }
+                          }}
+                        >
+                          <span
+                            aria-hidden="true"
+                            data-attach-tone={tone}
+                            className="flex size-8 items-center justify-center rounded-full text-white"
+                          >
+                            <Icon className="size-4" />
+                          </span>
+                          {t(`media.attachKind.${key}`)}
+                        </DropdownMenuItem>
+                      )
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Popover open={emojiOpen} onOpenChange={setEmojiOpen}>
+                <PopoverTrigger
+                  render={
+                    <Button
+                      type="button"
+                      variant="ball"
+                      size="icon"
+                      className={COMPOSER_ICON}
+                      aria-label={t("emoji.open")}
+                      disabled={disabled}
+                    />
+                  }
+                >
+                  <SmileIcon />
+                </PopoverTrigger>
+                <PopoverContent side="top" align="start" className="w-auto">
+                  <Tabs defaultValue="emoji">
+                    <TabsList>
+                      <TabsTrigger value="emoji">{t("emoji.tab")}</TabsTrigger>
+                      {onSticker ? (
+                        <TabsTrigger value="stickers">
+                          {t("sticker.tab")}
+                        </TabsTrigger>
+                      ) : null}
+                      {onGif && gifStatus.data?.enabled ? (
+                        <TabsTrigger value="gifs">{t("gif.tab")}</TabsTrigger>
+                      ) : null}
+                    </TabsList>
+                    <TabsContent value="emoji">
+                      <EmojiPicker onSelect={insertEmoji} />
+                    </TabsContent>
+                    {onSticker ? (
+                      <TabsContent value="stickers">
+                        <StickerPanel
+                          onSelect={(sticker) => {
+                            setEmojiOpen(false)
+                            onSticker(sticker.id)
+                          }}
+                          onManage={() => {
+                            setEmojiOpen(false)
+                            setManagingStickers(true)
+                          }}
+                        />
+                      </TabsContent>
+                    ) : null}
+                    {onGif && gifStatus.data?.enabled ? (
+                      <TabsContent value="gifs">
+                        <GifPanel
+                          onSelect={(gif) => {
+                            setEmojiOpen(false)
+                            onGif(gif)
+                          }}
+                        />
+                      </TabsContent>
+                    ) : null}
+                  </Tabs>
+                </PopoverContent>
+              </Popover>
+            </InputGroupAddon>
           )}
-        </InputGroupAddon>
-      </InputGroup>
+          {recording ? null : (
+            // O textarea fica com o texto transparente por cima do espelho, que mostra a formatação; cursor, seleção,
+            // correção ortográfica e teclado continuam os do textarea.
+            <div
+              data-slot="composer-field"
+              className="relative flex min-w-0 flex-1"
+            >
+              <FormattedMirror
+                ref={mirror}
+                segments={format.analysis.segments}
+                text={value}
+                className={cn(
+                  FIELD_TEXT,
+                  returning &&
+                    "animate-in duration-(--duration-base) ease-(--ease-enter) fade-in"
+                )}
+              />
+              <InputGroupTextarea
+                ref={textarea}
+                aria-label={t("chat.composerLabel")}
+                placeholder={t("chat.composerPlaceholder")}
+                value={value}
+                maxLength={MAX_LENGTH}
+                rows={1}
+                disabled={disabled}
+                enterKeyHint="send"
+                spellCheck={chatPrefs.spellcheck}
+                {...format.fieldProps}
+                className={cn(
+                  "relative field-sizing-content max-h-40 min-h-[calc(3rem-2px)] resize-none scrollbar-gutter-stable [-webkit-text-fill-color:transparent] placeholder:[-webkit-text-fill-color:var(--muted-foreground)] forced-colors:[-webkit-text-fill-color:CanvasText]",
+                  FIELD_TEXT,
+                  returning &&
+                    "animate-in duration-(--duration-base) ease-(--ease-enter) fade-in"
+                )}
+                onChange={(event) => {
+                  const field = event.target
+                  const caret = field.selectionStart ?? field.value.length
+                  // ":) " vira "🙂 " ao digitar o espaço (Configurações > Conversas), como no WhatsApp.
+                  const replaced =
+                    chatPrefs.emojiReplace &&
+                    (event.nativeEvent as InputEvent).inputType ===
+                      "insertText" &&
+                    !replacingText()
+                      ? replaceEmoticon(field.value, caret)
+                      : null
+                  typing(replaced?.text ?? field.value)
+                  if (replaced) {
+                    window.requestAnimationFrame(() =>
+                      field.setSelectionRange(replaced.caret, replaced.caret)
+                    )
+                  }
+                }}
+                onPaste={(event) => {
+                  const pasted = [...event.clipboardData.files]
+                  if (pasted.length > 0) {
+                    event.preventDefault()
+                    onFiles(pasted)
+                  }
+                }}
+                aria-autocomplete={mentions ? "list" : undefined}
+                aria-controls={mentionOpen ? mentionListId : undefined}
+                aria-activedescendant={
+                  mentionOpen ? `${mentionListId}-${activeMention}` : undefined
+                }
+                onKeyDown={(event) => {
+                  if (mentionKeyDown(event) || format.onKeyDown(event)) {
+                    return
+                  }
+                  const coarse = window.matchMedia("(pointer: coarse)").matches
+                  if (
+                    event.key === "Enter" &&
+                    !event.shiftKey &&
+                    enterSends(chatPrefs, coarse) &&
+                    !event.nativeEvent.isComposing
+                  ) {
+                    event.preventDefault()
+                    submit()
+                  }
+                  if (event.key === "Escape" && editing) {
+                    event.preventDefault()
+                    cancelEdit()
+                  } else if (event.key === "Escape" && replyTo) {
+                    event.preventDefault()
+                    onCancelReply()
+                  }
+                  if (
+                    event.key === "ArrowUp" &&
+                    value === "" &&
+                    !editing &&
+                    onEditLast
+                  ) {
+                    event.preventDefault()
+                    onEditLast()
+                  }
+                }}
+              />
+            </div>
+          )}
+          {/* O microfone (ou o enviar, quando há texto) fica dentro da pílula, como no WhatsApp; gravando, o gravador
+            ocupa a pílula inteira. */}
+          <InputGroupAddon
+            align="inline-end"
+            className={cn(
+              COMPOSER_ADDON,
+              recording &&
+                "min-w-0 flex-1 cursor-default justify-stretch pl-2 text-foreground"
+            )}
+          >
+            {showSend && !editing && onSchedule && !recording ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <Button
+                      type="button"
+                      variant="ball"
+                      size="icon"
+                      className={COMPOSER_ICON}
+                      aria-label={t("chat.sendOptions")}
+                      disabled={disabled}
+                    />
+                  }
+                >
+                  <ChevronUpIcon />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" side="top">
+                  <DropdownMenuItem onClick={() => submit({ silent: true })}>
+                    <BellOffIcon />
+                    {t("chat.sendSilently")}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      const body = value.trim()
+                      if (body !== "") {
+                        onSchedule(body)
+                        savedDraft.current = ""
+                        setValue("")
+                        void saveDraft(conversationId, "").catch(
+                          () => undefined
+                        )
+                      }
+                    }}
+                  >
+                    <CalendarClockIcon />
+                    {t("chat.schedule")}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : null}
+            {/* O enviar ocupa o lugar redondo do microfone e os dois chegam com o "pop" na troca. */}
+            {showSend && !recording ? (
+              <Button
+                type="submit"
+                size="icon"
+                className={cn(
+                  COMPOSER_ICON,
+                  "rounded-full",
+                  swap && "animate-pop"
+                )}
+                aria-label={editing ? t("chat.saveEdit") : t("chat.send")}
+                disabled={disabled || value.trim() === ""}
+              >
+                {editing ? <CheckIcon /> : <SendHorizontalIcon />}
+              </Button>
+            ) : (
+              <VoiceRecorder
+                conversationId={conversationId}
+                disabled={disabled}
+                animateIn={swap}
+                onActiveChange={setRecording}
+                onSend={onVoice}
+              />
+            )}
+          </InputGroupAddon>
+        </InputGroup>
+      </div>
+      {mentionOpen ? (
+        <MentionList
+          id={mentionListId}
+          options={mentionOptions}
+          active={activeMention}
+          onActive={(index) => setMentionActive({ key: mentionKey, index })}
+          onPick={pickMention}
+        />
+      ) : null}
       <StickerManager
         open={managingStickers}
         onOpenChange={setManagingStickers}

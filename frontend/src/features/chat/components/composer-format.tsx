@@ -88,7 +88,7 @@ export function replacingText() {
  * Troca o trecho pelo `insertText` do navegador, que entra no desfazer (Ctrl+Z) e dispara o input do React; sem ele
  * (navegador antigo), o setRangeText e um input sintético fazem o mesmo, só sem o desfazer.
  */
-function replaceText(field: HTMLTextAreaElement, edit: Edit) {
+export function replaceText(field: HTMLTextAreaElement, edit: Edit) {
   const before = field.value
   const expected =
     before.slice(0, edit.from) + edit.insert + before.slice(edit.to)
@@ -626,6 +626,9 @@ export function useComposerFormat({
     analysis,
     fieldProps,
     onKeyDown,
+    /** Seleção atual do campo e se ele tem o foco (a lista de menções usa o cursor). */
+    selection,
+    focused,
     ui: (
       <>
         {toolbar}

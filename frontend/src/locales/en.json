@@ -407,6 +407,10 @@
     "adminBadge": "admin"
   },
   "chat": {
+    "unreadMention": "You were mentioned",
+    "mentionList": "Mention someone",
+    "mentionEveryone": "everyone",
+    "mentionEveryoneHint": "Mention all group members",
     "conversations": "Chats",
     "sidebar": "Chats and contacts",
     "emptyList": "No chats yet",
@@ -603,6 +607,19 @@
     "statusDISMISSED": "Dismissed"
   },
   "media": {
+    "removeCurrent": "Remove from selection",
+    "dropHere": "Drop files here",
+    "captionPlaceholder": "Type a message",
+    "clearCaption": "Clear caption",
+    "noPreview": "No preview available",
+    "pages_one": "{{count}} page",
+    "pages_other": "{{count}} pages",
+    "selectedFiles": "Chosen files",
+    "addFiles": "Add files",
+    "showFile": "Show {{name}}",
+    "removeFile": "Remove {{name}}",
+    "discardTitle": "Discard selection?",
+    "discard": "Discard",
     "attachMenu": "Attach",
     "attachKind": {
       "document": "Document",

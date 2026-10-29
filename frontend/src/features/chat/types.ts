@@ -140,6 +140,8 @@ export type Conversation = {
   unreadCount: number
   firstUnreadSeq: number | null
   markedUnread: boolean
+  /** No grupo, alguma não lida me menciona (MS-04): o "@" na lista. Ausente no cache offline antigo. */
+  unreadMention?: boolean
   readSeq: number
   peerDeliveredSeq: number
   /** Trancada por mim (PV-03): fora da lista, conteúdo só com o código. */

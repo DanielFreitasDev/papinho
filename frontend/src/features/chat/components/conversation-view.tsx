@@ -83,6 +83,7 @@ import {
 import { groupQueries } from "../groups"
 import { describeNotice } from "../system-notice"
 import { clearReplyDraft, peekReplyDraft, setReplyDraft } from "../reply-drafts"
+import { MentionNames } from "../format/message-text"
 import { plainText } from "../format/parse"
 import { searchTerms } from "../format/search-match"
 import type {
@@ -95,7 +96,7 @@ import type {
   ReplyPreview,
 } from "../types"
 import { cancelFile, retryFile, sendFile } from "../attachments"
-import { AttachDialog } from "./attach-dialog"
+import { AttachEditor, type ChosenFile } from "./attach-editor"
 import { Composer } from "./composer"
 import { flyBubble, takeSendOrigin } from "../send-flight"
 import { useListAction } from "../organization"
@@ -378,6 +379,9 @@ function LoadedConversation({
   const [infoId, setInfoId] = useState<string | null>(null)
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [files, setFiles] = useState<File[]>([])
+  // Arquivos arrastados por cima da conversa: a área de soltar aparece (o contador ignora os filhos).
+  const [draggingFiles, setDraggingFiles] = useState(false)
+  const dragDepth = useRef(0)
   const [viewerId, setViewerId] = useState<string | null>(null)
   // Imagens da galeria (MD-03) podem não estar carregadas na conversa: o visualizador usa a lista dela.
   const [viewerImages, setViewerImages] = useState<Attachment[] | null>(null)
@@ -402,6 +406,31 @@ function LoadedConversation({
   const membersById = useMemo(
     () =>
       new Map((members.data ?? []).map((member) => [member.userId, member])),
+    [members.data]
+  )
+  // Menções (MS-04): quem o "@" oferece no campo e o nome que a bolha mostra no lugar do @usuario.
+  const mentionCandidates = useMemo(
+    () =>
+      (members.data ?? [])
+        .filter((member) => !member.me)
+        .sort((a, b) => a.label.localeCompare(b.label, "pt-BR"))
+        .map((member) => ({
+          userId: member.userId,
+          username: member.username,
+          label: member.label,
+          hasPhoto: member.hasPhoto,
+          photoVersion: member.photoVersion,
+        })),
+    [members.data]
+  )
+  const mentionNames = useMemo(
+    () =>
+      new Map(
+        (members.data ?? []).map((member) => [
+          member.username,
+          member.me ? member.displayName : member.label,
+        ])
+      ),
     [members.data]
   )
   const nameOf = (userId: string | null) =>
@@ -779,17 +808,21 @@ function LoadedConversation({
     if (tooLarge.length > 0) {
       toast.add({ title: t("media.tooLarge"), type: "error" })
     }
-    setFiles(chosen.filter((file) => file.size <= MAX_FILE_SIZE))
+    // Com a prévia aberta, os novos entram junto dos que já estão nela.
+    setFiles((current) => [
+      ...current,
+      ...chosen.filter((file) => file.size <= MAX_FILE_SIZE),
+    ])
   }
 
-  function sendFiles(chosen: File[], caption: string, viewOnce = false) {
+  function sendFiles(chosen: ChosenFile[], viewOnce = false) {
     let previous: Promise<unknown> = Promise.resolve()
-    chosen.forEach((file, index) => {
+    chosen.forEach(({ file, caption }, index) => {
       previous = sendFile(
         queryClient,
         conversation.id,
         file,
-        index === 0 ? caption : "",
+        caption,
         index === 0 ? replyTo : null,
         sendWithAttachment,
         crypto.randomUUID(),
@@ -1161,6 +1194,23 @@ function LoadedConversation({
   return (
     <div
       className="flex h-full min-h-0 flex-1"
+      onDragEnter={(event) => {
+        if (
+          conversation.canSend &&
+          event.dataTransfer.types.includes("Files")
+        ) {
+          dragDepth.current += 1
+          setDraggingFiles(true)
+        }
+      }}
+      onDragLeave={() => {
+        if (dragDepth.current > 0) {
+          dragDepth.current -= 1
+          if (dragDepth.current === 0) {
+            setDraggingFiles(false)
+          }
+        }
+      }}
       onDragOver={(event) => {
         if (
           conversation.canSend &&
@@ -1171,6 +1221,8 @@ function LoadedConversation({
         }
       }}
       onDrop={(event) => {
+        dragDepth.current = 0
+        setDraggingFiles(false)
         const dropped = [...event.dataTransfer.files]
         if (dropped.length > 0) {
           event.preventDefault()
@@ -1237,581 +1289,624 @@ function LoadedConversation({
             />
           ) : null}
         </header>
-        {searchOpen ? (
-          <ConversationSearch
-            key={searchSeed?.id ?? -1}
-            initialQuery={searchSeed?.query}
-            initialMessageId={searchSeed?.messageId}
-            onQueryChange={setSearchQuery}
-            conversationId={conversation.id}
-            people={
-              group
-                ? (members.data ?? []).map((member) => ({
-                    userId: member.userId,
-                    label: member.me ? t("chat.you") : member.label,
-                  }))
-                : conversation.peer && conversation.kind === "DIRECT"
-                  ? [
-                      { userId: meId, label: t("chat.you") },
-                      { userId: conversation.peer.userId, label: peerName },
-                    ]
-                  : []
-            }
-            onJump={(id) => void jumpTo(id)}
-            onClose={() => {
-              setSearchOpen(false)
-              setSearchQuery("")
-              setSearchSeed(null)
-            }}
-          />
-        ) : null}
-        {latestPinned ? (
-          <button
-            type="button"
-            onClick={() => void jumpTo(latestPinned.id)}
-            className="flex items-center gap-2 border-b bg-muted/50 px-(--spacing-gutter) py-2 text-left text-sm outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50"
-          >
-            <PinIcon aria-hidden="true" className="size-4 shrink-0" />
-            <span className="sr-only">{t("chat.pinnedMessages")}: </span>
-            <span className="truncate">{plainText(latestPinned.body)}</span>
-            {pinned.data && pinned.data.length > 1 ? (
-              <span className="ml-auto text-xs text-muted-foreground">
-                {pinned.data.length}
-              </span>
-            ) : null}
-          </button>
-        ) : null}
-        {scheduled.data && scheduled.data.length > 0 ? (
-          <button
-            type="button"
-            onClick={() => setScheduledOpen(true)}
-            className="flex items-center gap-2 border-b bg-muted/50 px-(--spacing-gutter) py-2 text-left text-sm outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50"
-          >
-            <CalendarClockIcon aria-hidden="true" className="size-4 shrink-0" />
-            {t("chat.scheduledCount", { count: scheduled.data.length })}
-          </button>
-        ) : null}
-        {conversation.state === "REQUEST" ? (
-          <Alert className="rounded-none border-x-0 border-t-0">
-            <AlertDescription className="flex flex-col gap-2">
-              <span>{t("chat.requestBanner", { name: peerName })}</span>
-              <span className="flex flex-wrap gap-2">
-                <Button
-                  size="sm"
-                  onClick={() => {
-                    const peer = conversation.peer
-                    conversationAction.mutate(
-                      { conversationId: conversation.id, action: "accept" },
-                      {
-                        onError: showError,
-                        onSuccess: () => {
-                          if (peer && !peer.contact) {
-                            setOfferedContact(peer)
+        {/* Abaixo do cabeçalho: a prévia dos anexos e a área de soltar cobrem só esta parte, como no WhatsApp. */}
+        <div className="relative flex min-h-0 flex-1 flex-col">
+          {searchOpen ? (
+            <ConversationSearch
+              key={searchSeed?.id ?? -1}
+              initialQuery={searchSeed?.query}
+              initialMessageId={searchSeed?.messageId}
+              onQueryChange={setSearchQuery}
+              conversationId={conversation.id}
+              people={
+                group
+                  ? (members.data ?? []).map((member) => ({
+                      userId: member.userId,
+                      label: member.me ? t("chat.you") : member.label,
+                    }))
+                  : conversation.peer && conversation.kind === "DIRECT"
+                    ? [
+                        { userId: meId, label: t("chat.you") },
+                        { userId: conversation.peer.userId, label: peerName },
+                      ]
+                    : []
+              }
+              onJump={(id) => void jumpTo(id)}
+              onClose={() => {
+                setSearchOpen(false)
+                setSearchQuery("")
+                setSearchSeed(null)
+              }}
+            />
+          ) : null}
+          {latestPinned ? (
+            <button
+              type="button"
+              onClick={() => void jumpTo(latestPinned.id)}
+              className="flex items-center gap-2 border-b bg-muted/50 px-(--spacing-gutter) py-2 text-left text-sm outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50"
+            >
+              <PinIcon aria-hidden="true" className="size-4 shrink-0" />
+              <span className="sr-only">{t("chat.pinnedMessages")}: </span>
+              <span className="truncate">{plainText(latestPinned.body)}</span>
+              {pinned.data && pinned.data.length > 1 ? (
+                <span className="ml-auto text-xs text-muted-foreground">
+                  {pinned.data.length}
+                </span>
+              ) : null}
+            </button>
+          ) : null}
+          {scheduled.data && scheduled.data.length > 0 ? (
+            <button
+              type="button"
+              onClick={() => setScheduledOpen(true)}
+              className="flex items-center gap-2 border-b bg-muted/50 px-(--spacing-gutter) py-2 text-left text-sm outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50"
+            >
+              <CalendarClockIcon
+                aria-hidden="true"
+                className="size-4 shrink-0"
+              />
+              {t("chat.scheduledCount", { count: scheduled.data.length })}
+            </button>
+          ) : null}
+          {conversation.state === "REQUEST" ? (
+            <Alert className="rounded-none border-x-0 border-t-0">
+              <AlertDescription className="flex flex-col gap-2">
+                <span>{t("chat.requestBanner", { name: peerName })}</span>
+                <span className="flex flex-wrap gap-2">
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      const peer = conversation.peer
+                      conversationAction.mutate(
+                        { conversationId: conversation.id, action: "accept" },
+                        {
+                          onError: showError,
+                          onSuccess: () => {
+                            if (peer && !peer.contact) {
+                              setOfferedContact(peer)
+                            }
+                          },
+                        }
+                      )
+                    }}
+                  >
+                    {t("chat.accept")}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={async () => {
+                      try {
+                        await conversationAction.mutateAsync({
+                          conversationId: conversation.id,
+                          action: "decline",
+                        })
+                      } catch (error) {
+                        toast.add({
+                          title: errorMessage(error, t("common.genericError")),
+                          type: "error",
+                        })
+                        return
+                      }
+                      toast.add({ title: t("chat.declined") })
+                      await navigate({ to: "/requests" })
+                    }}
+                  >
+                    {t("chat.decline")}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={async () => {
+                      try {
+                        await block.mutateAsync({
+                          userId: conversation.peer!.userId,
+                          blocked: true,
+                        })
+                        await conversationAction.mutateAsync({
+                          conversationId: conversation.id,
+                          action: "decline",
+                        })
+                      } catch (error) {
+                        toast.add({
+                          title: errorMessage(error, t("common.genericError")),
+                          type: "error",
+                        })
+                        return
+                      }
+                      toast.add({ title: t("chat.blockedToast") })
+                      await navigate({ to: "/requests" })
+                    }}
+                  >
+                    {t("chat.blockAndDecline")}
+                  </Button>
+                </span>
+              </AlertDescription>
+            </Alert>
+          ) : null}
+          <MentionNames value={mentionNames}>
+            <MessageScroller
+              className="min-h-0 flex-1"
+              onContextMenu={
+                conversation.state === "ACTIVE" && selection === null
+                  ? backgroundMenu.onContextMenu
+                  : undefined
+              }
+            >
+              <MessageScrollerViewport
+                ref={viewportRef}
+                aria-label={t("chat.messages")}
+                preserveScrollOnPrepend
+                className="px-(--spacing-gutter)"
+              >
+                <MessageScrollerContent className="gap-1 py-3">
+                  {start > 0 || cache.hasOlder ? (
+                    <LoadMore
+                      edge="start"
+                      revision={`${start}:${end}:${display.length}`}
+                      label={t("chat.loadOlder")}
+                      onLoad={() => {
+                        lastEdge.current = "start"
+                        const older = revealOlder(seqs, messageWindow)
+                        // Sem overflow-anchor (WebKit), as linhas que entram acima empurrariam a tela para baixo.
+                        const hold = () => {
+                          const viewport = viewportRef.current
+                          keepInPlace.current = viewport && visibleRow(viewport)
+                        }
+                        if (older.loadPage) {
+                          setMessageWindow(older.window)
+                          return loadOlder(queryClient, conversation.id).then(
+                            hold
+                          )
+                        }
+                        hold()
+                        setMessageWindow(older.window)
+                        return Promise.resolve()
+                      }}
+                    />
+                  ) : null}
+                  {display.length === 0 ? (
+                    <Empty className="flex-1">
+                      <EmptyHeader>
+                        <EmptyTitle>{t("chat.noMessages")}</EmptyTitle>
+                        <EmptyDescription>
+                          {conversation.kind === "SELF"
+                            ? t("chat.savedEmpty")
+                            : t("chat.noMessagesDescription", {
+                                name: peerName,
+                              })}
+                        </EmptyDescription>
+                      </EmptyHeader>
+                    </Empty>
+                  ) : null}
+                  {display.slice(start, end).map((message, offset) => {
+                    // Chave estável da pendente à confirmada (a mesma bolha não remonta: o tique muda no lugar). O banco
+                    // garante remetente + clientMessageId únicos; o id sozinho, de outra pessoa, poderia repetir.
+                    const rowKey = `${message.senderId ?? ""}:${message.clientMessageId ?? message.key}`
+                    const previous = display[start + offset - 1]
+                    const newDay =
+                      !previous ||
+                      dayKey(previous.createdAt) !== dayKey(message.createdAt)
+                    const unreadHere =
+                      unread !== null && message.seq === unread.seq
+                    // Sequência de quem mandou, como no WhatsApp: só a primeira tem rabinho, nome e foto.
+                    const firstInRun =
+                      newDay ||
+                      unreadHere ||
+                      previous.kind === "SYSTEM" ||
+                      previous.senderId !== message.senderId
+                    if (message.kind === "SYSTEM") {
+                      return (
+                        <Fragment key={rowKey}>
+                          {newDay ? (
+                            <Marker className={DAY_MARKER} role="separator">
+                              <MarkerContent className={MARKER_PILL}>
+                                {formatDay(message.createdAt)}
+                              </MarkerContent>
+                            </Marker>
+                          ) : null}
+                          <EnteringItem
+                            messageId={message.key}
+                            message={message}
+                            decide={decideEntrance}
+                          >
+                            <Marker className="mx-auto my-1 w-fit max-w-[90%] justify-center rounded-lg bg-card px-3 py-1.5 text-center text-xs text-muted-foreground shadow-xs">
+                              <MarkerContent>
+                                {describeNotice(message.body, meId, t)}
+                              </MarkerContent>
+                            </Marker>
+                          </EnteringItem>
+                        </Fragment>
+                      )
+                    }
+                    return (
+                      <Fragment key={rowKey}>
+                        {newDay ? (
+                          <Marker className={DAY_MARKER} role="separator">
+                            <MarkerContent className={MARKER_PILL}>
+                              {formatDay(message.createdAt)}
+                            </MarkerContent>
+                          </Marker>
+                        ) : null}
+                        {unreadHere ? (
+                          <Marker
+                            className={cn(DAY_MARKER, "font-medium")}
+                            id="first-unread"
+                          >
+                            <MarkerContent
+                              className={cn(MARKER_PILL, "text-primary")}
+                            >
+                              {t("chat.unreadMarker", { count: unread.count })}
+                            </MarkerContent>
+                          </Marker>
+                        ) : null}
+                        <EnteringItem
+                          messageId={message.id ?? message.key}
+                          message={message}
+                          decide={decideEntrance}
+                          scrollAnchor={
+                            unreadHere && messageWindow === openingWindow
                           }
-                        },
-                      }
-                    )
-                  }}
-                >
-                  {t("chat.accept")}
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={async () => {
-                    try {
-                      await conversationAction.mutateAsync({
-                        conversationId: conversation.id,
-                        action: "decline",
-                      })
-                    } catch (error) {
-                      toast.add({
-                        title: errorMessage(error, t("common.genericError")),
-                        type: "error",
-                      })
-                      return
-                    }
-                    toast.add({ title: t("chat.declined") })
-                    await navigate({ to: "/requests" })
-                  }}
-                >
-                  {t("chat.decline")}
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={async () => {
-                    try {
-                      await block.mutateAsync({
-                        userId: conversation.peer!.userId,
-                        blocked: true,
-                      })
-                      await conversationAction.mutateAsync({
-                        conversationId: conversation.id,
-                        action: "decline",
-                      })
-                    } catch (error) {
-                      toast.add({
-                        title: errorMessage(error, t("common.genericError")),
-                        type: "error",
-                      })
-                      return
-                    }
-                    toast.add({ title: t("chat.blockedToast") })
-                    await navigate({ to: "/requests" })
-                  }}
-                >
-                  {t("chat.blockAndDecline")}
-                </Button>
-              </span>
-            </AlertDescription>
-          </Alert>
-        ) : null}
-        <MessageScroller
-          className="min-h-0 flex-1"
-          onContextMenu={
-            conversation.state === "ACTIVE" && selection === null
-              ? backgroundMenu.onContextMenu
-              : undefined
-          }
-        >
-          <MessageScrollerViewport
-            ref={viewportRef}
-            aria-label={t("chat.messages")}
-            preserveScrollOnPrepend
-            className="px-(--spacing-gutter)"
-          >
-            <MessageScrollerContent className="gap-1 py-3">
-              {start > 0 || cache.hasOlder ? (
-                <LoadMore
-                  edge="start"
-                  revision={`${start}:${end}:${display.length}`}
-                  label={t("chat.loadOlder")}
-                  onLoad={() => {
-                    lastEdge.current = "start"
-                    const older = revealOlder(seqs, messageWindow)
-                    // Sem overflow-anchor (WebKit), as linhas que entram acima empurrariam a tela para baixo.
-                    const hold = () => {
-                      const viewport = viewportRef.current
-                      keepInPlace.current = viewport && visibleRow(viewport)
-                    }
-                    if (older.loadPage) {
-                      setMessageWindow(older.window)
-                      return loadOlder(queryClient, conversation.id).then(hold)
-                    }
-                    hold()
-                    setMessageWindow(older.window)
-                    return Promise.resolve()
-                  }}
-                />
-              ) : null}
-              {display.length === 0 ? (
-                <Empty className="flex-1">
-                  <EmptyHeader>
-                    <EmptyTitle>{t("chat.noMessages")}</EmptyTitle>
-                    <EmptyDescription>
-                      {conversation.kind === "SELF"
-                        ? t("chat.savedEmpty")
-                        : t("chat.noMessagesDescription", { name: peerName })}
-                    </EmptyDescription>
-                  </EmptyHeader>
-                </Empty>
-              ) : null}
-              {display.slice(start, end).map((message, offset) => {
-                // Chave estável da pendente à confirmada (a mesma bolha não remonta: o tique muda no lugar). O banco
-                // garante remetente + clientMessageId únicos; o id sozinho, de outra pessoa, poderia repetir.
-                const rowKey = `${message.senderId ?? ""}:${message.clientMessageId ?? message.key}`
-                const previous = display[start + offset - 1]
-                const newDay =
-                  !previous ||
-                  dayKey(previous.createdAt) !== dayKey(message.createdAt)
-                const unreadHere = unread !== null && message.seq === unread.seq
-                // Sequência de quem mandou, como no WhatsApp: só a primeira tem rabinho, nome e foto.
-                const firstInRun =
-                  newDay ||
-                  unreadHere ||
-                  previous.kind === "SYSTEM" ||
-                  previous.senderId !== message.senderId
-                if (message.kind === "SYSTEM") {
-                  return (
-                    <Fragment key={rowKey}>
-                      {newDay ? (
-                        <Marker className={DAY_MARKER} role="separator">
-                          <MarkerContent className={MARKER_PILL}>
-                            {formatDay(message.createdAt)}
-                          </MarkerContent>
-                        </Marker>
-                      ) : null}
-                      <EnteringItem
-                        messageId={message.key}
-                        message={message}
-                        decide={decideEntrance}
-                      >
-                        <Marker className="mx-auto my-1 w-fit max-w-[90%] justify-center rounded-lg bg-card px-3 py-1.5 text-center text-xs text-muted-foreground shadow-xs">
-                          <MarkerContent>
-                            {describeNotice(message.body, meId, t)}
-                          </MarkerContent>
-                        </Marker>
-                      </EnteringItem>
-                    </Fragment>
-                  )
-                }
-                return (
-                  <Fragment key={rowKey}>
-                    {newDay ? (
-                      <Marker className={DAY_MARKER} role="separator">
-                        <MarkerContent className={MARKER_PILL}>
-                          {formatDay(message.createdAt)}
-                        </MarkerContent>
-                      </Marker>
-                    ) : null}
-                    {unreadHere ? (
-                      <Marker
-                        className={cn(DAY_MARKER, "font-medium")}
-                        id="first-unread"
-                      >
-                        <MarkerContent
-                          className={cn(MARKER_PILL, "text-primary")}
                         >
-                          {t("chat.unreadMarker", { count: unread.count })}
-                        </MarkerContent>
-                      </Marker>
-                    ) : null}
-                    <EnteringItem
-                      messageId={message.id ?? message.key}
-                      message={message}
-                      decide={decideEntrance}
-                      scrollAnchor={
-                        unreadHere && messageWindow === openingWindow
-                      }
-                    >
-                      <MessageRow
-                        message={message}
-                        mine={message.senderId === meId}
-                        meId={meId}
-                        senderName={nameOf(message.senderId)}
-                        nameOf={stableNameOf}
-                        selecting={selection !== null}
-                        selected={
-                          message.id !== null &&
-                          (selection ?? []).includes(message.id)
-                        }
-                        onMessageAction={stableAction}
-                        onJump={stableJump}
-                        audioQueue={
-                          message.attachment?.kind === "AUDIO"
-                            ? audioQueue
-                            : undefined
-                        }
-                        canEdit={canEdit(message)}
-                        canReply={canReply}
-                        conversationId={conversation.id}
-                        showSender={group !== null}
-                        canReplyPrivately={
-                          group !== null &&
-                          message.senderId !== meId &&
-                          memberLabels.has(message.senderId ?? "")
-                        }
-                        highlight={highlight}
-                        flash={message.id !== null && message.id === flashId}
-                        firstInRun={firstInRun}
-                        groupSender={
-                          group !== null && message.senderId !== meId
-                            ? (membersById.get(message.senderId ?? "") ?? null)
-                            : undefined
-                        }
-                      />
-                    </EnteringItem>
-                  </Fragment>
-                )
-              })}
-              {end < display.length ? (
-                <LoadMore
-                  edge="end"
-                  revision={`${start}:${end}:${display.length}`}
-                  label={t("chat.loadNewer")}
-                  onLoad={() => {
-                    lastEdge.current = "end"
-                    setMessageWindow((window) => revealNewer(seqs, window))
-                    return Promise.resolve()
-                  }}
+                          <MessageRow
+                            message={message}
+                            mine={message.senderId === meId}
+                            meId={meId}
+                            senderName={nameOf(message.senderId)}
+                            nameOf={stableNameOf}
+                            selecting={selection !== null}
+                            selected={
+                              message.id !== null &&
+                              (selection ?? []).includes(message.id)
+                            }
+                            onMessageAction={stableAction}
+                            onJump={stableJump}
+                            audioQueue={
+                              message.attachment?.kind === "AUDIO"
+                                ? audioQueue
+                                : undefined
+                            }
+                            canEdit={canEdit(message)}
+                            canReply={canReply}
+                            conversationId={conversation.id}
+                            showSender={group !== null}
+                            canReplyPrivately={
+                              group !== null &&
+                              message.senderId !== meId &&
+                              memberLabels.has(message.senderId ?? "")
+                            }
+                            highlight={highlight}
+                            flash={
+                              message.id !== null && message.id === flashId
+                            }
+                            firstInRun={firstInRun}
+                            groupSender={
+                              group !== null && message.senderId !== meId
+                                ? (membersById.get(message.senderId ?? "") ??
+                                  null)
+                                : undefined
+                            }
+                          />
+                        </EnteringItem>
+                      </Fragment>
+                    )
+                  })}
+                  {end < display.length ? (
+                    <LoadMore
+                      edge="end"
+                      revision={`${start}:${end}:${display.length}`}
+                      label={t("chat.loadNewer")}
+                      onLoad={() => {
+                        lastEdge.current = "end"
+                        setMessageWindow((window) => revealNewer(seqs, window))
+                        return Promise.resolve()
+                      }}
+                    />
+                  ) : null}
+                </MessageScrollerContent>
+              </MessageScrollerViewport>
+              {unread && firstUnreadId ? (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="absolute top-2 left-1/2 z-10 -translate-x-1/2 shadow"
+                  onClick={() => void jumpTo(firstUnreadId)}
+                >
+                  {t("chat.jumpToUnread")}
+                </Button>
+              ) : null}
+              {/* No canto direito, com a margem da tela, como no WhatsApp: no centro cobria o meio dos balões. */}
+              {conversation.state === "ACTIVE" ? (
+                <ConversationMenu
+                  conversation={conversation}
+                  label={peerName}
+                  menu={backgroundMenu}
+                  trigger={false}
+                  leading={conversationLeading}
                 />
               ) : null}
-            </MessageScrollerContent>
-          </MessageScrollerViewport>
-          {unread && firstUnreadId ? (
-            <Button
-              variant="secondary"
-              size="sm"
-              className="absolute top-2 left-1/2 z-10 -translate-x-1/2 shadow"
-              onClick={() => void jumpTo(firstUnreadId)}
-            >
-              {t("chat.jumpToUnread")}
-            </Button>
-          ) : null}
-          {/* No canto direito, com a margem da tela, como no WhatsApp: no centro cobria o meio dos balões. */}
-          {conversation.state === "ACTIVE" ? (
-            <ConversationMenu
-              conversation={conversation}
-              label={peerName}
-              menu={backgroundMenu}
-              trigger={false}
-              leading={conversationLeading}
-            />
-          ) : null}
-          <MessageScrollerButton
-            direction="end"
-            className="inset-s-auto inset-e-(--spacing-gutter) size-10 translate-x-0 rounded-full shadow-md"
-            onClick={() =>
-              // Fora do fim do histórico, volta para as últimas antes de rolar.
-              setMessageWindow((window) =>
-                window.toSeq === null ? window : tailWindow(seqs)
-              )
-            }
-          />
-        </MessageScroller>
-        {selection !== null ? (
-          <div className="flex items-center gap-2 border-t bg-background px-(--spacing-gutter) py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label={t("chat.cancelSelection")}
-              onClick={() => setSelection(null)}
-            >
-              <XIcon />
-            </Button>
-            <span className="flex-1 text-sm" aria-live="polite">
-              {t("chat.selectedCount", { count: selection.length })}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={selection.length === 0}
-              onClick={() => {
-                selection.forEach((messageId) =>
-                  messageAction.mutate(
-                    { messageId, action: "star" },
-                    { onError: showError }
+              <MessageScrollerButton
+                direction="end"
+                className="inset-s-auto inset-e-(--spacing-gutter) size-10 translate-x-0 rounded-full shadow-md"
+                onClick={() =>
+                  // Fora do fim do histórico, volta para as últimas antes de rolar.
+                  setMessageWindow((window) =>
+                    window.toSeq === null ? window : tailWindow(seqs)
                   )
-                )
-                setSelection(null)
-              }}
-            >
-              <StarIcon data-icon="inline-start" />
-              {t("chat.star")}
-            </Button>
-            <Button
-              variant="outline"
-              size="icon-sm"
-              aria-label={t("chat.delete")}
-              disabled={selection.length === 0}
-              onClick={() => setDeleteIds(selection)}
-            >
-              <Trash2Icon />
-            </Button>
-            <Button
-              size="sm"
-              disabled={
-                selection.length === 0 ||
-                selection.some(
-                  (id) => display.find((item) => item.id === id)?.deleted
-                )
-              }
-              onClick={() => setForwardIds(selection)}
-            >
-              <ForwardIcon data-icon="inline-start" />
-              {t("chat.forward")}
-            </Button>
-          </div>
-        ) : conversation.blockedByMe || !conversation.canSend ? (
-          <Alert className="rounded-none border-x-0 border-b-0">
-            <AlertDescription>
-              {conversation.blockedByMe
-                ? t("chat.blockedNotice")
-                : group?.onlyAdminsSend
-                  ? t("groups.onlyAdminsNotice")
-                  : conversation.broadcast?.expired
-                    ? t("broadcast.expired")
-                    : t("chat.cannotSend")}
-            </AlertDescription>
-          </Alert>
-        ) : (
-          <Composer
-            conversationId={conversation.id}
-            replyTo={replyTo}
-            replyName={replyTo ? nameOf(replyTo.senderId) : ""}
-            onCancelReply={() => setReplyTo(null)}
-            onSend={(body, options) =>
-              sendBody(body, undefined, undefined, options?.silent ?? false)
-            }
-            draft={conversation.draft}
-            onSchedule={setScheduling}
-            onSticker={(stickerId) => {
-              send.mutate(
-                {
-                  clientMessageId: crypto.randomUUID(),
-                  body: "",
-                  replyTo,
-                  stickerId,
-                },
-                {
-                  onError: (error) =>
-                    toast.add({
-                      title: errorMessage(error, t("common.genericError")),
-                      type: "error",
-                    }),
                 }
-              )
-              setReplyTo(null)
-            }}
-            onGif={async (gif) => {
-              try {
-                const media = await attachGif(gif.id)
-                await sendWithAttachment({
-                  clientMessageId: crypto.randomUUID(),
-                  body: "",
-                  replyTo,
-                  attachmentId: media.id,
-                  attachment: {
-                    kind: "IMAGE",
-                    filename: "gif.gif",
-                    size: media.size,
-                    contentType: "image/gif",
-                    previewUrl: `/api/v1/gifs/${gif.id}/preview`,
+              />
+            </MessageScroller>
+          </MentionNames>
+          {selection !== null ? (
+            <div className="flex items-center gap-2 border-t bg-background px-(--spacing-gutter) py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={t("chat.cancelSelection")}
+                onClick={() => setSelection(null)}
+              >
+                <XIcon />
+              </Button>
+              <span className="flex-1 text-sm" aria-live="polite">
+                {t("chat.selectedCount", { count: selection.length })}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={selection.length === 0}
+                onClick={() => {
+                  selection.forEach((messageId) =>
+                    messageAction.mutate(
+                      { messageId, action: "star" },
+                      { onError: showError }
+                    )
+                  )
+                  setSelection(null)
+                }}
+              >
+                <StarIcon data-icon="inline-start" />
+                {t("chat.star")}
+              </Button>
+              <Button
+                variant="outline"
+                size="icon-sm"
+                aria-label={t("chat.delete")}
+                disabled={selection.length === 0}
+                onClick={() => setDeleteIds(selection)}
+              >
+                <Trash2Icon />
+              </Button>
+              <Button
+                size="sm"
+                disabled={
+                  selection.length === 0 ||
+                  selection.some(
+                    (id) => display.find((item) => item.id === id)?.deleted
+                  )
+                }
+                onClick={() => setForwardIds(selection)}
+              >
+                <ForwardIcon data-icon="inline-start" />
+                {t("chat.forward")}
+              </Button>
+            </div>
+          ) : conversation.blockedByMe || !conversation.canSend ? (
+            <Alert className="rounded-none border-x-0 border-b-0">
+              <AlertDescription>
+                {conversation.blockedByMe
+                  ? t("chat.blockedNotice")
+                  : group?.onlyAdminsSend
+                    ? t("groups.onlyAdminsNotice")
+                    : conversation.broadcast?.expired
+                      ? t("broadcast.expired")
+                      : t("chat.cannotSend")}
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <Composer
+              conversationId={conversation.id}
+              mentions={group ? mentionCandidates : undefined}
+              replyTo={replyTo}
+              replyName={replyTo ? nameOf(replyTo.senderId) : ""}
+              onCancelReply={() => setReplyTo(null)}
+              onSend={(body, options) =>
+                sendBody(body, undefined, undefined, options?.silent ?? false)
+              }
+              draft={conversation.draft}
+              onSchedule={setScheduling}
+              onSticker={(stickerId) => {
+                send.mutate(
+                  {
+                    clientMessageId: crypto.randomUUID(),
+                    body: "",
+                    replyTo,
+                    stickerId,
                   },
-                })
+                  {
+                    onError: (error) =>
+                      toast.add({
+                        title: errorMessage(error, t("common.genericError")),
+                        type: "error",
+                      }),
+                  }
+                )
                 setReplyTo(null)
-              } catch (error) {
-                toast.add({
-                  title: errorMessage(error, t("common.genericError")),
-                  type: "error",
-                })
+              }}
+              onGif={async (gif) => {
+                try {
+                  const media = await attachGif(gif.id)
+                  await sendWithAttachment({
+                    clientMessageId: crypto.randomUUID(),
+                    body: "",
+                    replyTo,
+                    attachmentId: media.id,
+                    attachment: {
+                      kind: "IMAGE",
+                      filename: "gif.gif",
+                      size: media.size,
+                      contentType: "image/gif",
+                      previewUrl: `/api/v1/gifs/${gif.id}/preview`,
+                    },
+                  })
+                  setReplyTo(null)
+                } catch (error) {
+                  toast.add({
+                    title: errorMessage(error, t("common.genericError")),
+                    type: "error",
+                  })
+                }
+              }}
+              onFiles={chooseFiles}
+              onVoice={(file) => sendFiles([{ file, caption: "" }])}
+              disabled={!canWrite}
+              editing={editing}
+              onPoll={
+                conversation.kind === "SELF" ||
+                conversation.kind === "BROADCAST"
+                  ? undefined
+                  : () => setPollOpen(true)
+              }
+              onEdit={saveEdit}
+              onCancelEdit={() => setEditing(null)}
+              onEditLast={() => {
+                const last = [...display].reverse().find(canEdit)
+                if (last) {
+                  startEdit(last)
+                }
+              }}
+            />
+          )}
+          <PdfViewer
+            open={openDocument}
+            onClose={() => setOpenDocument(null)}
+          />
+          <ConfirmDialog
+            open={offeredContact !== null}
+            onOpenChange={(open) => {
+              if (!open) {
+                setOfferedContact(null)
               }
             }}
-            onFiles={chooseFiles}
-            onVoice={(file) => sendFiles([file], "")}
-            disabled={!canWrite}
-            editing={editing}
-            onPoll={
-              conversation.kind === "SELF" || conversation.kind === "BROADCAST"
-                ? undefined
-                : () => setPollOpen(true)
-            }
-            onEdit={saveEdit}
-            onCancelEdit={() => setEditing(null)}
-            onEditLast={() => {
-              const last = [...display].reverse().find(canEdit)
-              if (last) {
-                startEdit(last)
+            destructive={false}
+            title={t("chat.offerContactTitle", {
+              name: offeredContact?.displayName ?? "",
+            })}
+            description={t("chat.offerContactDescription", {
+              name: offeredContact?.displayName ?? "",
+            })}
+            confirmLabel={t("chat.addToContacts")}
+            cancelLabel={t("common.notNow")}
+            onConfirm={() => {
+              const peer = offeredContact
+              if (!peer) {
+                return
+              }
+              addContact.mutate(
+                { username: peer.username },
+                {
+                  onError: showError,
+                  onSuccess: () =>
+                    toast.add({ title: t("contacts.added"), type: "success" }),
+                }
+              )
+            }}
+          />
+          <ForwardDialog
+            messageIds={forwardIds}
+            onClose={(sent) => {
+              setForwardIds([])
+              if (sent) {
+                setSelection(null)
               }
             }}
           />
-        )}
-        <PdfViewer open={openDocument} onClose={() => setOpenDocument(null)} />
-        <ConfirmDialog
-          open={offeredContact !== null}
-          onOpenChange={(open) => {
-            if (!open) {
-              setOfferedContact(null)
-            }
-          }}
-          destructive={false}
-          title={t("chat.offerContactTitle", {
-            name: offeredContact?.displayName ?? "",
-          })}
-          description={t("chat.offerContactDescription", {
-            name: offeredContact?.displayName ?? "",
-          })}
-          confirmLabel={t("chat.addToContacts")}
-          cancelLabel={t("common.notNow")}
-          onConfirm={() => {
-            const peer = offeredContact
-            if (!peer) {
-              return
-            }
-            addContact.mutate(
-              { username: peer.username },
-              {
-                onError: showError,
-                onSuccess: () =>
-                  toast.add({ title: t("contacts.added"), type: "success" }),
+          <MessageInfoDialog
+            messageId={infoId}
+            onClose={() => setInfoId(null)}
+          />
+          <ScheduleDialog
+            key={scheduling ?? "closed"}
+            conversationId={conversation.id}
+            body={scheduling}
+            onClose={() => setScheduling(null)}
+          />
+          <ScheduledListDialog
+            conversationId={conversation.id}
+            open={scheduledOpen}
+            onOpenChange={setScheduledOpen}
+          />
+          <Dialog
+            open={reactingTo !== null}
+            onOpenChange={(open) => (open ? null : setReactingTo(null))}
+          >
+            <DialogContent className="w-auto">
+              <DialogTitle>{t("emoji.moreReactions")}</DialogTitle>
+              <EmojiPicker
+                onSelect={(emoji) => {
+                  if (reactingTo) {
+                    messageAction.mutate(
+                      { messageId: reactingTo, action: "react", emoji },
+                      { onError: showError }
+                    )
+                  }
+                  setReactingTo(null)
+                }}
+              />
+            </DialogContent>
+          </Dialog>
+          <ViewOnceViewer
+            messageId={viewOnceId}
+            onClose={() => setViewOnceId(null)}
+          />
+          <PollDialog
+            conversationId={conversation.id}
+            open={pollOpen}
+            onOpenChange={setPollOpen}
+          />
+          <DeleteMessagesDialog
+            conversationId={conversation.id}
+            messageIds={deleteIds}
+            canDeleteForEveryone={canDeleteForEveryone(deleteIds)}
+            onClose={(deleted) => {
+              setDeleteIds([])
+              if (deleted) {
+                setSelection(null)
               }
-            )
-          }}
-        />
-        <ForwardDialog
-          messageIds={forwardIds}
-          onClose={(sent) => {
-            setForwardIds([])
-            if (sent) {
-              setSelection(null)
-            }
-          }}
-        />
-        <MessageInfoDialog messageId={infoId} onClose={() => setInfoId(null)} />
-        <ScheduleDialog
-          key={scheduling ?? "closed"}
-          conversationId={conversation.id}
-          body={scheduling}
-          onClose={() => setScheduling(null)}
-        />
-        <ScheduledListDialog
-          conversationId={conversation.id}
-          open={scheduledOpen}
-          onOpenChange={setScheduledOpen}
-        />
-        <Dialog
-          open={reactingTo !== null}
-          onOpenChange={(open) => (open ? null : setReactingTo(null))}
-        >
-          <DialogContent className="w-auto">
-            <DialogTitle>{t("emoji.moreReactions")}</DialogTitle>
-            <EmojiPicker
-              onSelect={(emoji) => {
-                if (reactingTo) {
-                  messageAction.mutate(
-                    { messageId: reactingTo, action: "react", emoji },
-                    { onError: showError }
-                  )
-                }
-                setReactingTo(null)
-              }}
+            }}
+          />
+          <ImageViewer
+            images={viewerImages ?? images}
+            openId={viewerId}
+            onOpenChange={setViewerId}
+          />
+          {files.length > 0 ? (
+            <AttachEditor
+              files={files}
+              allowViewOnce={
+                conversation.kind !== "SELF" &&
+                conversation.kind !== "BROADCAST"
+              }
+              onAdd={chooseFiles}
+              onRemove={(file) =>
+                setFiles((current) => current.filter((item) => item !== file))
+              }
+              onClose={() => setFiles([])}
+              onSend={sendFiles}
             />
-          </DialogContent>
-        </Dialog>
-        <ViewOnceViewer
-          messageId={viewOnceId}
-          onClose={() => setViewOnceId(null)}
-        />
-        <PollDialog
-          conversationId={conversation.id}
-          open={pollOpen}
-          onOpenChange={setPollOpen}
-        />
-        <DeleteMessagesDialog
-          conversationId={conversation.id}
-          messageIds={deleteIds}
-          canDeleteForEveryone={canDeleteForEveryone(deleteIds)}
-          onClose={(deleted) => {
-            setDeleteIds([])
-            if (deleted) {
-              setSelection(null)
-            }
-          }}
-        />
-        <AttachDialog
-          allowViewOnce={
-            conversation.kind !== "SELF" && conversation.kind !== "BROADCAST"
-          }
-          files={files}
-          onClose={() => setFiles([])}
-          onSend={sendFiles}
-        />
-        <ImageViewer
-          images={viewerImages ?? images}
-          openId={viewerId}
-          onOpenChange={setViewerId}
-        />
+          ) : null}
+          {draggingFiles ? (
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 z-40 flex animate-in p-(--spacing-gutter) duration-(--duration-fast) ease-(--ease-enter) fade-in"
+            >
+              <div className="flex flex-1 items-center justify-center rounded-xl border-2 border-dashed border-primary bg-primary/10 backdrop-blur-sm">
+                <p className="text-2xl font-medium text-primary">
+                  {t("media.dropHere")}
+                </p>
+              </div>
+            </div>
+          ) : null}
+        </div>
       </div>
       {wide && detailsOpen ? (
         <aside

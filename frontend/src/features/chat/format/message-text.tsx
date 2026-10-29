@@ -1,4 +1,11 @@
-import { Fragment, useEffect, useState, type ReactNode } from "react"
+import {
+  createContext,
+  Fragment,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from "react"
 import { Link } from "@tanstack/react-router"
 import { useTranslation } from "react-i18next"
 import { cn } from "cn"
@@ -7,6 +14,37 @@ import type { HastNode } from "./highlight"
 import { parseMessage, type Block, type Inline } from "./parse"
 import { highlightText } from "./search-highlight"
 import type { SearchTerms } from "./search-match"
+
+/**
+ * Nome de cada membro do grupo pelo @usuario: a menção aparece na bolha com o nome, como no WhatsApp (MS-04); o texto
+ * guardado continua `@usuario`. Fora de um grupo o mapa fica vazio e a menção mostra o @usuario.
+ */
+export const MentionNames = createContext<ReadonlyMap<string, string>>(
+  new Map()
+)
+
+function Mention({
+  username,
+  highlight,
+}: {
+  username: string
+  highlight: SearchTerms | null | undefined
+}) {
+  const name = useContext(MentionNames).get(username.toLowerCase())
+  return (
+    <Link
+      to="/add/$username"
+      params={{ username }}
+      className={cn(
+        "font-medium underline-offset-2 hover:underline",
+        name !== undefined && "text-primary"
+      )}
+      data-private={name !== undefined ? "names" : undefined}
+    >
+      {highlightText(`@${name ?? username}`, highlight)}
+    </Link>
+  )
+}
 
 /**
  * Corpo de uma mensagem com a formatação do WhatsApp, sem HTML do usuário (MS-01). Com uma busca aberta, os trechos
@@ -108,14 +146,7 @@ function renderInline(
           )
         }
         return (
-          <Link
-            key={index}
-            to="/add/$username"
-            params={{ username: node.username }}
-            className="font-medium underline-offset-2 hover:underline"
-          >
-            {highlightText(`@${node.username}`, highlight)}
-          </Link>
+          <Mention key={index} username={node.username} highlight={highlight} />
         )
       case "link":
         return (

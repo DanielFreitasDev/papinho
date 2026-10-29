@@ -539,6 +539,12 @@ function ConversationItem({
                 className="size-4 shrink-0 text-muted-foreground"
               />
             ) : null}
+            {conversation.unreadMention && conversation.unreadCount > 0 ? (
+              <Badge className="size-5 justify-center p-0 font-bold">
+                <span aria-hidden="true">@</span>
+                <span className="sr-only">{t("chat.unreadMention")}</span>
+              </Badge>
+            ) : null}
             {conversation.unreadCount > 0 ? (
               <Badge
                 key={conversation.unreadCount}

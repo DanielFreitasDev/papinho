@@ -34,3 +34,38 @@ export async function openPdf(url: string): Promise<PDFDocumentLoadingTask> {
     iccUrl: `${PDFJS_DATA}iccs/`,
   })
 }
+
+/**
+ * Capa de um PDF ainda no aparelho (antes de enviar): a primeira página como imagem e o número de páginas. Null se o
+ * pdf.js não abrir o arquivo (com senha ou corrompido).
+ */
+export async function pdfCover(
+  file: Blob,
+  width: number
+): Promise<{ src: string; pages: number } | null> {
+  const pdfjs = await loadPdfjs()
+  const task = pdfjs.getDocument({
+    data: new Uint8Array(await file.arrayBuffer()),
+    enableXfa: false,
+    standardFontDataUrl: `${PDFJS_DATA}standard_fonts/`,
+    cMapUrl: `${PDFJS_DATA}cmaps/`,
+    cMapPacked: true,
+    wasmUrl: `${PDFJS_DATA}wasm/`,
+    iccUrl: `${PDFJS_DATA}iccs/`,
+  })
+  try {
+    const pdf = await task.promise
+    const page = await pdf.getPage(1)
+    const base = page.getViewport({ scale: 1 })
+    const viewport = page.getViewport({ scale: width / base.width })
+    const canvas = document.createElement("canvas")
+    canvas.width = Math.ceil(viewport.width)
+    canvas.height = Math.ceil(viewport.height)
+    await page.render({ canvas, viewport }).promise
+    return { src: canvas.toDataURL("image/png"), pages: pdf.numPages }
+  } catch {
+    return null
+  } finally {
+    void task.destroy()
+  }
+}

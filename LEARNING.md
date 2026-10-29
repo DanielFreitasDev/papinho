@@ -71,6 +71,7 @@ Leia as entradas relacionadas à tarefa. Os detalhes ficam em `docs/learning/`.
 - [Prévia de PDF num processo à parte](docs/learning/decisao-previa-de-pdf-em-processo-separado.md) — o PDFBox descomprime tudo na memória; filho com 256 MB e 20 s, PropertiesLauncher no JAR.
 - [Correção da auditoria de 2026-10-17](docs/learning/decisao-auditoria-2026-10-17.md) — convite do admin no fechado, foto view-once, HEIC recusado, exportação sem trancadas, presença.
 - [Correção dos Baixos de 2026-10-17](docs/learning/decisao-auditoria-baixos-2026-10-17.md) — login por IP e conta, grant dos anexos trancados, reservas da conta apagada, antivírus fora.
+- [Anexos, menções e resposta no estilo do WhatsApp](docs/learning/decisao-anexos-mencoes-estilo-whatsapp.md) — prévia no lugar do diálogo, capa do PDF no navegador, @usuario gravado e nome na bolha, "@" na lista pelo SQL, botão invisível que pega clique.
 
 ## Abordagens que NÃO funcionaram
 - [Reidratar o cache com o IndexedDB antes da rede](docs/learning/falha-reidratar-cache-offline-antes-da-rede.md) — o snapshot velho apagava o marcador de não lidas; use rede primeiro.

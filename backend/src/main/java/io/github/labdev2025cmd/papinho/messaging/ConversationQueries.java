@@ -13,6 +13,8 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Component;
 
+import io.github.labdev2025cmd.papinho.identity.UserDirectory;
+
 /**
  * Lista de conversas de um usuário numa consulta só: participante, a outra pessoa (conversa individual) ou o
  * resumo dos membros (grupo), última mensagem e contagem de não lidas (MS-14). Num grupo a mensagem conta como
@@ -43,6 +45,12 @@ class ConversationQueries {
                             or not exists (select 1 from messages m where m.conversation_id = c.id
                                               and m.seq > me.archived_seq and m.kind <> 'SYSTEM'
                                               and m.sender_id is distinct from me.user_id)) as archived,
+                   -- MS-04: alguma não lida do grupo me menciona (@usuario ou @todos), para o "@" na lista.
+                   c.kind = 'GROUP' and exists (select 1 from messages m where m.conversation_id = c.id
+                       and m.seq > me.read_seq and m.kind <> 'SYSTEM' and m.deleted_at is null
+                       and m.sender_id is distinct from me.user_id and m.body ~* :mentionPattern
+                       and not exists (select 1 from message_hidden h
+                                        where h.message_id = m.id and h.user_id = me.user_id)) as unread_mention,
                    me.pinned_at, me.muted_until, me.mute_mentions, me.favorite,
                    array(select fi.folder_id from chat_folder_items fi
                            join chat_folders f on f.id = fi.folder_id
@@ -78,15 +86,29 @@ class ConversationQueries {
             """;
 
     private final NamedParameterJdbcTemplate jdbc;
+    private final UserDirectory users;
 
-    ConversationQueries(NamedParameterJdbcTemplate jdbc) {
+    ConversationQueries(NamedParameterJdbcTemplate jdbc, UserDirectory users) {
         this.jdbc = jdbc;
+        this.users = users;
+    }
+
+    /**
+     * Expressão regular do PostgreSQL para uma menção a {@code username} ou a {@code @todos}, com as mesmas bordas do
+     * {@link NotificationRecipients}: antes, início ou um caractere fora de {@code [a-z0-9_.@]}; depois, pontos finais
+     * opcionais e o fim ou um caractere fora de {@code [a-z0-9._]}.
+     */
+    static String mentionPattern(String username) {
+        return "(^|[^a-z0-9_.@])@(" + username.replace(".", "\\.") + "|todos)\\.*($|[^a-z0-9._])";
     }
 
     List<Row> list(UUID userId, Collection<MemberState> states, @Nullable UUID conversationId) {
         MapSqlParameterSource params = new MapSqlParameterSource().addValue("userId", userId)
                 .addValue("states", states.stream().map(Enum::name).toList())
-                .addValue("conversationId", conversationId == null ? null : conversationId.toString());
+                .addValue("conversationId", conversationId == null ? null : conversationId.toString())
+                // Sem usuário (conta desativada) nenhuma menção casa: o "@" no padrão nunca aparece sozinho.
+                .addValue("mentionPattern", mentionPattern(users.findById(userId)
+                        .map(UserDirectory.UserSummary::username).orElse("\\b\\B")));
         return jdbc.query(LIST, params, (rs, index) -> toRow(rs));
     }
 
@@ -119,7 +141,7 @@ class ConversationQueries {
                 rs.getLong("peer_delivered_seq"), rs.getLong("peer_read_seq"), rs.getLong("unread_count"),
                 firstUnread == 0 ? null : firstUnread, last, rs.getString("draft"),
                 rs.getObject("my_read_receipts", Boolean.class), rs.getObject("peer_read_receipts", Boolean.class),
-                rs.getLong("group_sharing"), toOrganization(rs));
+                rs.getLong("group_sharing"), toOrganization(rs), rs.getBoolean("unread_mention"));
     }
 
     private static ConversationService.Organization toOrganization(ResultSet rs) throws SQLException {
@@ -143,7 +165,7 @@ class ConversationQueries {
             @Nullable MemberState peerState, long peerDeliveredSeq, long peerReadSeq, long unreadCount,
             @Nullable Long firstUnreadSeq, @Nullable LastMessage last, @Nullable String draft,
             @Nullable Boolean myReadReceipts, @Nullable Boolean peerReadReceipts, long groupSharing,
-            ConversationService.Organization organization) {
+            ConversationService.Organization organization, boolean unreadMention) {
     }
 
     record LastMessage(UUID id, long seq, @Nullable UUID senderId, String body, Instant createdAt,

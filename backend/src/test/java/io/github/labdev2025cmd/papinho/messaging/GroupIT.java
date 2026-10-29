@@ -277,6 +277,31 @@ class GroupIT {
                 .as("só cita mensagem de quem está na conversa").hasStatus(400);
     }
 
+    @Test
+    @DisplayName("menção não lida marca o grupo com @ só para quem foi mencionado, até ler; @todos marca todos")
+    void shouldFlagUnreadMentions() {
+        String id = createGroup();
+        send(ana, id, "email ana@bruno.com e @brunox não contam");
+        assertThat(unreadMention(bruno, id)).isFalse();
+        long seq = bruno.json(bruno.get(conversation(id))).get("lastSeq").asLong();
+        send(ana, id, "@bruno. viu?");
+        assertThat(unreadMention(bruno, id)).isTrue();
+        assertThat(unreadMention(carla, id)).as("não mencionada").isFalse();
+        assertThat(unreadMention(ana, id)).as("quem escreveu").isFalse();
+        bruno.put(conversation(id) + "/read", Map.of("seq", seq + 1));
+        assertThat(unreadMention(bruno, id)).as("lida").isFalse();
+
+        send(bruno, id, "Bom dia, @TODOS");
+        assertThat(unreadMention(carla, id)).isTrue();
+        assertThat(unreadMention(ana, id)).isTrue();
+        assertThat(ana.json(ana.get("/api/v1/conversations")).get(0).get("unreadMention").asBoolean())
+                .as("também na lista").isTrue();
+    }
+
+    private static boolean unreadMention(ApiClient client, String id) {
+        return client.json(client.get(conversation(id))).get("unreadMention").asBoolean();
+    }
+
     private String createGroup() {
         return ana.json(ana.post("/api/v1/groups", Map.of("name", "Família", "memberIds", List.of(brunoId, carlaId))))
                 .get("id").asString();

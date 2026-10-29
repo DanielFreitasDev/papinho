@@ -500,7 +500,8 @@ public class ConversationService {
                     result.add(new ConversationView(row.id(), row.kind().name(), row.state(), null, null,
                             broadcast, row.lastSeq(), preview(row, Map.of()), 0, null, false, row.readSeq(),
                             row.lastSeq(), row.lastSeq(), row.updatedAt(), !broadcast.expired(), false, null,
-                            row.draft(), locked.contains(row.id()), row.myReadReceipts(), true, row.organization()));
+                            row.draft(), locked.contains(row.id()), row.myReadReceipts(), true, row.organization(),
+                            false));
                 }
                 continue;
             }
@@ -521,7 +522,7 @@ public class ConversationService {
                         row.lastSeq(), preview(row, Map.of()), row.unreadCount(), row.firstUnreadSeq(),
                         row.markedUnread(), row.readSeq(), row.lastSeq(), null, row.updatedAt(), false, false,
                         row.disappearingSeconds(), row.draft(), locked.contains(row.id()), row.myReadReceipts(),
-                        false, row.organization()));
+                        false, row.organization(), false));
             }
         }
         return result;
@@ -553,7 +554,7 @@ public class ConversationService {
                 preview(row, Map.of()), row.unreadCount(), row.firstUnreadSeq(), row.markedUnread(), row.readSeq(),
                 peerDeliveredSeq, peerReadSeq, row.updatedAt(), !blockedByMe && peer.active(), blockedByMe,
                 row.disappearingSeconds(), row.draft(), locked, row.myReadReceipts(), self || iShare,
-                row.organization());
+                row.organization(), false);
     }
 
     /** Nome como {@code me} vê cada pessoa: apelido do contato, nome de exibição ou {@code @usuario}. */
@@ -588,7 +589,8 @@ public class ConversationService {
         return new ConversationView(row.id(), row.kind().name(), row.state(), null, groupView, null, row.lastSeq(),
                 preview(row, senderLabels), row.unreadCount(), row.firstUnreadSeq(), row.markedUnread(), row.readSeq(),
                 row.peerDeliveredSeq(), peerReadSeq, row.updatedAt(), canSend, false,
-                row.disappearingSeconds(), row.draft(), locked, row.myReadReceipts(), iShare, row.organization());
+                row.disappearingSeconds(), row.draft(), locked, row.myReadReceipts(), iShare, row.organization(),
+                row.unreadMention());
     }
 
     private static @Nullable MessagePreview preview(ConversationQueries.Row row, Map<UUID, String> senderLabels) {
@@ -619,13 +621,15 @@ public class ConversationService {
      * @param readReceipts minha escolha de confirmação de leitura nesta conversa; nulo = padrão (PV-06)
      * @param readReceiptsEnabled a confirmação de leitura vale para mim aqui (escolha ou padrão)
      * @param organization arquivar, fixar, silenciar, favoritar e pastas (GR-05), só minhas
+     * @param unreadMention no grupo, alguma mensagem não lida me menciona (MS-04): o "@" na lista
      */
     public record ConversationView(UUID id, String kind, MemberState state, @Nullable PeerView peer,
             @Nullable GroupView group, @Nullable BroadcastView broadcast, long lastSeq, @Nullable MessagePreview lastMessage, long unreadCount,
             @Nullable Long firstUnreadSeq, boolean markedUnread, long readSeq, long peerDeliveredSeq,
             @Nullable Long peerReadSeq, Instant updatedAt, boolean canSend, boolean blockedByMe,
             @Nullable Integer disappearingSeconds, @Nullable String draft, boolean locked,
-            @Nullable Boolean readReceipts, boolean readReceiptsEnabled, Organization organization) {
+            @Nullable Boolean readReceipts, boolean readReceiptsEnabled, Organization organization,
+            boolean unreadMention) {
     }
 
     /**

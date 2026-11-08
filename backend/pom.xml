@@ -18,7 +18,7 @@
 		<bucket4j.version>8.21.0</bucket4j.version>
 		<tika.version>4.1.0</tika.version>
 		<pdfbox.version>3.0.8</pdfbox.version>
-		<jsoup.version>1.23.2</jsoup.version>
+		<jsoup.version>1.24.1</jsoup.version>
 		<shedlock.version>7.10.1</shedlock.version>
 		<greenmail.version>2.1.14</greenmail.version>
 		<awssdk.version>2.57.2</awssdk.version>
